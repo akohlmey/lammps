@@ -38,14 +38,11 @@ import numpy as np
 import time
 
 from ipi.utils.depend import *
-from ipi.utils import units
 from ipi.utils.softexit import softexit
 from ipi.utils.io.io_xyz import read_xyz
 from ipi.utils.io.io_pdb import read_pdb
 from ipi.utils.io.io_xml import xml_parse_file
-from ipi.utils.units import Constants, unit_to_internal
-from ipi.inputs.thermostats import InputThermo
-from ipi.inputs.barostats import InputBaro
+from ipi.utils.units import unit_to_internal
 from ipi.engine.thermostats import *
 from ipi.engine.barostats import *
 
@@ -399,7 +396,7 @@ class NPTEnsemble(NVTEnsemble):
       """
 
       super(NPTEnsemble,self).__init__(dt, temp, thermostat, fixcom=fixcom)
-      if barostat == None:
+      if barostat is None:
          self.barostat = Barostat()
       else:
          self.barostat = barostat
@@ -519,7 +516,7 @@ class ReplayEnsemble(Ensemble):
       """
 
       super(ReplayEnsemble,self).__init__(dt=dt,temp=temp,fixcom=fixcom)
-      if intraj == None:
+      if intraj is None:
          raise ValueError("Must provide an initialized InitFile object to read trajectory from")
       self.intraj = intraj
       if intraj.mode == "manual":

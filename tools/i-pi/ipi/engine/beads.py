@@ -30,7 +30,6 @@ __all__ = ['Beads']
 import numpy as np
 from ipi.utils.depend import *
 from ipi.engine.atoms import Atoms
-from ipi.utils import units
 
 class Beads(dobject):
    """Storage for the beads positions and velocities.

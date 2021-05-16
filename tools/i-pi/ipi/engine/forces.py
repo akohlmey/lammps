@@ -34,7 +34,6 @@ __all__ = ['ForceField', 'ForceBeads', 'Forces', 'FFSocket']
 import numpy as np
 import time
 from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, warning
 from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
 from ipi.interfaces.sockets import InterfaceSocket

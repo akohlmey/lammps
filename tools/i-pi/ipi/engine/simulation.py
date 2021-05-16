@@ -28,8 +28,7 @@ Classes:
 
 __all__ = ['Simulation']
 
-import numpy as np
-import os.path, sys, time
+import os.path, time
 from ipi.utils.depend import *
 from ipi.utils.units  import *
 from ipi.utils.prng   import *
@@ -40,8 +39,6 @@ from ipi.utils.softexit import softexit
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 from ipi.engine.forces import Forces
-from ipi.engine.beads import Beads
-from ipi.engine.normalmodes import NormalModes
 from ipi.engine.properties import Properties, Trajectories
 from ipi.engine.outputs import CheckpointOutput
 
@@ -179,7 +176,6 @@ class Simulation(dobject):
             o.write()
          self.step = 0
 
-      steptime = 0.0
       simtime =  time.time()
 
       cstep = 0

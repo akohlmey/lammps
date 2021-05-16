@@ -17,10 +17,9 @@ Functions:
 """
 
 import sys
-from ipi.engine import simulation
 from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.io_xml import *
-from ipi.utils.messages import banner, help, verbosity
+from ipi.utils.messages import banner, help
 
 def main(file_name):
    """Runs the simulation.
@@ -49,8 +48,6 @@ def main(file_name):
 
    simul = simrestart.fetch() # Creates the appropriate simulation object.
    simul.run()
-
-   del simul
 
 #This is what is run if the file is run as a script.
 if __name__ == '__main__':

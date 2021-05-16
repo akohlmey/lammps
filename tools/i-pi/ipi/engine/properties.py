@@ -38,7 +38,7 @@ import os
 import numpy as np
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import *
-from ipi.utils.units import Constants, unit_to_internal, unit_to_user
+from ipi.utils.units import Constants, unit_to_user
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io import *
 from ipi.engine.atoms import *

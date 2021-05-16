@@ -38,8 +38,6 @@ __all__ = ['Barostat', 'BaroBZP']
 import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.units import *
-from ipi.utils.mathtools import eigensystem_ut3x3, invert_ut3x3, exp_ut3x3, det_ut3x3
-from ipi.inputs.thermostats import InputThermo
 from ipi.engine.thermostats import Thermostat
 
 class Barostat(dobject):
@@ -421,8 +419,6 @@ class BaroMHT(Barostat):
       """Propagates the momenta for half a time step."""
 
       dthalf = self.dt*0.5
-      dthalf2 = dthalf**2
-      dthalf3 = dthalf**3/3.0
 
       fc = np.sum(depstrip(self.forces.f),0)/float(self.beads.nbeads)
       m = depstrip(self.beads.m3)[0]

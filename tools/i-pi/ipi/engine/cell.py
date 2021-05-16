@@ -27,8 +27,6 @@ __all__ = ['Cell']
 import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.mathtools import *
-from ipi.utils import units
-
 
 class Cell(dobject):
    """Base class to represent the simulation cell in a periodic system.

@@ -42,7 +42,6 @@ Functions:
 import numpy as np
 
 from ipi.engine.beads import Beads
-from ipi.engine.cell import Cell
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.ensembles import Ensemble
 from ipi.utils.io.io_xyz import read_xyz
@@ -346,7 +345,7 @@ class Initializer(dobject):
 
             simul.cell.h = rh
             if simul.cell.V == 0.0:
-               ValueError("Cell provided has zero volume")
+               raise ValueError("Cell provided has zero volume")
 
             fcell = True
          elif k == "masses":

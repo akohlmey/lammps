@@ -49,7 +49,6 @@ from ipi.utils.units    import *
 from ipi.utils.mathtools import matrix_exp, stab_cholesky, root_herm
 from ipi.utils.prng import Random
 from ipi.utils.messages import verbosity, warning, info
-from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 
 class Thermostat(dobject):

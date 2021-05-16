@@ -121,7 +121,7 @@ class PropertyOutput(dobject):
                ohead += ": " + prop["help"]
             self.out.write(ohead + "\n")
 
-   def close_stream():
+   def close_stream(self):
       """Closes the output stream."""
 
       self.out.close()
@@ -252,7 +252,7 @@ class TrajectoryOutput(dobject):
          except:
             raise ValueError("Could not open file " + self.filename + "." + self.format + " for output")
 
-   def close_stream():
+   def close_stream(self):
       """Closes the output stream."""
 
       if hasattr(self.out, "__getitem__"):

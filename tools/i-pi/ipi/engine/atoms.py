@@ -29,7 +29,6 @@ __all__ = ['Atoms', 'Atom']
 
 import numpy as np
 from ipi.utils.depend import *
-from ipi.utils import units
 
 class Atom(dobject):
    """Represent an atom, with position, velocity, mass and related properties.
