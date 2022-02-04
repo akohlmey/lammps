@@ -254,6 +254,8 @@ void lammps_force_timeout(void *handle);
 int lammps_has_error(void *handle);
 int lammps_get_last_error_message(void *handle, char *buffer, int buf_size);
 
+void lammps_flushlog(void *handle);
+
 #ifdef __cplusplus
 }
 #endif

@@ -590,7 +590,7 @@ void Finish::end(int flag)
     }
   }
 
-  if (logfile) fflush(logfile);
+  utils::flushlog(lmp);
 }
 
 /* ---------------------------------------------------------------------- */

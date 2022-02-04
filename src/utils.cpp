@@ -138,6 +138,12 @@ void utils::fmtargs_logmesg(LAMMPS *lmp, fmt::string_view format, fmt::format_ar
   }
 }
 
+void utils::flushlog(LAMMPS *lmp)
+{
+  if (lmp->screen) fflush(lmp->screen);
+  if (lmp->logfile) fflush(lmp->logfile);
+}
+
 /* define this here, so we won't have to include the headers
    everywhere and utils.h will more likely be included anyway. */
 

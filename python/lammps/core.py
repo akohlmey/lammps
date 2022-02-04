@@ -315,6 +315,8 @@ class lammps(object):
     self.lib.lammps_fix_external_set_vector_length.argtypes = [c_void_p, c_char_p, c_int]
     self.lib.lammps_fix_external_set_vector.argtypes = [c_void_p, c_char_p, c_int, c_double]
 
+    self.lib.lammps_flushlog.argtypes = [c_void_p]
+
     # detect if Python is using a version of mpi4py that can pass communicators
     # only needed if LAMMPS has been compiled with MPI support.
     self.has_mpi4py = False
@@ -2091,3 +2093,13 @@ class lammps(object):
     computeid = computeid.encode()
     idx = self.lib.lammps_find_compute_neighlist(self.lmp, computeid, reqid)
     return idx
+
+  # -------------------------------------------------------------------------
+
+  def flushlog(self):
+    """Flush output buffers for screen and logfile output.
+
+    This is a wrapper around the :cpp:func:`lammps_flushlog` function of the C-library interface.
+
+    """
+    return self.lib.lammps_flushlog(self.lmp)

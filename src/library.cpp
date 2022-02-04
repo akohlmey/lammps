@@ -5563,6 +5563,13 @@ int lammps_get_last_error_message(void *handle, char *buffer, int buf_size) {
   return 0;
 }
 
+/** Flush buffers for screen and logfile output */
+
+void lammps_flushlog(void *handle)
+{
+  utils::flushlog((LAMMPS *)handle);
+}
+
 // Local Variables:
 // fill-column: 72
 // End:
