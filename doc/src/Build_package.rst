@@ -174,7 +174,6 @@ one of them as a starting point and customize it to your needs.
     cmake -C ../cmake/presets/gcc.cmake      [OPTIONS] ../cmake  # change settings to use the GNU compilers by default
     cmake -C ../cmake/presets/intel.cmake    [OPTIONS] ../cmake  # change settings to use the Intel compilers by default
     cmake -C ../cmake/presets/pgi.cmake      [OPTIONS] ../cmake  # change settings to use the PGI compilers by default
-    cmake -C ../cmake/presets/all_on.cmake   [OPTIONS] ../cmake  # enable all packages
     cmake -C ../cmake/presets/all_off.cmake  [OPTIONS] ../cmake  # disable all packages
     mingw64-cmake -C ../cmake/presets/mingw-cross.cmake [OPTIONS] ../cmake  #  compile with MinGW cross compilers
 
@@ -224,7 +223,6 @@ These commands install/un-install sets of packages:
 
 .. code-block:: bash
 
-    make yes-all                        # install all packages
     make no-all                         # check for changes and uninstall all packages
     make no-installed                   # only check and uninstall installed packages
     make yes-basic                      # install a few commonly used packages'
@@ -242,11 +240,10 @@ package`` will list all the these commands.
 .. note::
 
    Installing or un-installing a package for the make based build process
-   works by simply copying files back and forth between the main source
-   directory src and the sub-directories with the package name (e.g.
-   src/KSPACE, src/ATC), so that the files are included or excluded
-   when LAMMPS is built.  Only source files in the src folder will be
-   compiled.
+   works by simply copying files from the sub-directories with the package
+   name (e.g. src/KSPACE, src/ATC) to the main source directory or deleting
+   them. This way all the files in the src folder are compiled and thus
+   become part of LAMMPS when it is built.
 
 The following make commands help manage files that exist in both the
 src directory and in package sub-directories.  You do not normally

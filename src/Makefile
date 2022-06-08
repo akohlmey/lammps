@@ -283,7 +283,6 @@ help:
 	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make yes-package             install a single pkg in src dir'
 	@echo 'make no-package              remove a single pkg from src dir'
-	@echo 'make yes-all                 install all pkgs in src dir'
 	@echo 'make no-all                  remove all pkgs from src dir'
 	@echo 'make no-installed (ni)       quick uninstall of installed pkgs'
 	@echo 'make yes-basic               install a few commonly used pkgs'
@@ -543,7 +542,7 @@ package:
 	@echo 'make lib-package      build and/or download a package library'
 
 yes-all:
-	@for p in $(PACKAGE); do $(MAKE) yes-$$p; done
+	@echo '"make yes-all" is no longer available,  try "make yes-most" instead'
 
 no-all:
 	@for p in $(PACKAGE); do $(MAKE) no-$$p; done
