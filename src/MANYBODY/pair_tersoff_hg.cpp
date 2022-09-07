@@ -25,6 +25,7 @@
 #include "math_extra.h"
 #include "math_special.h"
 #include "memory.h"
+#include "my_page.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
@@ -47,11 +48,51 @@ using namespace MathExtra;
 #define TOL 1.0e-9
 #define PGDELTA 1
 
+// bracketed version of exp()
+static inline double SpExp(double arg)
+{
+  if (arg > 69.0776)
+    return 1.e30;
+  else if (arg < -69.0776)
+    return 0.0;
+  else
+    return exp(arg);
+}
+
+static inline double Sp(double Xij, double Xmin, double Xmax, double &Sprime)
+{
+  double S;
+  double t = (Xij - Xmin) / (Xmax - Xmin);
+
+  if (t < 0) {
+    S = 1;
+    Sprime = 0;
+  } else if (t < 1) {
+    S = 1;
+    Sprime = 0;
+    double tt = t * t;    //t^2
+    Sprime -= 30 * tt;
+    tt *= t;    //t^3
+    S -= 10 * tt;
+    Sprime += 60 * tt;
+    tt *= t;    //t^4
+    S += 15 * tt;
+    Sprime -= 30 * tt;
+    S -= 6 * tt * t;
+    Sprime /= (Xmax - Xmin);
+  } else {
+    S = Sprime = 0;
+  }
+  if (S < 0) {    //can happen due to roundoff
+    S = Sprime = 0;
+  }
+  return S;
+}
+
 /* ---------------------------------------------------------------------- */
 
 PairTERSOFFHG::PairTERSOFFHG(LAMMPS *lmp) : PairTersoff(lmp)
 {
-
   nmax = 0;
 
   // set comm size needed by this Pair
@@ -65,86 +106,12 @@ PairTERSOFFHG::PairTERSOFFHG(LAMMPS *lmp) : PairTersoff(lmp)
   pgsize = oneatom = 0;
 }
 
+// clang-format off
+
 /* ---------------------------------------------------------------------- */
 
 void PairTERSOFFHG::read_file(char *file)
 {
-//  int params_per_line = 28;
-//  char **words = new char*[params_per_line+1];
-
-  // memory->sfree(params);
-  // params = NULL;
-  // nparams = maxparam = 0;
-
-  // // open file on proc 0
-
-  // FILE *fp;
-  // if (comm->me == 0) {
-  //   fp = force->open_potential(file);
-  //   if (fp == NULL) {
-  //     char str[128];
-  //     sprintf(str,"Cannot open TersoffHG potential file %s",file);
-  //     error->one(FLERR,str);
-  //   }
-  // }
-
-  // read each line out of file, skipping blank lines or leading '#'
-  // store line of params if all 3 element tags are in element list
-
-  // int n,nwords,ielement,jelement,kelement;
-  // char line[MAXLINE],*ptr;
-  // int eof = 0;
-
-  // while (1) {
-  //   if (comm->me == 0) {
-  //     ptr = fgets(line,MAXLINE,fp);
-  //     if (ptr == NULL) {
-  //       eof = 1;
-  //       fclose(fp);
-  //     } else n = strlen(line) + 1;
-  //   }
-  //   MPI_Bcast(&eof,1,MPI_INT,0,world);
-  //   if (eof) break;
-  //   MPI_Bcast(&n,1,MPI_INT,0,world);
-  //   MPI_Bcast(line,n,MPI_CHAR,0,world);
-
-  //   // strip comment, skip line if blank
-
-  //   if ((ptr = strchr(line,'#'))) *ptr = '\0';
-  //   nwords = atom->count_words(line);
-  //   if (nwords == 0) continue;
-
-  //   // concatenate additional lines until have params_per_line words
-
-  //   while (nwords < params_per_line) {
-  //     n = strlen(line);
-  //     if (comm->me == 0) {
-  //       ptr = fgets(&line[n],MAXLINE-n,fp);
-  //       if (ptr == NULL) {
-  //         eof = 1;
-  //         fclose(fp);
-  //       } else n = strlen(line) + 1;
-  //     }
-  //     MPI_Bcast(&eof,1,MPI_INT,0,world);
-  //     if (eof) break;
-  //     MPI_Bcast(&n,1,MPI_INT,0,world);
-  //     MPI_Bcast(line,n,MPI_CHAR,0,world);
-  //     if ((ptr = strchr(line,'#'))) *ptr = '\0';
-  //     nwords = atom->count_words(line);
-  //   }
-
-  //   if (nwords != params_per_line)
-  //     error->all(FLERR,"Incorrect format in TERSOFFHG potential file");
-
-  //   // words = ptrs to all words in line
-
-  //   nwords = 0;
-  //   words[nwords++] = strtok(line," \t\n\r\f");
-  //   while ((words[nwords++] = strtok(NULL," \t\n\r\f"))) continue;
-
-    // ielement,jelement,kelement = 1st args
-    // if all 3 args are in element list, then parse this line
-    // else skip to next line
   memory->sfree(params);
   params = nullptr;
   nparams = maxparam = 0;
@@ -194,31 +161,31 @@ void PairTERSOFFHG::read_file(char *file)
         params[nparams].jelement = jelement;
         params[nparams].kelement = kelement;
         params[nparams].powerm    = values.next_double(); // beta (A13)
-        params[nparams].gamma = values.next_double(); //atof(words[4]);     // not used
-        params[nparams].lam3 = values.next_double(); //atof(words[5]);      // alpha (A13)
-        params[nparams].c = values.next_double(); //atof(words[6]);         // c (A14)
-        params[nparams].d = values.next_double(); //atof(words[7]);         // d (A14)
-        params[nparams].h = values.next_double(); //atof(words[8]);         // h (A14)
-        params[nparams].powern = values.next_double(); //atof(words[9]);    // delta (A12)
-        params[nparams].beta = values.next_double(); //atof(words[10]);     // not used
-        params[nparams].lam2 = values.next_double(); //atof(words[11]);     // mu (A4)
-        params[nparams].bigb = values.next_double(); //atof(words[12]);     // B (A4)
-        params[nparams].bigr = values.next_double(); //atof(words[13]);     // rmin (A5)
-        params[nparams].bigd = values.next_double(); //atof(words[14]);     // rmax - rmin (A5)
-        params[nparams].lam1 = values.next_double(); //atof(words[15]);     // lambda (A3)
-        params[nparams].biga = values.next_double(); //atof(words[16]);     // A (A3)
-        params[nparams].powereta = values.next_double(); //atof(words[17]); // eta (A12)
-        params[nparams].Z_i = values.next_double(); //atof(words[18]);      // Z_i (A7)
-        params[nparams].Z_j = values.next_double(); //atof(words[19]);      // Z_j (A7)
-        params[nparams].spl_ra = values.next_double(); //atof(words[20]);   // spl_ra (A10)
-        params[nparams].spl_rb = values.next_double(); //atof(words[21]);   // spl_rb (A10)
-        params[nparams].spl_a = values.next_double(); //atof(words[22]);    // spl_a (A10)
-        params[nparams].spl_b = values.next_double(); //atof(words[23]);    // spl_b (A10)
-        params[nparams].spl_c = values.next_double(); //atof(words[24]);    // spl_c (A10)
-        params[nparams].spl_s = values.next_double(); //atof(words[25]);    // spl_s (A10)
-        params[nparams].Re = values.next_double(); //atof(words[26]);       // Re (A13)
+        params[nparams].gamma = values.next_double();     // not used
+        params[nparams].lam3 = values.next_double();      // alpha (A13)
+        params[nparams].c = values.next_double();         // c (A14)
+        params[nparams].d = values.next_double();         // d (A14)
+        params[nparams].h = values.next_double();         // h (A14)
+        params[nparams].powern = values.next_double();    // delta (A12)
+        params[nparams].beta = values.next_double();      // not used
+        params[nparams].lam2 = values.next_double();      // mu (A4)
+        params[nparams].bigb = values.next_double();      // B (A4)
+        params[nparams].bigr = values.next_double();      // rmin (A5)
+        params[nparams].bigd = values.next_double();      // rmax - rmin (A5)
+        params[nparams].lam1 = values.next_double();      // lambda (A3)
+        params[nparams].biga = values.next_double();      // A (A3)
+        params[nparams].powereta = values.next_double();  // eta (A12)
+        params[nparams].Z_i = values.next_double();       // Z_i (A7)
+        params[nparams].Z_j = values.next_double();       // Z_j (A7)
+        params[nparams].spl_ra = values.next_double();    // spl_ra (A10)
+        params[nparams].spl_rb = values.next_double();    // spl_rb (A10)
+        params[nparams].spl_a = values.next_double();     // spl_a (A10)
+        params[nparams].spl_b = values.next_double();     // spl_b (A10)
+        params[nparams].spl_c = values.next_double();     // spl_c (A10)
+        params[nparams].spl_s = values.next_double();     // spl_s (A10)
+        params[nparams].Re = values.next_double();        // Re (A13)
         std::string pfile=values.next_string();
-        params[nparams].PxyFile = pfile; //words[27];       // File contaning P nodes
+        params[nparams].PxyFile = pfile; // File contaning P nodes
         params[nparams].powermint = int(params[nparams].powerm);
 
         if (unit_convert) {
@@ -250,7 +217,6 @@ void PairTERSOFFHG::read_file(char *file)
     }
   }
 
-  //delete [] words;
   MPI_Bcast(&nparams, 1, MPI_INT, 0, world);
   MPI_Bcast(&maxparam, 1, MPI_INT, 0, world);
 
@@ -265,9 +231,9 @@ void PairTERSOFFHG::read_file(char *file)
 void PairTERSOFFHG::init_style()
 {
   if (atom->tag_enable == 0)
-    error->all(FLERR,"Pair style AIREBO requires atom IDs");
+    error->all(FLERR,"Pair style tersoff/hg requires atom IDs");
   if (force->newton_pair == 0)
-    error->all(FLERR,"Pair style AIREBO requires newton pair on");
+    error->all(FLERR,"Pair style tersoff/hg requires newton pair on");
 
   // need a full neighbor list, including neighbors of ghosts
 
@@ -309,8 +275,7 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
   double rij;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -327,9 +292,6 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
   double rcmaxsq;
   double rcmin, rcmax;
 
-
-  // count number of nearest neighbors; needs communications
-//  count_neigh();
   int n,allnum;
   double dS;
   int *neighptr;
@@ -339,8 +301,7 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
     memory->destroy(REBO_numneigh);
     memory->sfree(REBO_firstneigh);
     memory->create(REBO_numneigh,maxlocal,"AIREBO:numneigh");
-    REBO_firstneigh = (int **) memory->smalloc(maxlocal*sizeof(int *),
-                                               "AIREBO:firstneigh");
+    REBO_firstneigh = (int **) memory->smalloc(maxlocal*sizeof(int *), "AIREBO:firstneigh");
   }
 
   allnum = list->inum + list->gnum;
@@ -348,12 +309,10 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
 
-  // From pair_AIREBO: store all REBO neighs of owned and ghost atoms
   ipage->reset();
   Nmap.clear();
 
-  for (ii = 0; ii < allnum; ii++)
-  {
+  for (ii = 0; ii < allnum; ii++) {
     i = ilist[ii];
 
     n = 0;
@@ -366,8 +325,7 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
     jlist = firstneigh[i];
     jnum = numneigh[i];
 
-    for (jj = 0; jj < jnum; jj++)
-    {
+    for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
       j &= NEIGHMASK;
       jtype = map[type[j]];
@@ -380,7 +338,7 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
       rcmin = params[iparam_ij].bigr;
       rcmax = rcmin + params[iparam_ij].bigd;
       rcmaxsq = rcmax*rcmax;
-      if (rsq < rcmaxsq){//[itype][jtype]) {
+      if (rsq < rcmaxsq){
         neighptr[n++] = j;
         Nmap[i][jtype]+=Sp(sqrt(rsq),rcmin,rcmax,dS);
       }
@@ -393,8 +351,7 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
       error->one(FLERR,"Neighbor list overflow, boost neigh_modify one");
   }
 
-  for (ii = 0; ii < inum; ii++)
-  {
+  for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
     itag = tag[i];
     itype = map[type[i]];
@@ -404,32 +361,27 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
     ytmp = x[i][1];
     ztmp = x[i][2];
 
-    for (jj = 0; jj < REBO_numneigh[i]; jj++)
-    {
+    for (jj = 0; jj < REBO_numneigh[i]; jj++) {
       j = jlist[jj];
       jtag = tag[j];
 
-      if (itag > jtag)
-      {
+      if (itag > jtag) {
         if ((itag+jtag) % 2 == 0) continue;
-      }
-      else if (itag < jtag)
-      {
+      } else if (itag < jtag) {
         if ((itag+jtag) % 2 == 1) continue;
-      }
-      else
-      {
+      } else {
         if (x[j][2] < ztmp) continue;
         if (x[j][2] == ztmp && x[j][1] < ytmp) continue;
         if (x[j][2] == ztmp && x[j][1] == ytmp && x[j][0] < xtmp) continue;
       }
 
-      Rij.set(x[i][0]-x[j][0], x[i][1]-x[j][1], x[i][2]-x[j][2]);
-      rij=Rij.mag();
-      rsq = Rij.sqmag();
-        //std::cerr<<tag[i]<<" "<<tag[j]<<" "<<rij<<" "<<std::endl;
+      const double delx = xtmp - x[j][0];
+      const double dely = ytmp - x[j][1];
+      const double delz = ztmp - x[j][2];
 
-      Rij1 = Rij/rij;
+      rsq = delx*delx + dely*dely + delz*delz;
+      rij = sqrt(rsq);
+
       jtype = map[type[j]];
       iparam_ij = elem3param[itype][jtype][jtype];
 
@@ -444,48 +396,43 @@ void PairTERSOFFHG::compute(int eflag, int vflag)
       VA_ij = ij_f * aa;
       dVA_ij = aa * (ij_fprime - ij_f*MORSE_MU);
 
-      if (rij < params[iparam_ij].spl_ra)
-      {
+      if (rij < params[iparam_ij].spl_ra) {
         double moa = 0.388874*pow(params[iparam_ij].Z_i+params[iparam_ij].Z_j,-2./3.);
         double moeps=14.39965*params[iparam_ij].Z_i*params[iparam_ij].Z_j;
         double rija=rij/moa;
         VR_ij = moeps/rij*(( 0.35*SpExp(-0.3*rija)
-                          +0.55*SpExp(-1.2*rija)
-                          +0.1*SpExp(-6*rija))) + params[iparam_ij].spl_s;
+                             +0.55*SpExp(-1.2*rija)
+                             +0.1*SpExp(-6*rija))) + params[iparam_ij].spl_s;
         dVR_ij = -moeps/rij*(( 0.35*SpExp(-0.3*rija)*(1/rij+0.3/moa)
-                            +0.55*SpExp(-1.2*rija)*(1/rij+1.2/moa)
-                            +0.1*SpExp(-6*rija)*(1/rij+6/moa)));
-      }
-      else if (rij < params[iparam_ij].spl_rb)
-      {
-        VR_ij = params[iparam_ij].spl_c + SpExp(params[iparam_ij].spl_a * rij + params[iparam_ij].spl_b);
-        dVR_ij = params[iparam_ij].spl_a * SpExp(params[iparam_ij].spl_a * rij + params[iparam_ij].spl_b);
-      }
-      else
-      {
+                               +0.55*SpExp(-1.2*rija)*(1/rij+1.2/moa)
+                               +0.1*SpExp(-6*rija)*(1/rij+6/moa)));
+      } else if (rij < params[iparam_ij].spl_rb) {
+        VR_ij = params[iparam_ij].spl_c + SpExp(params[iparam_ij].spl_a * rij
+                                                + params[iparam_ij].spl_b);
+        dVR_ij = params[iparam_ij].spl_a * SpExp(params[iparam_ij].spl_a * rij
+                                                 + params[iparam_ij].spl_b);
+      } else {
         aa=params[iparam_ij].biga * SpExp(-MORSE_LAM * rij);
         VR_ij = ij_f * aa;
         dVR_ij = aa * (ij_fprime - ij_f*MORSE_LAM);
       }
-//      std::cerr<<tag[i]<<" "<<tag[j]<<" "<<VA_ij<<"\n";
 
       double b_ij=BondOrder(i, j, ij_f, VA_ij, eflag, vflag);
-//      std::cerr<<tag[i]<<" "<<tag[j]<<" "<<VA_ij<<"\n";
 
       evdwl = VR_ij - b_ij*VA_ij;
       fpair = (-dVR_ij+b_ij*dVA_ij)/rij;
-      HGvector Fij=(-dVR_ij+b_ij*dVA_ij)*Rij1;
+      const double Fij=(-dVR_ij+b_ij*dVA_ij)/rij;
 
       if (evflag) ev_tally(i,j,nlocal,newton_pair,
-                        evdwl, 0.0, fpair, Rij.x, Rij.y, Rij.z);
+                           evdwl, 0.0, fpair, Rij.x, Rij.y, Rij.z);
 
-      f[i][0] += Fij.x;
-      f[i][1] += Fij.y;
-      f[i][2] += Fij.z;
+      f[i][0] += delx*Fij;
+      f[i][1] += dely*Fij;
+      f[i][2] += delz*Fij;
 
-      f[j][0] -= Fij.x;
-      f[j][1] -= Fij.y;
-      f[j][2] -= Fij.z;
+      f[j][0] -= delx*Fij;
+      f[j][1] -= dely*Fij;
+      f[j][2] -= delz*Fij;
     }
   }
 }
@@ -524,57 +471,19 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
   rij=Rij.mag();
   Rij1=Rij/rij;
 
-  //double NF_ij, NC_ij, NSi_ij, Nt_ij, NF_ji, NC_ji, NSi_ji, Nt_ji;
-  //double NCl_ij, NCl_ji;
   double P_ij, P_ji, dFP_ij, dFP_ji, dCP_ij, dCP_ji;
   double el, elf, alpha, beta, Re, n, dlam, g, g1;//, xik, Yik, Y1ik, F_ij, dFi_ij, dFj_ij, dFc_ij;
   double eta_i, eta_j, delta_i, delta_j;
 
-  // NC_ij  = i->Nmap[6]  - (j->id==6)  * bond_ij->f;
-  // NSi_ij = i->Nmap[14] - (j->id==14) * bond_ij->f;
-  // NCl_ij = i->Nmap[17] - (j->id==17) * bond_ij->f;
-  // NF_ji  = j->Nmap[9]  - (i->id==9)  * bond_ij->f;
-  // NC_ji  = j->Nmap[6]  - (i->id==6)  * bond_ij->f;
-  // NSi_ji = j->Nmap[14] - (i->id==14) * bond_ij->f;
-  // NCl_ji = j->Nmap[17] - (i->id==17) * bond_ij->f;
-
-  // Nt_ij = NF_ij + NC_ij + NSi_ij + NCl_ij;
-  // Nt_ji = NF_ji + NC_ji + NSi_ji + NCl_ji;
-
   P_ij=P_ji=dFP_ij=dFP_ji=dCP_ij=dCP_ji=0;
-  //std::cerr<<"BONDORDER"<<std::endl;
 
   //these only work if 0 is Si, 1 is F/Cl. Later, find a way to virtualize
   bicubicint (Nmap[i][1]-(jtype==1)*ij_f, Nmap[i][0]-(jtype==0)*ij_f,
               &P_ij, &dFP_ij, &dCP_ij, &params[iparam_ij]);
-  //std::cerr<<" "<<Nmap[i][1]-(jtype==1)*ij_f<<" "<<Nmap[i][0]-(jtype==0)*ij_f<<" "<<
-  //            P_ij<<" "<<dFP_ij<<" "<<dCP_ij<<std::endl;
 
   bicubicint (Nmap[j][1]-(itype==1)*ij_f, Nmap[j][0]-(itype==0)*ij_f,
               &P_ji, &dFP_ji, &dCP_ji, &params[iparam_ji]);
 
-  //std::cerr<<" "<<Nmap[j][1]-(itype==1)*ij_f<<" "<<Nmap[j][0]-(itype==0)*ij_f<<" "<<
-  //            P_ji<<" "<<dFP_ij<<" "<<dCP_ij<<std::endl;
-  // if (bond_ij->type==12)
-  // {
-  //   Pcc_bicubicint(NF_ij, NC_ij+NSi_ij, &P_ij, &dFP_ij,&dCP_ij);
-  //   Pcc_bicubicint(NF_ji, NC_ji+NSi_ji, &P_ji, &dFP_ji,&dCP_ji);
-  // }
-  // else if (bond_ij->type==15)
-  // {
-  //   if (i->id==6) Pcf_bicubicint(NF_ij, NC_ij+NSi_ij, &P_ij, &dFP_ij,&dCP_ij);
-  //   else Pcf_bicubicint(NF_ji, NC_ji+NSi_ji, &P_ji, &dFP_ji,&dCP_ji);
-  // }
-  // else if (bond_ij->type==23)
-  // {
-  //   if (i->id==14) Psif_bicubicint(NF_ij, NC_ij+NSi_ij, &P_ij, &dFP_ij,&dCP_ij);
-  //   else Psif_bicubicint(NF_ji,  NC_ji+NSi_ji, &P_ji, &dFP_ji,&dCP_ji);
-  // }
-  // else if (bond_ij->type==31)
-  // {
-  //   if (i->id==14) Psicl_bicubicint(NCl_ij, NC_ij+NSi_ij, &P_ij, &dFP_ij,&dCP_ij);
-  //   else Psicl_bicubicint(NCl_ji,  NC_ji+NSi_ji, &P_ji, &dFP_ji,&dCP_ji);
-  // }
   bsp_ij=P_ij; bsp_ji=P_ji;
 
   // //***************for k neighbor of i*************************
@@ -619,10 +528,8 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
       g1 = -2*params[iparam_ijk].d*(params[iparam_ijk].h-cos_theta);
 
       iFv_ij+=(elf*(g1*(1/rik - cos_theta/rij) + g*dlam));
-      iFv_ik.push_back(ik_fprime*
-           (g*el + dFP_ij + dCP_ij)
-//           (g*el + 0)//((k->id==9||k->id==17) ? dFP_ij : dCP_ij))
-           +elf*(g1*(1/rij - cos_theta/rik) - g*dlam));
+      iFv_ik.push_back(ik_fprime*(g*el + dFP_ij + dCP_ij)
+                       +elf*(g1*(1/rij - cos_theta/rik) - g*dlam));
       iFv_jk.push_back(elf*(-g1*rjk/rik/rij));
 
       bsp_ij += g*elf;
@@ -631,8 +538,7 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
 
   // //***************for k neighbor of j*************************
   klist = REBO_firstneigh[j];
-  for (kk = 0; kk < REBO_numneigh[j]; kk++)
-  {
+  for (kk = 0; kk < REBO_numneigh[j]; kk++) {
     k = klist[kk];
     k &= NEIGHMASK;
     ktag = tag[k];
@@ -643,8 +549,7 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
     rjk=Rjk.mag();
     Rjk1=Rjk/rjk;
 
-    if (tag[k]!=tag[i] && Rjk.sqmag() <= params[iparam_jk].cutsq)
-    {
+    if (tag[k]!=tag[i] && Rjk.sqmag() <= params[iparam_jk].cutsq) {
       Rik.set(x[i][0]-x[k][0], x[i][1]-x[k][1], x[i][2]-x[k][2]);
       rik=Rik.mag();
       Rik1=Rik/rik;
@@ -653,8 +558,7 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
       jk_f = Sp(rjk, bigr, bigr+bigd, jk_fprime);
       // //*******b-sigma-pi calculations************
       alpha = params[iparam_ijk].lam3;
-      if (alpha)
-      {
+      if (alpha) {
         beta = params[iparam_ijk].powerm;
         n = (rij - params[iparam_ji].Re) - (rjk - params[iparam_jk].Re);
         el=SpExp(alpha*pow(n, beta));
@@ -662,8 +566,7 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
         if (beta!=1){
           dlam*=beta*pow(n, beta-1);
         }
-      }
-      else{
+      } else {
         el = 1.0; dlam=0;
       }
       elf=el*jk_f;
@@ -672,10 +575,8 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
       g1 = -2*params[iparam_ijk].d*(params[iparam_ijk].h-cos_theta);
 
       jFv_ij+=(elf*(g1*(1/rjk - cos_theta/rij) + g*dlam));
-      jFv_jk.push_back(jk_fprime*
-           (g*el + dFP_ji + dCP_ji)
-//           (g*el + 0)//((k->id==9||k->id==17) ? dFP_ji : dCP_ji))
-           +elf*(g1*(1/rij - cos_theta/rjk) - g*dlam));
+      jFv_jk.push_back(jk_fprime* (g*el + dFP_ji + dCP_ji)
+                       +elf*(g1*(1/rij - cos_theta/rjk) - g*dlam));
       jFv_ik.push_back(elf*(-g1*rik/rjk/rij));
 
       bsp_ji += g*elf;
@@ -694,26 +595,19 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
      + pow(1 + pow(bsp_ji, eta_j), -delta_j)); // +F_ij);
 
 
-  if (eta_i!=1)
-  {
+  if (eta_i!=1) {
     if (bsp_ij <= 0) bsp_ij=0; //unphysical, but happens due to roundoff
     else
-      bsp_ij=pow(1 + pow(bsp_ij, eta_i), -delta_i-1)*
-                 eta_i*pow(bsp_ij, eta_i-1);
-  }
-  else
-    bsp_ij=pow(1 + bsp_ij, -delta_i-1);
+      bsp_ij=pow(1 + pow(bsp_ij, eta_i), -delta_i-1)* eta_i*pow(bsp_ij, eta_i-1);
+  } else bsp_ij=pow(1 + bsp_ij, -delta_i-1);
 
   bsp_ij*=-Pre*delta_i;
 
-  if (eta_j!=1)
-  {
+  if (eta_j!=1) {
     if (bsp_ji <= 0) bsp_ji=0;
     else bsp_ji=pow(1 + pow(bsp_ji, eta_j), -delta_j-1)
                 *eta_j*pow(bsp_ji, eta_j-1);
-  }
-  else
-    bsp_ji=pow(1 + bsp_ji, -delta_j-1);
+  } else bsp_ji=pow(1 + bsp_ji, -delta_j-1);
 
   bsp_ji*=-Pre*delta_j;
 
@@ -732,10 +626,10 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
 
   cnt=0;
   scrcount=0;
-  // //***************for k neighbor of i*************************
+
+  //***************for k neighbor of i*************************
   klist = REBO_firstneigh[i];
-  for (kk = 0; kk < REBO_numneigh[i]; kk++)
-  {
+  for (kk = 0; kk < REBO_numneigh[i]; kk++) {
     k = klist[kk];
     k &= NEIGHMASK;
     ktag = tag[k];
@@ -780,11 +674,10 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
       cnt++;
     }
   }
-  // //***************for k neighbor of j*************************
+  //***************for k neighbor of j*************************
   cnt=0;
   klist = REBO_firstneigh[j];
-  for (kk = 0; kk < REBO_numneigh[j]; kk++)
-  {
+  for (kk = 0; kk < REBO_numneigh[j]; kk++) {
     k = klist[kk];
     k &= NEIGHMASK;
     ktag = tag[k];
@@ -802,8 +695,7 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
       force_jk=bsp_ji*jFv_jk[cnt];
       Fij = force_jk*Rjk1;
 
-      if (evflag) ev_tally(j,k,nlocal,newton_pair,
-            0.0,0.0,force_jk/rjk,Rjk.x,Rjk.y,Rjk.z);
+      if (evflag) ev_tally(j,k,nlocal,newton_pair,0.0,0.0,force_jk/rjk,Rjk.x,Rjk.y,Rjk.z);
 
       f[j][0] += Fij.x;
       f[j][1] += Fij.y;
@@ -816,8 +708,7 @@ double PairTERSOFFHG::BondOrder(int i, int j, double ij_f, double Pre, int eflag
       force_ik = bsp_ji * jFv_ik[cnt];
       Fij =  force_ik * Rik1;
 
-      if (evflag) ev_tally(i,k,nlocal,newton_pair,
-            0.0,0.0,force_ik/rik,Rik.x,Rik.y,Rik.z);
+      if (evflag) ev_tally(i,k,nlocal,newton_pair,0.0,0.0,force_ik/rik,Rik.x,Rik.y,Rik.z);
 
       f[i][0] += Fij.x;
       f[i][1] += Fij.y;
@@ -910,9 +801,9 @@ void PairTERSOFFHG::unpack_reverse_comm(int n, int *list, double *buf)
 }
 
 
-void * PairTERSOFFHG::xmalloc(size_t n){
+void * PairTERSOFFHG::xmalloc(size_t n) {
   void *p;
-  if ((p=malloc(n)) == NULL){
+  if ((p=malloc(n)) == NULL) {
     fprintf(stderr, "xmalloc:memory allocation\n");
     exit(1);
   }
@@ -934,16 +825,11 @@ void PairTERSOFFHG::read_lib(Param *param)
 
   if (splfile.compare("NULL")!=0 && comm->me == 0)
   {
-//    std::cerr<<splfile<<std::endl;
     std::ifstream fp(splfile, std::ios::in);
     if (!fp)
-    {
-//      char str[128];
-//      sprintf(str,"Cannot open specified spline file");
       error->one(FLERR,"Cannot open specified spline file");
-    }
-    while (!fp.eof())
-    {
+
+    while (!fp.eof()) {
       fp>>i>>j>>pp;
       p[i][j] = pp;
     }
@@ -1017,7 +903,6 @@ void PairTERSOFFHG::bicubic_genCoef (double y[X1_NGRIDPOINTS][X2_NGRIDPOINTS], P
       z12[2] = y12[i+1][j+1];
       z12[3] = y12[i][j+1];
       /* Use bcucof() to compute the 4x4 coefficient matrix c_(ij) */
-//      bcucof(z, z1, z2, z12, 1.0, 1.0, *((*c)[i][j]));
       bcucof(z, z1, z2, z12, 1.0, 1.0, *(param->PxyInterp[i][j]));
     }
   }
@@ -1028,9 +913,8 @@ void PairTERSOFFHG::bicubic_genCoef (double y[X1_NGRIDPOINTS][X2_NGRIDPOINTS], P
  * is used in the "bcuint" function to interpolate a function
  * value at a specified off-lattice point. */
 void PairTERSOFFHG::bcucof(double y[], double y1[], double y2[], double y12[],
-            double d1, double d2, double c[4][4]){
-  int wt[16][16] = /* Weighting factors; pretabulated long long ago */
-  {
+            double d1, double d2, double c[4][4]) {
+  int wt[16][16] = /* Weighting factors; pretabulated long long ago */ {
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
     -3, 0, 0, 3, 0, 0, 0, 0,-2, 0, 0,-1, 0, 0, 0, 0,
@@ -1052,14 +936,14 @@ void PairTERSOFFHG::bcucof(double y[], double y1[], double y2[], double y12[],
   double xx, d1d2, cl[16], x[16];
 
   d1d2 = d1*d2;
-  for (i = 0; i < 4; i++){ /* Build a temporary vector */
+  for (i = 0; i < 4; i++) { /* Build a temporary vector */
     x[i] = y[i];
     x[i+4] = y1[i]*d1;
     x[i+8] = y2[i]*d2;
     x[i+12] = y12[i]*d1d2;
   }
   //Multiply the matrix wt[][] by vector x[] and store result in vector cl[]
-  for (i = 0; i < 16; i++){
+  for (i = 0; i < 16; i++) {
     xx = 0.0;
     for (k = 0; k < 16; k++) xx += wt[i][k]*x[k];
     cl[i] = xx;
@@ -1111,4 +995,3 @@ void PairTERSOFFHG::bcuint(double x1l, double x1u, double x2l, double x2u,
   *ansy1 /= d1;
   *ansy2 /= d2;
 }
-
