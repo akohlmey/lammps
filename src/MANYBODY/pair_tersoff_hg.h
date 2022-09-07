@@ -1,6 +1,6 @@
 /* -*- c++ -*- ----------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://www.lammps.org/ Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -12,13 +12,13 @@
 ------------------------------------------------------------------------- */
 
 #ifdef PAIR_CLASS
-
-PairStyle(tersoffHG,PairTERSOFFHG)
-
+// clang-format off
+PairStyle(tersoff/hg,PairTERSOFFHG);
+// clang-format on
 #else
 
-#ifndef LMP_PAIR_TERSOFFHG_H
-#define LMP_PAIR_TERSOFFHG_H
+#ifndef LMP_PAIR_TERSOFF_HG_H
+#define LMP_PAIR_TERSOFF_HG_H
 
 #include "pair_tersoff.h"
 #include "my_page.h"
@@ -48,7 +48,7 @@ private:
   double iFv_ij, jFv_ij, force_ik, force_jk;
   std::vector<double> iFv_ik, iFv_jk;//, iFv_ik2;
   std::vector<double> jFv_ik, jFv_jk;//, jFv_jk2;
-  std::map<int, std::map<int, double> > Nmap; 
+  std::map<int, std::map<int, double> > Nmap;
 
 public:
   PairTERSOFFHG(class LAMMPS *);
@@ -93,10 +93,10 @@ protected:
             double d1, double d2, double c[4][4]);
   double BondOrder(int, int, double, double, int, int);
   void bicubicint (double x1, double x2, double *y, double *y1, double *y2, Param *);
-  void bcuint(double x1l, double x1u, double x2l, double x2u, 
+  void bcuint(double x1l, double x1u, double x2l, double x2u,
       double x1, double x2, double *ansy, double *ansy1, double *ansy2,
       double c[4][4]);
-  inline double Sp(double Xij, double Xmin, double Xmax, double &Sprime) const 
+  inline double Sp(double Xij, double Xmin, double Xmax, double &Sprime) const
   {
     double S;
     double t = (Xij-Xmin) / (Xmax-Xmin);
@@ -133,25 +133,3 @@ protected:
 
 #endif
 #endif
-
-/* ERROR/WARNING messages:
-
-E: Pair tersoffHG requires metal or real units
-
-This is a current restriction of this pair potential.
-
-E: Cannot open Tersoff potential file %s
-
-The specified potential file cannot be opened.  Check that the path
-and name are correct.
-
-E: Incorrect format in Tersoff potential file
-
-Incorrect number of words per line in the potential file.
-
-E: Illegal Tersoff parameter
-
-One or more of the coefficients defined in the potential file is
-invalid.
-
-*/

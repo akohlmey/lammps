@@ -8,12 +8,12 @@
 
 // void svector::EulerTrans(double phi, double theta, double psi){
 //    double q0, q1, q2, q3;
-   
+
 //    q0=cos(0.5*theta)*cos(0.5*(phi+psi));
 //    q1=sin(0.5*theta)*cos(0.5*(phi-psi));
 //    q2=sin(0.5*theta)*sin(0.5*(phi-psi));
 //    q3=cos(0.5*theta)*sin(0.5*(phi+psi));
-   
+
 //    double dx=(q0*q0+q1*q1-q2*q2-q3*q3)*x
 //      +(2*(q1*q2+q0*q3))*y
 //      +(2*(q1*q3-q0*q2))*z;
@@ -23,7 +23,7 @@
 //    double dz=(2*(q1*q3+q0*q2))*x
 //      +(2*(q2*q3-q1*q0))*y
 //      +(q0*q0-q1*q1-q2*q2+q3*q3)*z;
-   
+
 //    x=dx; y=dy; z=dz;
 // }
 

@@ -6,7 +6,7 @@
 
 //#include <iostream>
 //#include <cmath>
-//#include "consts.h" 
+//#include "consts.h"
 
 //using namespace std;
 
@@ -41,9 +41,9 @@ class HGvector
   friend double operator ^ (const HGvector& V1, const HGvector& V2) //dot
     {return V1.x*V2.x+V1.y*V2.y+V1.z*V2.z;}
   friend HGvector operator * (const HGvector& V1, const HGvector& V2)  //cross
-    {return HGvector(V1.y*V2.z-V1.z*V2.y, 
-	                   V1.z*V2.x-V1.x*V2.z,
-	                   V1.x*V2.y-V1.y*V2.x);}
+    {return HGvector(V1.y*V2.z-V1.z*V2.y,
+                           V1.z*V2.x-V1.x*V2.z,
+                           V1.x*V2.y-V1.y*V2.x);}
   friend HGvector operator * (const HGvector& V1, const double f)
     {return HGvector(V1.x*f, V1.y*f, V1.z*f);}
   friend HGvector operator * (const double f, const HGvector& V1)
