@@ -280,6 +280,7 @@ OPT.
    * :doc:`table/rx (k) <pair_table_rx>`
    * :doc:`tdpd <pair_mesodpd>`
    * :doc:`tersoff (giko) <pair_tersoff>`
+   * :doc:`tersoff/hg <pair_tersoff_hg>`
    * :doc:`tersoff/mod (gko) <pair_tersoff_mod>`
    * :doc:`tersoff/mod/c (o) <pair_tersoff_mod>`
    * :doc:`tersoff/table (o) <pair_tersoff>`

@@ -358,6 +358,7 @@ accelerated styles exist.
 * :doc:`table/rx <pair_table_rx>` -
 * :doc:`tdpd <pair_mesodpd>` - tDPD particle interactions
 * :doc:`tersoff <pair_tersoff>` - Tersoff 3-body potential
+* :doc:`tersoff/hg <pair_tersoff_hg>` - Humbird-Graves Tersoff 3-body potential
 * :doc:`tersoff/mod <pair_tersoff_mod>` - modified Tersoff 3-body potential
 * :doc:`tersoff/mod/c <pair_tersoff_mod>` -
 * :doc:`tersoff/table <pair_tersoff>` -
