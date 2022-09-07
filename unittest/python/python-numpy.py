@@ -15,6 +15,17 @@ try:
 except:
     pass
 
+has_full=False
+try:
+    machine=None
+    if 'LAMMPS_MACHINE_NAME' in os.environ:
+        machine=os.environ['LAMMPS_MACHINE_NAME']
+    lmp=lammps(name=machine)
+    has_full = lmp.has_style("atom","full")
+    lmp.close()
+except:
+    pass
+
 try:
     import numpy
     NUMPY_INSTALLED = True
@@ -31,6 +42,14 @@ class PythonNumpy(unittest.TestCase):
 
     def tearDown(self):
         del self.lmp
+
+    def checkBond(self, vals, btype, batom1, batom2):
+        if ((vals[1] == batom1 and vals[2] == batom2)
+            or (vals[1] == batom2 and vals[2] == batom1)):
+            self.assertEqual(vals[0], btype)
+            return 1
+        else:
+            return 0
 
     def testLammpsPointer(self):
         self.assertEqual(type(self.lmp.lmp), c_void_p)
@@ -74,17 +93,39 @@ class PythonNumpy(unittest.TestCase):
         # TODO
         pass
 
-    def testExtractComputeLocalScalar(self):
-        # TODO
-        pass
-
     def testExtractComputeLocalVector(self):
-        # TODO
-        pass
+        self.lmp.command("region       box block 0 2 0 2 0 2")
+        self.lmp.command("create_box 1 box")
+        self.lmp.command("create_atoms 1 single 1.0 1.0 1.0")
+        self.lmp.command("create_atoms 1 single 1.0 1.0 1.5")
+        self.lmp.command("mass 1 1.0")
+        self.lmp.command("pair_style lj/cut 1.9")
+        self.lmp.command("pair_coeff 1 1 1.0 1.0")
+        self.lmp.command("compute r0 all pair/local dist")
+        self.lmp.command("run 0 post no")
+        values = self.lmp.numpy.extract_compute("r0", LMP_STYLE_LOCAL, LMP_TYPE_VECTOR)
+        self.assertEqual(values.ndim, 1)
+        self.assertEqual(values.size, 2)
+        self.assertEqual(values[0], 0.5)
+        self.assertEqual(values[1], 1.5)
 
     def testExtractComputeLocalArray(self):
-        # TODO
-        pass
+        self.lmp.command("region       box block 0 2 0 2 0 2")
+        self.lmp.command("create_box 1 box")
+        self.lmp.command("create_atoms 1 single 1.0 1.0 1.0")
+        self.lmp.command("create_atoms 1 single 1.0 1.0 1.5")
+        self.lmp.command("mass 1 1.0")
+        self.lmp.command("pair_style lj/cut 1.9")
+        self.lmp.command("pair_coeff 1 1 1.0 1.0")
+        self.lmp.command("compute r0 all pair/local dist dx dy dz")
+        self.lmp.command("run 0 post no")
+        values = self.lmp.numpy.extract_compute("r0", LMP_STYLE_LOCAL, LMP_TYPE_ARRAY)
+        self.assertEqual(values.ndim, 2)
+        self.assertEqual(values.size, 8)
+        self.assertEqual(values[0,0], 0.5)
+        self.assertEqual(values[0,3], -0.5)
+        self.assertEqual(values[1,0], 1.5)
+        self.assertEqual(values[1,3], 1.5)
 
     def testExtractAtomDeprecated(self):
         self.lmp.command("units lj")
@@ -147,6 +188,50 @@ class PythonNumpy(unittest.TestCase):
         self.assertTrue((x[0] == (1.0, 1.0, 1.0)).all())
         self.assertTrue((x[1] == (1.0, 1.0, 1.5)).all())
         self.assertEqual(len(v), 2)
+
+    @unittest.skipIf(not has_full,"Gather bonds test")
+    def testGatherBond_newton_on(self):
+        self.lmp.command('shell cd ' + os.environ['TEST_INPUT_DIR'])
+        self.lmp.command("newton on on")
+        self.lmp.file("in.fourmol")
+        self.lmp.command("run 0 post no")
+        bonds = self.lmp.numpy.gather_bonds()
+        self.assertEqual(len(bonds),24)
+        count = 0
+        for bond in bonds:
+            count += self.checkBond(bond, 5, 1, 2)
+            count += self.checkBond(bond, 3, 1, 3)
+            count += self.checkBond(bond, 2, 3, 4)
+            count += self.checkBond(bond, 2, 3, 5)
+            count += self.checkBond(bond, 1, 6, 3)
+            count += self.checkBond(bond, 3, 6, 8)
+            count += self.checkBond(bond, 4, 6, 7)
+            count += self.checkBond(bond, 5, 8, 9)
+            count += self.checkBond(bond, 5, 27, 28)
+            count += self.checkBond(bond, 5, 29, 27)
+        self.assertEqual(count,10)
+
+    @unittest.skipIf(not has_full,"Gather bonds test")
+    def testGatherBond_newton_off(self):
+        self.lmp.command('shell cd ' + os.environ['TEST_INPUT_DIR'])
+        self.lmp.command("newton off off")
+        self.lmp.file("in.fourmol")
+        self.lmp.command("run 0 post no")
+        bonds = self.lmp.numpy.gather_bonds()
+        self.assertEqual(len(bonds),24)
+        count = 0
+        for bond in bonds:
+            count += self.checkBond(bond, 5, 1, 2)
+            count += self.checkBond(bond, 3, 1, 3)
+            count += self.checkBond(bond, 2, 3, 4)
+            count += self.checkBond(bond, 2, 3, 5)
+            count += self.checkBond(bond, 1, 6, 3)
+            count += self.checkBond(bond, 3, 6, 8)
+            count += self.checkBond(bond, 4, 6, 7)
+            count += self.checkBond(bond, 5, 8, 9)
+            count += self.checkBond(bond, 5, 27, 28)
+            count += self.checkBond(bond, 5, 29, 27)
+        self.assertEqual(count,10)
 
     def testNeighborListSimple(self):
         self.lmp.commands_string("""

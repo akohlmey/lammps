@@ -22,24 +22,24 @@ Syntax
        *check* value = *yes* or *no*
          *yes* = only build if some atom has moved half the skin distance or more
          *no* = always build on 1st step that *every* and *delay* are satisfied
-       *once*
+       *once* value = *yes* or *no*
          *yes* = only build neighbor list once at start of run and never rebuild
          *no* = rebuild neighbor list according to other settings
-       *cluster*
+       *cluster* value = *yes* or *no*
          *yes* = check bond,angle,etc neighbor list for nearby clusters
          *no* = do not check bond,angle,etc neighbor list for nearby clusters
        *include* value = group-ID
          group-ID = only build pair neighbor lists for atoms in this group
        *exclude* values:
-         type M N
+         *type* M N
            M,N = exclude if one atom in pair is type M, other is type N
-         group group1-ID group2-ID
+         *group* group1-ID group2-ID
            group1-ID,group2-ID = exclude if one atom is in 1st group, other in 2nd
-         molecule/intra group-ID
+         *molecule/intra* group-ID
            group-ID = exclude if both atoms are in the same molecule and in group
-         molecule/inter group-ID
+         *molecule/inter* group-ID
            group-ID = exclude if both atoms are in different molecules and in group
-         none
+         *none*
            delete all exclude settings
        *page* value = N
          N = number of pairs stored in a single neighbor page
@@ -75,13 +75,13 @@ pairwise neighbor lists.  Depending on what pair interactions and
 other commands are defined, a simulation may require one or more
 neighbor lists.
 
-The *every*\ , *delay*\ , *check*\ , and *once* options affect how often
+The *every*, *delay*, *check*, and *once* options affect how often
 lists are built as a simulation runs.  The *delay* setting means never
 build new lists until at least N steps after the previous build.  The
 *every* setting means build lists every M steps (after the delay has
-passed).  If the *check* setting is *no*\ , the lists are built on the
+passed).  If the *check* setting is *no*, the lists are built on the
 first step that satisfies the *delay* and *every* settings.  If the
-*check* setting is *yes*\ , then the *every* and *delay* settings
+*check* setting is *yes*, then the *every* and *delay* settings
 determine when a build may possibly be performed, but an actual build
 only occurs if some atom has moved more than half the skin distance
 (specified in the :doc:`neighbor <neighbor>` command) since the last
@@ -112,7 +112,7 @@ pairwise cutoff is so short that atoms that are part of the same
 interaction are not communicated as ghost atoms.  This is an unusual
 model (e.g. no pair interactions at all) and the problem can be fixed
 by use of the :doc:`comm_modify cutoff <comm_modify>` command.  Note
-that to save time, the default *cluster* setting is *no*\ , so that this
+that to save time, the default *cluster* setting is *no*, so that this
 check is not performed.
 
 The *include* option limits the building of pairwise neighbor lists to

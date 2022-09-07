@@ -29,15 +29,16 @@ Examples
 Description
 """""""""""
 
-The *kim command* includes a set of sub-commands that allow LAMMPS users to use
-interatomic models (IM) (potentials and force fields) and their predictions for
-various physical properties archived in the
-`Open Knowledgebase of Interatomic Models (OpenKIM) <https://openkim.org>`_
-repository.
+The *kim command* includes a set of sub-commands that allow LAMMPS
+users to use interatomic models (IM) (potentials and force fields) and
+their predictions for various physical properties archived in the
+`Open Knowledgebase of Interatomic Models (OpenKIM)
+<https://openkim.org>`_ repository.
 
-Using OpenKIM provides LAMMPS users with immediate access to a large number of
-verified IMs and their predictions. OpenKIM IMs have multiple benefits including
-`reliability, reproducibility and convenience <https://openkim.org/doc/overview/kim-features/>`_.
+Using OpenKIM provides LAMMPS users with immediate access to a large
+number of verified IMs and their predictions. OpenKIM IMs have
+multiple benefits including `reliability, reproducibility and
+convenience <https://openkim.org/doc/overview/kim-features/>`_.
 
 .. _IM_types:
 
@@ -372,9 +373,9 @@ the *kim interactions* command executes the following LAMMPS input commands:
 
 .. code-block:: LAMMPS
 
-   pair_style reax/c lmp_control safezone 2.0 mincap 100
+   pair_style reaxff lmp_control safezone 2.0 mincap 100
    pair_coeff * * ffield.reax.rdx C H N O
-   fix reaxqeq all qeq/reax 1 0.0 10.0 1.0e-6 param.qeq
+   fix reaxqeq all qeq/reaxff 1 0.0 10.0 1.0e-6 param.qeq
 
 .. note::
 
@@ -476,7 +477,7 @@ performed.
 The second required argument *query_function* is the name of the query function
 to be called (e.g.  *get_lattice_constant_cubic*\ ).  All following
 :doc:`arguments <Commands_parse>` are parameters handed over to the web query in
-the format *keyword=value*\ , where *value* is always an array of one or more
+the format *keyword=value*, where *value* is always an array of one or more
 comma-separated items in brackets.  The list of supported keywords and the type
 and format of their values depend on the query function used.  The current list
 of query functions is available on the OpenKIM webpage at

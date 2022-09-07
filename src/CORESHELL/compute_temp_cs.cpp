@@ -19,19 +19,19 @@
 
 #include "compute_temp_cs.h"
 
-#include <cstring>
-
 #include "atom.h"
 #include "atom_vec.h"
+#include "comm.h"
 #include "domain.h"
-#include "update.h"
+#include "error.h"
+#include "fix_store_peratom.h"
 #include "force.h"
 #include "group.h"
-#include "modify.h"
-#include "fix_store.h"
-#include "comm.h"
 #include "memory.h"
-#include "error.h"
+#include "modify.h"
+#include "update.h"
+
+#include <cstring>
 
 
 using namespace LAMMPS_NS;
@@ -69,13 +69,9 @@ ComputeTempCS::ComputeTempCS(LAMMPS *lmp, int narg, char **arg) :
   // create a new fix STORE style
   // id = compute-ID + COMPUTE_STORE, fix group = compute group
 
-  std::string fixcmd = id + std::string("_COMPUTE_STORE");
-  id_fix = new char[fixcmd.size()+1];
-  strcpy(id_fix,fixcmd.c_str());
-
-  fixcmd += fmt::format(" {} STORE peratom 0 1", group->names[igroup]);
-  modify->add_fix(fixcmd);
-  fix = (FixStore *) modify->fix[modify->nfix-1];
+  id_fix = utils::strdup(id + std::string("_COMPUTE_STORE"));
+  fix = dynamic_cast<FixStorePeratom *>(
+    modify->add_fix(fmt::format("{} {} STORE/PERATOM 0 1", id_fix, group->names[igroup])));
 
   // set fix store values = 0 for now
   // fill them in via setup() once Comm::borders() has been called
@@ -110,8 +106,8 @@ ComputeTempCS::~ComputeTempCS()
 
   if (modify->nfix) modify->delete_fix(id_fix);
 
-  delete [] id_fix;
-  delete [] vector;
+  delete[] id_fix;
+  delete[] vector;
   memory->destroy(vint);
 }
 
@@ -175,7 +171,7 @@ void ComputeTempCS::setup()
     // reverse comm to acquire unknown partner IDs from ghost atoms
     // only needed if newton_bond = on
 
-    if (force->newton_bond) comm->reverse_comm_compute(this);
+    if (force->newton_bond) comm->reverse_comm(this);
 
     // check that all C/S partners were found
 

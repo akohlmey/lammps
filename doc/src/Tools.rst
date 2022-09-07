@@ -7,7 +7,7 @@ steps are often necessary to setup and analyze a simulation.  A list
 of such tools can be found on the `LAMMPS webpage <lws_>`_ at these links:
 
 * `Pre/Post processing <https://www.lammps.org/prepost.html>`_
-* `Offsite LAMMPS packages & tools <https://www.lammps.org/offsite.html>`_
+* `External LAMMPS packages & tools <https://www.lammps.org/external.html>`_
 * `Pizza.py toolkit <pizza_>`_
 
 The last link for `Pizza.py <pizza_>`_ is a Python-based tool developed at
@@ -15,7 +15,7 @@ Sandia which provides tools for doing setup, analysis, plotting, and
 visualization for LAMMPS simulations.
 
 .. _lws: https://www.lammps.org
-.. _pizza: https://pizza.sandia.gov
+.. _pizza: https://lammps.github.io/pizza
 .. _python: https://www.python.org
 
 Additional tools included in the LAMMPS distribution are described on
@@ -56,6 +56,7 @@ Pre-processing tools
    * :ref:`moltemplate <moltemplate>`
    * :ref:`msi2lmp <msi>`
    * :ref:`polybond <polybond>`
+   * :ref:`stl_bin2txt <stlconvert>`
 
 
 Post-processing tools
@@ -67,7 +68,7 @@ Post-processing tools
    * :ref:`amber2lmp <amber>`
    * :ref:`binary2txt <binary>`
    * :ref:`ch2lmp <charmm>`
-   * :ref:`colvars <colvars>`
+   * :ref:`colvars <colvars_tools>`
    * :ref:`eff <eff>`
    * :ref:`fep <fep>`
    * :ref:`lmp2arc <arc>`
@@ -76,7 +77,6 @@ Post-processing tools
    * :ref:`phonon <phonon>`
    * :ref:`pymol_asphere <pymol>`
    * :ref:`python <pythontools>`
-   * :ref:`reax <reax_tool>`
    * :ref:`replica <replica>`
    * :ref:`smd <smd>`
    * :ref:`spin <spin>`
@@ -88,14 +88,14 @@ Miscellaneous tools
 .. table_from_list::
    :columns: 6
 
-   * :ref:`CMake <cmake>`
+   * :ref:`LAMMPS coding standards <coding_standard>`
    * :ref:`emacs <emacs>`
    * :ref:`i-pi <ipi>`
    * :ref:`kate <kate>`
    * :ref:`LAMMPS shell <lammps_shell>`
    * :ref:`LAMMPS magic patterns for file(1) <magic>`
    * :ref:`Offline build tool <offline>`
-   * :ref:`singularity <singularity_tool>`
+   * :ref:`singularity/apptainer <singularity_tool>`
    * :ref:`SWIG interface <swig>`
    * :ref:`vim <vim>`
 
@@ -173,7 +173,7 @@ Chris Lorenz (chris.lorenz at kcl.ac.uk), King's College London.
 chain tool
 ----------------------
 
-The file chain.f creates a LAMMPS data file containing bead-spring
+The file chain.f90 creates a LAMMPS data file containing bead-spring
 polymer chains and/or monomer solvent atoms.  It uses a text file
 containing chain definition parameters as an input.  The created
 chains and solvent atoms can strongly overlap, so LAMMPS needs to run
@@ -190,31 +190,36 @@ for the :doc:`chain benchmark <Speed_bench>`.
 
 ----------
 
-.. _cmake:
+.. _coding_standard:
 
-CMake tools
------------
+LAMMPS coding standard
+----------------------
 
-The ``cmbuild`` script is a wrapper around using ``cmake --build <dir>
---target`` and allows compiling LAMMPS in a :ref:`CMake build folder
-<cmake_build>` with a make-like syntax regardless of the actual build
-tool and the specific name of the program used (e.g. ``ninja-v1.10`` or
-``gmake``) when using ``-D CMAKE_MAKE_PROGRAM=<name>``.
+The ``coding_standard`` folder contains multiple python scripts to
+check for and apply some LAMMPS coding conventions.  The following
+scripts are available:
 
 .. parsed-literal::
 
-  Usage: cmbuild [-v] [-h] [-C <dir>] [-j <num>] [<target>]
+   permissions.py   # detects if sources have executable permissions and scripts have not
+   whitespace.py    # detects TAB characters and trailing whitespace
+   homepage.py      # detects outdated LAMMPS homepage URLs (pointing to sandia.gov instead of lammps.org)
+   errordocs.py     # detects deprecated error docs in header files
 
-  Options:
-    -h                print this message
-    -j <NUM>          allow processing of NUM concurrent tasks
-    -C DIRECTORY      execute build in folder DIRECTORY
-    -v                produce verbose output
+The tools need to be given the main folder of the LAMMPS distribution
+or individual file names as argument and will by default check them
+and report any non-compliance.  With the optional ``-f`` argument the
+corresponding script will try to change the non-compliant file(s) to
+match the conventions.
 
+For convenience this scripts can also be invoked by the make file in
+the ``src`` folder with, `make check-whitespace` or `make fix-whitespace`
+to either detect or edit the files.  Correspondingly for the other python
+scripts. `make check` will run all checks.
 
 ----------
 
-.. _colvars:
+.. _colvars_tools:
 
 colvars tools
 ---------------------------
@@ -278,16 +283,33 @@ at ens-lyon.fr, alain.dequidt at uca.fr
 eam database tool
 -----------------------------
 
-The tools/eam_database directory contains a Fortran program that will
-generate EAM alloy setfl potential files for any combination of 16
-elements: Cu, Ag, Au, Ni, Pd, Pt, Al, Pb, Fe, Mo, Ta, W, Mg, Co, Ti,
-Zr.  The files can then be used with the :doc:`pair_style eam/alloy <pair_eam>` command.
+The tools/eam_database directory contains a Fortran and a Python program
+that will generate EAM alloy setfl potential files for any combination
+of the 17 elements: Cu, Ag, Au, Ni, Pd, Pt, Al, Pb, Fe, Mo, Ta, W, Mg,
+Co, Ti, Zr, Cr.  The files can then be used with the :doc:`pair_style
+eam/alloy <pair_eam>` command.
 
-The tool is authored by Xiaowang Zhou (Sandia), xzhou at sandia.gov,
-and is based on his paper:
+The Fortran version of the tool was authored by Xiaowang Zhou (Sandia),
+xzhou at sandia.gov, with updates from Lucas Hale (NIST) lucas.hale at
+nist.gov and is based on his paper:
 
 X. W. Zhou, R. A. Johnson, and H. N. G. Wadley, Phys. Rev. B, 69,
 144113 (2004).
+
+The parameters for Cr were taken from:
+
+Lin Z B, Johnson R A and Zhigilei L V, Phys. Rev. B 77 214108 (2008).
+
+The Python version of the tool was authored  by Germain Clavier
+(TU Eindhoven) g.m.g.c.clavier at tue.nl or germain.clavier at gmail.com
+
+.. note::
+
+   The parameters in the database are only optimized for individual
+   elements. The mixed parameters for interactions between different
+   elements generated by this tool are derived from simple mixing rules
+   and are thus inferior to parameterizations that are specifically
+   optimized for specific mixtures and combinations of elements.
 
 ----------
 
@@ -341,7 +363,7 @@ fep tool
 
 The tools/fep directory contains Python scripts useful for
 post-processing results from performing free-energy perturbation
-simulations using the USER-FEP package.
+simulations using the FEP package.
 
 The scripts were contributed by Agilio Padua (ENS de Lyon), agilio.padua at ens-lyon.fr.
 
@@ -364,7 +386,7 @@ michele.ceriotti at gmail.com, to interface to a variety of molecular
 dynamics codes.
 
 See the tools/i-pi/manual.pdf file for an overview of i-PI, and the
-:doc:`fix ipi <fix_ipi>` doc page for further details on running PIMD
+:doc:`fix ipi <fix_ipi>` page for further details on running PIMD
 calculations with LAMMPS.
 
 ----------
@@ -861,10 +883,10 @@ phonon tool
 
 The phonon sub-directory contains a post-processing tool useful for
 analyzing the output of the :doc:`fix phonon <fix_phonon>` command in
-the USER-PHONON package.
+the PHONON package.
 
 See the README file for instruction on building the tool and what
-library it needs.  And see the examples/USER/phonon directory
+library it needs.  And see the examples/PACKAGES/phonon directory
 for example problems that can be post-processed with this tool.
 
 This tool was written by Ling-Ti Kong at Shanghai Jiao Tong
@@ -947,20 +969,6 @@ while at the Shell lab at UC Santa Barbara. (tanmoy dot 7989 at gmail.com)
 
 ----------
 
-.. _reax_tool:
-
-reax tool
---------------------------
-
-The reax sub-directory contains stand-alone codes that can
-post-process the output of the :doc:`fix reax/c/bonds <fix_reaxc_bonds>`
-command from a LAMMPS simulation using :doc:`ReaxFF <pair_reaxc>`.  See
-the README.txt file for more info.
-
-These tools were written by Aidan Thompson at Sandia.
-
-----------
-
 .. _smd:
 
 smd tool
@@ -968,13 +976,13 @@ smd tool
 
 The smd sub-directory contains a C++ file dump2vtk_tris.cpp and
 Makefile which can be compiled and used to convert triangle output
-files created by the Smooth-Mach Dynamics (USER-SMD) package into a
+files created by the Smooth-Mach Dynamics (MACHDYN) package into a
 VTK-compatible unstructured grid file.  It could then be read in and
 visualized by VTK.
 
 See the header of dump2vtk.cpp for more details.
 
-This tool was written by the USER-SMD package author, Georg
+This tool was written by the MACHDYN package author, Georg
 Ganzenmuller at the Fraunhofer-Institute for High-Speed Dynamics,
 Ernst Mach Institute in Germany (georg.ganzenmueller at emi.fhg.de).
 
@@ -999,14 +1007,37 @@ Ivanov, at University of Iceland (ali5 at hi.is).
 
 .. _singularity_tool:
 
-singularity tool
-----------------------------------------
+singularity/apptainer tool
+--------------------------
 
-The singularity sub-directory contains container definitions files
-that can be used to build container images for building and testing
-LAMMPS on specific OS variants using the `Singularity <https://sylabs.io>`_
-container software. Contributions for additional variants are welcome.
-For more details please see the README.md file in that folder.
+The singularity sub-directory contains container definitions files that
+can be used to build container images for building and testing LAMMPS on
+specific OS variants using the `Apptainer <https://apptainer.org>`_ or
+`Singularity <https://sylabs.io>`_ container software. Contributions for
+additional variants are welcome.  For more details please see the
+README.md file in that folder.
+
+----------
+
+.. _stlconvert:
+
+stl_bin2txt tool
+----------------
+
+The file stl_bin2txt.cpp converts binary STL files - like they are
+frequently offered for download on the web - into ASCII format STL files
+that LAMMPS can read with the :doc:`create_atoms mesh <create_atoms>` or
+the :doc:`fix smd/wall_surface <fix_smd_wall_surface>` commands.  The syntax
+for running the tool is
+
+.. code-block:: bash
+
+   stl_bin2txt infile.stl outfile.stl
+
+which creates outfile.stl from infile.stl.  This tool must be compiled
+on a platform compatible with the byte-ordering that was used to create
+the binary file.  This usually is a so-called little endian hardware
+(like x86).
 
 ----------
 

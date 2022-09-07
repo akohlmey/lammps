@@ -17,7 +17,7 @@ currently supports building with :doc:`conventional makefiles
 differ in how packages are enabled or disabled for inclusion into a
 LAMMPS binary so they cannot be mixed.  The source files for each
 package are in all-uppercase sub-directories of the ``src`` folder, for
-example ``src/MOLECULE`` or ``src/USER-MISC``.  The ``src/STUBS``
+example ``src/MOLECULE`` or ``src/EXTRA-MOLECULE``.  The ``src/STUBS``
 sub-directory is not a package but contains a dummy MPI library, that is
 used when building a serial version of the code. The ``src/MAKE``
 directory and its sub-directories contain makefiles with settings and
@@ -225,7 +225,7 @@ follows:
   commands in an input script.
 
 - The Force class computes various forces between atoms.  The Pair
-  parent class is for non-bonded or pair-wise forces, which in LAMMPS
+  parent class is for non-bonded or pairwise forces, which in LAMMPS
   also includes many-body forces such as the Tersoff 3-body potential if
   those are computed by walking pairwise neighbor lists.  The Bond,
   Angle, Dihedral, Improper parent classes are styles for bonded
@@ -251,12 +251,6 @@ follows:
 
 - The Timer class logs timing information, output at the end
   of a run.
-
-.. TODO section on "Spatial decomposition and parallel operations"
-..       diagram of 3d processor grid, brick vs. tiled. local vs. ghost
-..       atoms, 6-way communication with pack/unpack functions,
-..       PBC as part of the communication, forward and reverse communication
-..       rendezvous communication, ring communication.
 
 .. TODO section on "Fixes, Computes, and Variables"
 ..      how and when data is computed and provided and how it is

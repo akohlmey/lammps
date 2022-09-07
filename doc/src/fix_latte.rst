@@ -117,13 +117,6 @@ potential energy of the system as part of :doc:`thermodynamic output
 energy yes <fix_modify>`.
 
 The :doc:`fix_modify <fix_modify>` *virial* option is supported by
-this fix to add the contribution compute by LATTE to the global
-pressure of the system via the :doc:`compute pressure
-<compute_pressure>` command.  This can be accessed by
-:doc:`thermodynamic output <thermo_style>`.  The default setting for
-this fix is :doc:`fix_modify virial yes <fix_modify>`.
-
-The :doc:`fix_modify <fix_modify>` *virial* option is supported by
 this fix to add the contribution computed by LATTE to the global
 pressure of the system as part of :doc:`thermodynamic output
 <thermo_style>`.  The default setting for this fix is :doc:`fix_modify
@@ -137,7 +130,7 @@ energy discussed above.  The scalar value calculated by this fix is
 No parameter of this fix can be used with the *start/stop* keywords of
 the :doc:`run <run>` command.
 
-The DFTB forces computed by LATTE via this fix are imposed during an
+The DFTB forces computed by LATTE via this fix are used during an
 energy minimization, invoked by the :doc:`minimize <minimize>`
 command.
 
@@ -153,7 +146,7 @@ Restrictions
 
 This fix is part of the LATTE package.  It is only enabled if LAMMPS
 was built with that package.  See the :doc:`Build package
-<Build_package>` doc page for more info.
+<Build_package>` page for more info.
 
 You must use metal units, as set by the :doc:`units <units>` command to
 use this fix.
@@ -171,7 +164,7 @@ doing 99% or more of the work to compute quantum-accurate forces.
    NEB calculations can be done using this fix using multiple
    replicas and running LAMMPS in parallel.  However, each replica must
    be run on a single MPI task.  For details, see the :doc:`neb <neb>`
-   command doc page and the :doc:`-partition command-line switch <Run_options>`
+   command page and the :doc:`-partition command-line switch <Run_options>`
 
 Related commands
 """"""""""""""""

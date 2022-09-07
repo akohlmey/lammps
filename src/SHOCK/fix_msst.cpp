@@ -129,9 +129,7 @@ FixMSST::FixMSST(LAMMPS *lmp, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"dftb") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix msst command");
-      if (strcmp(arg[iarg+1],"yes") == 0) dftb = 1;
-      else if (strcmp(arg[iarg+1],"yes") == 0) dftb = 0;
-      else error->all(FLERR,"Illegal fix msst command");
+      dftb = utils::logical(FLERR,arg[iarg+1],false,lmp);
       iarg += 2;
     } else if (strcmp(arg[iarg],"beta") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix msst command");
@@ -152,8 +150,7 @@ FixMSST::FixMSST(LAMMPS *lmp, int narg, char **arg) :
     mesg += fmt::format("  Cell mass-like parameter qmass "
                         "(units of mass^2/length^4) = {:.8g}\n", qmass);
     mesg += fmt::format("  Shock velocity = {:.8g}\n", velocity);
-    mesg += fmt::format("  Artificial viscosity "
-                        "(units of mass/length/time) = {:.8g}\n", mu);
+    mesg += fmt::format("  Artificial viscosity (units of mass/length/time) = {:.8g}\n", mu);
 
     if (p0_set)
       mesg += fmt::format("  Initial pressure specified to be {:.8g}\n", p0);
@@ -179,8 +176,7 @@ FixMSST::FixMSST(LAMMPS *lmp, int narg, char **arg) :
   //   and thus its KE/temperature contribution should use group all
 
   std::string fixcmd = std::string(id) + "MSST_temp";
-  id_temp = new char[fixcmd.size()+1];
-  strcpy(id_temp,fixcmd.c_str());
+  id_temp = utils::strdup(fixcmd);
   modify->add_compute(fixcmd + " all temp");
   tflag = 1;
 
@@ -189,8 +185,7 @@ FixMSST::FixMSST(LAMMPS *lmp, int narg, char **arg) :
   // pass id_temp as 4th arg to pressure constructor
 
   fixcmd = std::string(id) + "MSST_press";
-  id_press = new char[fixcmd.size()+1];
-  strcpy(id_press,fixcmd.c_str());
+  id_press = utils::strdup(fixcmd);
   modify->add_compute(fixcmd + " all pressure " + std::string(id_temp));
   pflag = 1;
 
@@ -198,8 +193,7 @@ FixMSST::FixMSST(LAMMPS *lmp, int narg, char **arg) :
   // id = fix-ID + "MSST_pe", compute group = all
 
   fixcmd = std::string(id) + "MSST_pe";
-  id_pe = new char[fixcmd.size()+1];
-  strcpy(id_pe,fixcmd.c_str());
+  id_pe = utils::strdup(fixcmd);
   modify->add_compute(fixcmd + " all pe");
   peflag = 1;
 
@@ -305,7 +299,7 @@ void FixMSST::init()
   if (dftb) {
     for (int i = 0; i < modify->nfix; i++)
       if (utils::strmatch(modify->fix[i]->style,"^external$"))
-        fix_external = (FixExternal *) modify->fix[i];
+        fix_external = dynamic_cast<FixExternal *>( modify->fix[i]);
     if (fix_external == nullptr)
       error->all(FLERR,"Fix msst dftb cannot be used w/out fix external");
   }
@@ -818,7 +812,7 @@ void FixMSST::write_restart(FILE *fp)
 void FixMSST::restart(char *buf)
 {
   int n = 0;
-  double *list = (double *) buf;
+  auto list = (double *) buf;
   omega[direction] = list[n++];
   e0 = list[n++];
   v0 = list[n++];

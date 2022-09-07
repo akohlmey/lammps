@@ -14,10 +14,6 @@ generated.  For example, a message like this:
 means that line #187 in the file src/domain.cpp generated the error.
 Looking in the source code may help you figure out what went wrong.
 
-Note that warning messages from :doc:`user-contributed packages <Packages_user>` are not listed here.  If such a warning
-occurs and is not self-explanatory, you will need to look in the source
-code or contact the author of the package.
-
 Doc page with :doc:`ERROR messages <Errors_messages>`
 
 ----------
@@ -71,14 +67,6 @@ Doc page with :doc:`ERROR messages <Errors_messages>`
    bond/angle/dihedral.  LAMMPS computes this by taking the maximum bond
    length, multiplying by the number of bonds in the interaction (e.g. 3
    for a dihedral) and adding a small amount of stretch.
-
-*Bond/react: Atom affected by reaction too close to template edge*
-   This means an atom which changes type or connectivity during the
-   reaction is too close to an 'edge' atom defined in the superimpose
-   file. This could cause incorrect assignment of bonds, angle, etc.
-   Generally, this means you must include more atoms in your templates,
-   such that there are at least two atoms between each atom involved in
-   the reaction and an edge atom.
 
 *Both groups in compute group/group have a net charge; the Kspace boundary correction to energy will be non-zero*
    Self-explanatory.
@@ -210,14 +198,22 @@ Doc page with :doc:`ERROR messages <Errors_messages>`
 *Fix SRD walls overlap but fix srd overlap not set*
    You likely want to set this in your input script.
 
-* Fix bond/create is used multiple times or with fix bond/break - may not work as expected*
+*Fix bond/create is used multiple times or with fix bond/break - may not work as expected*
    When using fix bond/create multiple times or in combination with
    fix bond/break, the individual fix instances do not share information
    about changes they made at the same time step and thus it may result
    in unexpected behavior.
 
+*Fix bond/react: Atom affected by reaction too close to template edge*
+   This means an atom which changes type or connectivity during the
+   reaction is too close to an 'edge' atom defined in the superimpose
+   file. This could cause incorrect assignment of bonds, angle, etc.
+   Generally, this means you must include more atoms in your templates,
+   such that there are at least two atoms between each atom involved in
+   the reaction and an edge atom.
+
 *Fix bond/swap will ignore defined angles*
-   See the doc page for fix bond/swap for more info on this
+   See the page for fix bond/swap for more info on this
    restriction.
 
 *Fix deposit near setting < possible overlap separation %g*
@@ -420,7 +416,7 @@ This will most likely cause errors in kinetic fluctuations.
    not defined for the specified atom style.
 
 *Molecule has bond topology but no special bond settings*
-   This means the bonded atoms will not be excluded in pair-wise
+   This means the bonded atoms will not be excluded in pairwise
    interactions.
 
 *Molecule template for create_atoms has multiple molecules*
@@ -474,6 +470,12 @@ This will most likely cause errors in kinetic fluctuations.
 *More than one compute sna/atom*
    Self-explanatory.
 
+*More than one compute sna/grid*
+   Self-explanatory.
+
+*More than one compute sna/grid/local*
+   Self-explanatory.
+
 *More than one compute snad/atom*
    Self-explanatory.
 
@@ -518,7 +520,7 @@ This will most likely cause errors in kinetic fluctuations.
    will integrate the body motion, but it would be more efficient to use
    fix rigid.
 
-*Not using real units with pair reax*
+*Not using real units with pair reaxff*
    This is most likely an error, unless you have created your own ReaxFF
    parameter file in a different set of units.
 
@@ -529,7 +531,7 @@ This will most likely cause errors in kinetic fluctuations.
 
 *OMP_NUM_THREADS environment is not set.*
    This environment variable must be set appropriately to use the
-   USER-OMP package.
+   OPENMP package.
 
 *One or more atoms are time integrated more than once*
    This is probably an error since you typically do not want to
@@ -808,6 +810,3 @@ This will most likely cause errors in kinetic fluctuations.
 
 *Using pair tail corrections with pair_modify compute no*
    The tail corrections will thus not be computed.
-
-*pair style reax is now deprecated and will soon be retired. Users should switch to pair_style reax/c*
-   Self-explanatory.

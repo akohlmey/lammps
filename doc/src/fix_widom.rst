@@ -21,7 +21,7 @@ Syntax
 
   .. parsed-literal::
 
-     keyword = *mol*\ , *region*\ , *full_energy*, *charge*\ , *intra_energy*
+     keyword = *mol*, *region*, *full_energy*, *charge*, *intra_energy*
        *mol* value = template-ID
          template-ID = ID of molecule template specified in a separate :doc:`molecule <molecule>` command
        *region* value = region-ID
@@ -100,11 +100,11 @@ The excess chemical potential mu_ex is defined as:
 
 .. math::
 
-   \mu_{ex} = -kT \ln(<\exp(-(U_{N+1}-U_{N})/{kT})>)
+   \mu_{ex} = -kT \ln(<\exp(-(U_{N+1}-U_{N})/{k_B T})>)
 
-where *k* is Boltzman's constant, *T* is the user-specified temperature,
-U_N and U_{N+1} is the potential energy of the system with N and N+1
-particles.
+where :math:`k_B` is the Boltzmann constant, :math:`T` is the
+user-specified temperature, :math:`U_N` and :math:`U_{N+1}` is the
+potential energy of the system with :math:`N` and :math:`N+1` particles.
 
 The *full_energy* option means that the fix calculates the total
 potential energy of the entire simulated system, instead of just the

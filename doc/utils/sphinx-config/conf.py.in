@@ -385,7 +385,7 @@ from sphinx.highlighting import lexers
 
 lexers['LAMMPS'] = LAMMPSLexer.LAMMPSLexer(startinline=True)
 
-sys.path.append(LAMMPS_PYTHON_DIR)
+sys.path.insert(1,LAMMPS_PYTHON_DIR)
 
 # avoid syntax highlighting in blocks that don't specify language
 highlight_language = 'none'
@@ -418,6 +418,7 @@ html_context['current_version'] = os.environ.get('LAMMPS_WEBSITE_BUILD_VERSION',
 html_context['git_commit'] = git_commit
 html_context['versions'] = [
   ('latest', 'https://docs.lammps.org/latest/'),
+  ('stable', 'https://docs.lammps.org/stable/'),
   (version, 'https://docs.lammps.org/')
 ]
 html_context['downloads'] = [('PDF', 'Manual.pdf')]

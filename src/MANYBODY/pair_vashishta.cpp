@@ -19,9 +19,6 @@
 
 #include "pair_vashishta.h"
 
-#include <cmath>
-
-#include <cstring>
 #include "atom.h"
 #include "comm.h"
 #include "error.h"
@@ -29,10 +26,10 @@
 #include "memory.h"
 #include "neighbor.h"
 #include "neigh_list.h"
-#include "neigh_request.h"
-
-#include "tokenizer.h"
 #include "potential_file_reader.h"
+
+#include <cmath>
+#include <cstring>
 
 using namespace LAMMPS_NS;
 
@@ -272,9 +269,7 @@ void PairVashishta::init_style()
 
   // need a full neighbor list
 
-  int irequest = neighbor->request(this);
-  neighbor->requests[irequest]->half = 0;
-  neighbor->requests[irequest]->full = 1;
+  neighbor->add_request(this, NeighConst::REQ_FULL);
 }
 
 /* ----------------------------------------------------------------------
@@ -415,11 +410,13 @@ void PairVashishta::setup_params()
         for (m = 0; m < nparams; m++) {
           if (i == params[m].ielement && j == params[m].jelement &&
               k == params[m].kelement) {
-            if (n >= 0) error->all(FLERR,"Potential file has duplicate entry");
+            if (n >= 0) error->all(FLERR,"Potential file has a duplicate entry for: {} {} {}",
+                                   elements[i], elements[j], elements[k]);
             n = m;
           }
         }
-        if (n < 0) error->all(FLERR,"Potential file is missing an entry");
+        if (n < 0) error->all(FLERR,"Potential file is missing an entry for: {} {} {}",
+                              elements[i], elements[j], elements[k]);
         elem3param[i][j][k] = n;
       }
 

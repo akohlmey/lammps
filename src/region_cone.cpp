@@ -31,17 +31,18 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 RegCone::RegCone(LAMMPS *lmp, int narg, char **arg) :
-  Region(lmp, narg, arg)
+  Region(lmp, narg, arg), lo(0.0), hi(0.0)
 {
   options(narg-9,&arg[9]);
 
   // check open face settings
 
-  if (openflag && (open_faces[3] || open_faces[4] || open_faces[5]))
-    error->all(FLERR,"Invalid region cone open setting");
+  if (openflag)
+    for (int i=3; i<6; i++)
+      if (open_faces[i]) error->all(FLERR,"Illegal region cone open face: {}", i+1);
 
-  if (strcmp(arg[2],"x") && strcmp(arg[2],"y") && strcmp(arg[2],"z"))
-    error->all(FLERR,"Illegal region cylinder command");
+  if (strcmp(arg[2],"x") != 0 && strcmp(arg[2],"y") != 0 && strcmp(arg[2],"z") != 0)
+    error->all(FLERR,"Illegal region cone axis: {}", arg[2]);
   axis = arg[2][0];
 
   if (axis == 'x') {

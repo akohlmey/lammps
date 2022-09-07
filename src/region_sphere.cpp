@@ -74,12 +74,12 @@ RegSphere::RegSphere(LAMMPS *lmp, int narg, char **arg) :
 
   if (varshape) {
     variable_check();
-    shape_update();
+    RegSphere::shape_update();
   }
 
   // error check
 
-  if (radius < 0.0) error->all(FLERR,"Illegal region sphere command");
+  if (radius < 0.0) error->all(FLERR,"Illegal region sphere radius: {}", radius);
 
   // extent of sphere
   // for variable radius, uses initial radius and origin for variable center

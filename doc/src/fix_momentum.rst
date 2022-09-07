@@ -21,7 +21,8 @@ Syntax
 * momentum = style name of this fix command
 * N = adjust the momentum every this many timesteps
   one or more keyword/value pairs may be appended
-* keyword = *linear* or *angular* or *rescale*
+
+.. parsed-literal::
 
    fix ID group-ID momentum/chunk N chunkID keyword values ...
 
@@ -30,7 +31,7 @@ Syntax
 * N = adjust the momentum per chunk every this many timesteps
 * chunkID = ID of :doc:`compute chunk/atom <compute_chunk_atom>` command
 
-  one or more keyword/value pairs may be appended
+  one or more keyword/value settings may be appended to each of the fix commands:
 * keyword = *linear* or *angular* or *rescale*
 
   .. parsed-literal::
@@ -97,9 +98,9 @@ the :doc:`run <run>` command.  This fix is not invoked during
 Restrictions
 """"""""""""
 
-Fix momentum/chunk is part of the USER-MISC package.  It is only enabled
+Fix momentum/chunk is part of the EXTRA-FIX package.  It is only enabled
 if LAMMPS was built with that package.  See the :doc:`Build package
-<Build_package>` doc page for more info.
+<Build_package>` page for more info.
 
 
 Related commands

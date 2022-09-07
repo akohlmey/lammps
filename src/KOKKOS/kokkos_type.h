@@ -20,18 +20,20 @@
 
 #include <Kokkos_Core.hpp>
 #include <Kokkos_DualView.hpp>
-#include <impl/Kokkos_Timer.hpp>
-#include <Kokkos_Vectorization.hpp>
+#include <Kokkos_Timer.hpp>
 #include <Kokkos_ScatterView.hpp>
+#include <Kokkos_UnorderedMap.hpp>
 
-enum{FULL=1u,HALFTHREAD=2u,HALF=4u};
+constexpr int FULL = 1;
+constexpr int HALFTHREAD = 2;
+constexpr int HALF = 4;
 
 #if defined(KOKKOS_ENABLE_CXX11)
 #undef ISFINITE
 #define ISFINITE(x) std::isfinite(x)
 #endif
 
-#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL)
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP) || defined(KOKKOS_ENABLE_SYCL) || defined(KOKKOS_ENABLE_OPENMPTARGET)
 #define LMP_KOKKOS_GPU
 #endif
 
@@ -45,7 +47,9 @@ enum{FULL=1u,HALFTHREAD=2u,HALF=4u};
 static constexpr LAMMPS_NS::bigint LMP_KOKKOS_AV_DELTA = 10;
 
 namespace Kokkos {
-  using NoInit = ViewAllocateWithoutInitializing;
+  static auto NoInit = [](std::string const& label) {
+    return Kokkos::view_alloc(Kokkos::WithoutInitializing, label);
+  };
 }
 
   struct lmp_float3 {
@@ -192,6 +196,15 @@ public:
 #endif
 };
 
+// Helpers for readability
+
+using KKScatterSum = Kokkos::Experimental::ScatterSum;
+using KKScatterDuplicated = Kokkos::Experimental::ScatterDuplicated;
+using KKScatterNonDuplicated = Kokkos::Experimental::ScatterNonDuplicated;
+
+template<typename DataType, typename Layout, typename Device, typename... Args>
+using KKScatterView = Kokkos::Experimental::ScatterView<DataType, Layout, Device, Args...>;
+
 
 // set ExecutionSpace stuct with variable "space"
 
@@ -218,6 +231,11 @@ template<>
 struct ExecutionSpaceFromDevice<Kokkos::Experimental::SYCL> {
   static const LAMMPS_NS::ExecutionSpace space = LAMMPS_NS::Device;
 };
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+template<>
+struct ExecutionSpaceFromDevice<Kokkos::Experimental::OpenMPTarget> {
+  static const LAMMPS_NS::ExecutionSpace space = LAMMPS_NS::Device;
+};
 #endif
 
 // set host pinned space
@@ -226,7 +244,11 @@ typedef Kokkos::CudaHostPinnedSpace LMPPinnedHostType;
 #elif defined(KOKKOS_ENABLE_HIP)
 typedef Kokkos::Experimental::HIPHostPinnedSpace LMPPinnedHostType;
 #elif defined(KOKKOS_ENABLE_SYCL)
-typedef Kokkos::Experimental::SYCLSharedUSMSpace LMPPinnedHostType;
+typedef Kokkos::Experimental::SYCLHostUSMSpace LMPPinnedHostType;
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+typedef Kokkos::Serial LMPPinnedHostType;
+#else
+typedef LMPHostType LMPPinnedHostType;
 #endif
 
 // create simple LMPDeviceSpace typedef for non CUDA-, HIP-, or SYCL-specific
@@ -237,6 +259,8 @@ typedef Kokkos::Cuda LMPDeviceSpace;
 typedef Kokkos::Experimental::HIP LMPDeviceSpace;
 #elif defined(KOKKOS_ENABLE_SYCL)
 typedef Kokkos::Experimental::SYCL LMPDeviceSpace;
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+typedef Kokkos::Experimental::OpenMPTarget LMPDeviceSpace;
 #endif
 
 
@@ -260,6 +284,9 @@ struct AtomicDup {
   using value = Kokkos::Experimental::ScatterNonAtomic;
 };
 
+template<int NEIGHFLAG, class DeviceType>
+using AtomicDup_v = typename AtomicDup<NEIGHFLAG, DeviceType>::value;
+
 #ifdef KOKKOS_ENABLE_CUDA
 template<>
 struct AtomicDup<HALFTHREAD,Kokkos::Cuda> {
@@ -273,6 +300,11 @@ struct AtomicDup<HALFTHREAD,Kokkos::Experimental::HIP> {
 #elif defined(KOKKOS_ENABLE_SYCL)
 template<>
 struct AtomicDup<HALFTHREAD,Kokkos::Experimental::SYCL> {
+  using value = Kokkos::Experimental::ScatterAtomic;
+};
+#elif defined(KOKKOS_ENABLE_OPENMPTARGET)
+template<>
+struct AtomicDup<HALFTHREAD,Kokkos::Experimental::OpenMPTarget> {
   using value = Kokkos::Experimental::ScatterAtomic;
 };
 #endif
@@ -302,6 +334,9 @@ template<int NEIGHFLAG, class DeviceType>
 struct NeedDup {
   using value = Kokkos::Experimental::ScatterNonDuplicated;
 };
+
+template<int NEIGHFLAG, class DeviceType>
+using NeedDup_v = typename NeedDup<NEIGHFLAG,DeviceType>::value;
 
 #ifndef LMP_KOKKOS_USE_ATOMICS
 
@@ -383,32 +418,24 @@ struct s_EV_FLOAT {
   s_EV_FLOAT() {
     evdwl = 0;
     ecoul = 0;
-    v[0] = 0; v[1] = 0; v[2] = 0;
-    v[3] = 0; v[4] = 0; v[5] = 0;
+    for (int i = 0; i < 6; ++i)
+      v[i] = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const s_EV_FLOAT &rhs) {
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
+    for (int i = 0; i < 6; ++i)
+      v[i] += rhs.v[i];
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const volatile s_EV_FLOAT &rhs) volatile {
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
+    for (int i = 0; i < 6; ++i)
+      v[i] += rhs.v[i];
   }
 };
 typedef struct s_EV_FLOAT EV_FLOAT;
@@ -422,53 +449,30 @@ struct s_EV_FLOAT_REAX {
   s_EV_FLOAT_REAX() {
     evdwl = 0;
     ecoul = 0;
-    v[0] = 0; v[1] = 0; v[2] = 0;
-    v[3] = 0; v[4] = 0; v[5] = 0;
-    ereax[0] = 0; ereax[1] = 0; ereax[2] = 0;
-    ereax[3] = 0; ereax[4] = 0; ereax[5] = 0;
-    ereax[6] = 0; ereax[7] = 0; ereax[8] = 0;
+    for (int i = 0; i < 6; ++i)
+      v[i] = 0;
+    for (int i = 0; i < 9; ++i)
+      ereax[i] = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const s_EV_FLOAT_REAX &rhs) {
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
-    ereax[0] += rhs.ereax[0];
-    ereax[1] += rhs.ereax[1];
-    ereax[2] += rhs.ereax[2];
-    ereax[3] += rhs.ereax[3];
-    ereax[4] += rhs.ereax[4];
-    ereax[5] += rhs.ereax[5];
-    ereax[6] += rhs.ereax[6];
-    ereax[7] += rhs.ereax[7];
-    ereax[8] += rhs.ereax[8];
+    for (int i = 0; i < 6; ++i)
+      v[i] += rhs.v[i];
+    for (int i = 0; i < 9; ++i)
+      ereax[i] += rhs.ereax[i];
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const volatile s_EV_FLOAT_REAX &rhs) volatile {
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
-    ereax[0] += rhs.ereax[0];
-    ereax[1] += rhs.ereax[1];
-    ereax[2] += rhs.ereax[2];
-    ereax[3] += rhs.ereax[3];
-    ereax[4] += rhs.ereax[4];
-    ereax[5] += rhs.ereax[5];
-    ereax[6] += rhs.ereax[6];
-    ereax[7] += rhs.ereax[7];
-    ereax[8] += rhs.ereax[8];
+    for (int i = 0; i < 6; ++i)
+      v[i] += rhs.v[i];
+    for (int i = 0; i < 9; ++i)
+      ereax[i] += rhs.ereax[i];
   }
 };
 typedef struct s_EV_FLOAT_REAX EV_FLOAT_REAX;
@@ -480,44 +484,64 @@ struct s_FEV_FLOAT {
   E_FLOAT v[6];
   KOKKOS_INLINE_FUNCTION
   s_FEV_FLOAT() {
-    f[0] = 0; f[1] = 0; f[2] = 0;
     evdwl = 0;
     ecoul = 0;
-    v[0] = 0; v[1] = 0; v[2] = 0;
-    v[3] = 0; v[4] = 0; v[5] = 0;
+    for (int i = 0; i < 6; ++i)
+      v[i] = 0;
+    for (int i = 0; i < 3; ++i)
+      f[i] = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const s_FEV_FLOAT &rhs) {
-    f[0] += rhs.f[0];
-    f[1] += rhs.f[1];
-    f[2] += rhs.f[2];
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
+    for (int i = 0; i < 6; ++i)
+      v[i] += rhs.v[i];
+    for (int i = 0; i < 3; ++i)
+      f[i] += rhs.f[i];
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const volatile s_FEV_FLOAT &rhs) volatile {
-    f[0] += rhs.f[0];
-    f[1] += rhs.f[1];
-    f[2] += rhs.f[2];
     evdwl += rhs.evdwl;
     ecoul += rhs.ecoul;
-    v[0] += rhs.v[0];
-    v[1] += rhs.v[1];
-    v[2] += rhs.v[2];
-    v[3] += rhs.v[3];
-    v[4] += rhs.v[4];
-    v[5] += rhs.v[5];
+    for (int i = 0; i < 6; ++i)
+      v[i] += rhs.v[i];
+    for (int i = 0; i < 3; ++i)
+      f[i] += rhs.f[i];
   }
 };
 typedef struct s_FEV_FLOAT FEV_FLOAT;
+
+struct alignas(2*sizeof(F_FLOAT)) s_FLOAT2 {
+  F_FLOAT v[2];
+
+  KOKKOS_INLINE_FUNCTION
+  s_FLOAT2() {
+    v[0] = v[1] = 0.0;
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  s_FLOAT2(const s_FLOAT2 & rhs) {
+    for (int i = 0; i < 2; i++){
+      v[i] = rhs.v[i];
+    }
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator+=(const s_FLOAT2 &rhs) {
+    v[0] += rhs.v[0];
+    v[1] += rhs.v[1];
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator+=(const volatile s_FLOAT2 &rhs) volatile {
+    v[0] += rhs.v[0];
+    v[1] += rhs.v[1];
+  }
+};
+typedef struct s_FLOAT2 F_FLOAT2;
 
 #ifndef PREC_POS
 #define PREC_POS PRECISION
@@ -550,6 +574,23 @@ typedef int T_INT;
 // ------------------------------------------------------------------------
 
 // LAMMPS types
+
+typedef Kokkos::UnorderedMap<LAMMPS_NS::tagint,int,LMPDeviceType> hash_type;
+typedef hash_type::HostMirror host_hash_type;
+
+struct dual_hash_type {
+  hash_type d_view;
+  host_hash_type h_view;
+
+  template<class DeviceType>
+  KOKKOS_INLINE_FUNCTION
+  std::enable_if_t<(std::is_same<DeviceType,LMPDeviceType>::value || Kokkos::SpaceAccessibility<LMPDeviceType::memory_space,LMPHostType::memory_space>::accessible),hash_type&> view() {return d_view;}
+
+  template<class DeviceType>
+  KOKKOS_INLINE_FUNCTION
+  std::enable_if_t<!(std::is_same<DeviceType,LMPDeviceType>::value || Kokkos::SpaceAccessibility<LMPDeviceType::memory_space,LMPHostType::memory_space>::accessible),host_hash_type&> view() {return h_view;}
+
+};
 
 template <class DeviceType>
 struct ArrayTypes;
@@ -733,6 +774,14 @@ typedef tdual_ffloat_1d::t_dev_um t_ffloat_1d_um;
 typedef tdual_ffloat_1d::t_dev_const_um t_ffloat_1d_const_um;
 typedef tdual_ffloat_1d::t_dev_const_randomread t_ffloat_1d_randomread;
 
+// 1d F_FLOAT2 array n
+typedef Kokkos::DualView<F_FLOAT*[2], Kokkos::LayoutRight, LMPDeviceType> tdual_ffloat2_1d;
+typedef tdual_ffloat2_1d::t_dev t_ffloat2_1d;
+typedef tdual_ffloat2_1d::t_dev_const t_ffloat2_1d_const;
+typedef tdual_ffloat2_1d::t_dev_um t_ffloat2_1d_um;
+typedef tdual_ffloat2_1d::t_dev_const_um t_ffloat2_1d_const_um;
+typedef tdual_ffloat2_1d::t_dev_const_randomread t_ffloat2_1d_randomread;
+
 //2d F_FLOAT array n*m
 
 typedef Kokkos::DualView<F_FLOAT**, Kokkos::LayoutRight, LMPDeviceType> tdual_ffloat_2d;
@@ -836,6 +885,13 @@ typedef tdual_neighbors_2d::t_dev_const t_neighbors_2d_const;
 typedef tdual_neighbors_2d::t_dev_um t_neighbors_2d_um;
 typedef tdual_neighbors_2d::t_dev_const_um t_neighbors_2d_const_um;
 typedef tdual_neighbors_2d::t_dev_const_randomread t_neighbors_2d_randomread;
+
+typedef Kokkos::DualView<int**, Kokkos::LayoutRight, LMPDeviceType> tdual_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_dev t_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_dev_const t_neighbors_2d_const_lr;
+typedef tdual_neighbors_2d_lr::t_dev_um t_neighbors_2d_um_lr;
+typedef tdual_neighbors_2d_lr::t_dev_const_um t_neighbors_2d_const_um_lr;
+typedef tdual_neighbors_2d_lr::t_dev_const_randomread t_neighbors_2d_randomread_lr;
 
 };
 
@@ -1003,6 +1059,14 @@ typedef tdual_ffloat_1d::t_host_um t_ffloat_1d_um;
 typedef tdual_ffloat_1d::t_host_const_um t_ffloat_1d_const_um;
 typedef tdual_ffloat_1d::t_host_const_randomread t_ffloat_1d_randomread;
 
+// 1d F_FLOAT2 array n
+typedef Kokkos::DualView<F_FLOAT*[2], Kokkos::LayoutRight, LMPDeviceType> tdual_ffloat2_1d;
+typedef tdual_ffloat2_1d::t_host t_ffloat2_1d;
+typedef tdual_ffloat2_1d::t_host_const t_ffloat2_1d_const;
+typedef tdual_ffloat2_1d::t_host_um t_ffloat2_1d_um;
+typedef tdual_ffloat2_1d::t_host_const_um t_ffloat2_1d_const_um;
+typedef tdual_ffloat2_1d::t_host_const_randomread t_ffloat2_1d_randomread;
+
 //2d F_FLOAT array n*m
 typedef Kokkos::DualView<F_FLOAT**, Kokkos::LayoutRight, LMPDeviceType> tdual_ffloat_2d;
 typedef tdual_ffloat_2d::t_host t_ffloat_2d;
@@ -1098,6 +1162,13 @@ typedef tdual_neighbors_2d::t_host_um t_neighbors_2d_um;
 typedef tdual_neighbors_2d::t_host_const_um t_neighbors_2d_const_um;
 typedef tdual_neighbors_2d::t_host_const_randomread t_neighbors_2d_randomread;
 
+typedef Kokkos::DualView<int**, Kokkos::LayoutRight, LMPDeviceType> tdual_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_host t_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_host_const t_neighbors_2d_const_lr;
+typedef tdual_neighbors_2d_lr::t_host_um t_neighbors_2d_um_lr;
+typedef tdual_neighbors_2d_lr::t_host_const_um t_neighbors_2d_const_um_lr;
+typedef tdual_neighbors_2d_lr::t_host_const_randomread t_neighbors_2d_randomread_lr;
+
 };
 #endif
 //default LAMMPS Types
@@ -1140,6 +1211,12 @@ struct params_lj_coul {
   KOKKOS_INLINE_FUNCTION
   params_lj_coul(int /*i*/) {cut_ljsq=0;cut_coulsq=0;lj1=0;lj2=0;lj3=0;lj4=0;offset=0;};
   F_FLOAT cut_ljsq,cut_coulsq,lj1,lj2,lj3,lj4,offset;
+};
+
+// ReaxFF
+
+struct alignas(4 * sizeof(int)) reax_int4 {
+  int i0, i1, i2, i3;
 };
 
 // Pair SNAP
@@ -1206,13 +1283,28 @@ struct alignas(2*sizeof(real_type_)) SNAComplex
   static constexpr complex one() { return complex(static_cast<real_type>(1.), static_cast<real_type>(0.)); }
 
   KOKKOS_INLINE_FUNCTION
-  const complex conj() { return complex(re, -im); }
+  const complex conj() const { return complex(re, -im); }
 
+  KOKKOS_INLINE_FUNCTION
+  const real_type real_part_product(const complex &cm2) { return re * cm2.re - im * cm2.im; }
+
+  KOKKOS_INLINE_FUNCTION
+  const real_type real_part_product(const real_type &r) const { return re * r; }
 };
 
 template <typename real_type>
 KOKKOS_FORCEINLINE_FUNCTION SNAComplex<real_type> operator*(const real_type& r, const SNAComplex<real_type>& self) {
   return SNAComplex<real_type>(r*self.re, r*self.im);
+}
+
+template <typename real_type>
+KOKKOS_FORCEINLINE_FUNCTION SNAComplex<real_type> operator*(const SNAComplex<real_type>& self, const real_type& r) {
+  return SNAComplex<real_type>(r*self.re, r*self.im);
+}
+
+template <typename real_type>
+KOKKOS_FORCEINLINE_FUNCTION SNAComplex<real_type> operator*(const SNAComplex<real_type>& self, const SNAComplex<real_type>& cm2) {
+  return SNAComplex<real_type>(self.re*cm2.re - self.im*cm2.im, self.re*cm2.im + self.im*cm2.re);
 }
 
 typedef SNAComplex<SNAreal> SNAcomplex;

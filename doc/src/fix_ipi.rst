@@ -14,8 +14,14 @@ Syntax
 * ipi = style name of this fix command
 * address = internet address (FQDN or IP), or UNIX socket name
 * port = port number (ignored for UNIX sockets)
-* optional keyword = *unix*\ , if present uses a unix socket
-* optional keyword = *reset*\ , if present reset electrostatics at each call
+
+* zero or more keywords may be appended
+* keyword = *unix* or *reset*
+
+  .. parsed-literal::
+
+       *unix* args = none = use a unix socket
+       *reset* args = none = reset electrostatics at each call
 
 Examples
 """"""""
@@ -36,7 +42,7 @@ following publication :ref:`(IPI-CPC) <IPICPC>`.
 A version of the i-PI package, containing only files needed for use
 with LAMMPS, is provided in the tools/i-pi directory.  See the
 tools/i-pi/manual.pdf for an introduction to i-PI.  The
-examples/USER/i-pi directory contains example scripts for using i-PI
+examples/PACKAGES/i-pi directory contains example scripts for using i-PI
 with LAMMPS.
 
 In brief, the path integral molecular dynamics is performed by the
@@ -84,10 +90,11 @@ coordinates are transferred. However, one could use this strategy to
 define an external potential acting on the atoms that are moved by
 i-PI.
 
-This fix is part of the USER-MISC package.  It is only enabled if
-LAMMPS was built with that package.  See the :doc:`Build package <Build_package>` doc page for more info.  Because of the
-use of UNIX domain sockets, this fix will only work in a UNIX
-environment.
+This fix is part of the MISC package.  It is only enabled if
+LAMMPS was built with that package.  See the
+:doc:`Build package <Build_package>` page for more info.
+Because of the use of UNIX domain sockets, this fix will only
+work in a UNIX environment.
 
 Related commands
 """"""""""""""""

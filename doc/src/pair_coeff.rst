@@ -24,7 +24,7 @@ Examples
    pair_coeff * * 1.0 1.0
    pair_coeff * * nialhjea 1 1 2
    pair_coeff * 3 morse.table ENTRY1
-   pair_coeff 1 2 lj/cut 1.0 1.0 2.5 (for pair_style hybrid)
+   pair_coeff 1 2 lj/cut 1.0 1.0 2.5 # (for pair_style hybrid)
 
 Description
 """""""""""
@@ -78,7 +78,7 @@ not set explicitly by a pair_coeff command, the values are inferred
 from the I,I and J,J settings by mixing rules; see the
 :doc:`pair_modify <pair_modify>` command for a discussion.  Details on
 this option as it pertains to individual potentials are described on
-the doc page for the potential.
+the page for the potential.
 
 Many pair styles, typically for many-body potentials, use tabulated
 potential files as input, when specifying the pair_coeff command.

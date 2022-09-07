@@ -22,9 +22,9 @@
 #include "region.h"
 #include "variable.h"
 
+#include "../testing/core.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "../testing/core.h"
 
 #include <cstring>
 #include <vector>
@@ -32,14 +32,11 @@
 // whether to print verbose output (i.e. not capturing LAMMPS screen output).
 bool verbose = false;
 
-using LAMMPS_NS::MathConst::MY_PI;
-using LAMMPS_NS::utils::split_words;
-
 namespace LAMMPS_NS {
+using ::testing::ContainsRegex;
 using ::testing::ExitedWithCode;
-using ::testing::MatchesRegex;
 using ::testing::StrEq;
-
+using MathConst::MY_PI;
 
 class VariableTest : public LAMMPSTest {
 protected:
@@ -50,7 +47,7 @@ protected:
     void SetUp() override
     {
         testbinary = "VariableTest";
-        args = {"-log", "none", "-echo", "screen", "-nocite", "-v",   "num",  "1"};
+        args       = {"-log", "none", "-echo", "screen", "-nocite", "-v", "num", "1"};
         LAMMPSTest::SetUp();
         group    = lmp->group;
         domain   = lmp->domain;
@@ -60,8 +57,8 @@ protected:
     void TearDown() override
     {
         LAMMPSTest::TearDown();
-        unlink("test_variable.file");
-        unlink("test_variable.atomfile");
+        platform::unlink("test_variable.file");
+        platform::unlink("test_variable.atomfile");
     }
 
     void atomic_system()
@@ -145,12 +142,14 @@ TEST_F(VariableTest, CreateDelete)
     command("variable ten3   uloop     4 pad");
     command("variable dummy  index     0");
     command("variable file   equal     is_file(MYFILE)");
+    command("variable iswin  equal     is_os(^Windows)");
+    command("variable islin  equal     is_os(^Linux)");
     END_HIDE_OUTPUT();
-    ASSERT_EQ(variable->nvar, 18);
+    ASSERT_EQ(variable->nvar, 20);
     BEGIN_HIDE_OUTPUT();
     command("variable dummy  delete");
     END_HIDE_OUTPUT();
-    ASSERT_EQ(variable->nvar, 17);
+    ASSERT_EQ(variable->nvar, 19);
     ASSERT_THAT(variable->retrieve("three"), StrEq("three"));
     variable->set_string("three", "four");
     ASSERT_THAT(variable->retrieve("three"), StrEq("four"));
@@ -162,12 +161,23 @@ TEST_F(VariableTest, CreateDelete)
     variable->internal_set(variable->find("ten"), 2.5);
     ASSERT_THAT(variable->retrieve("ten"), StrEq("2.5"));
     ASSERT_THAT(variable->retrieve("file"), StrEq("0"));
-    FILE *fp = fopen("MYFILE","w");
-    fputs(" ",fp);
+    FILE *fp = fopen("MYFILE", "w");
+    fputs(" ", fp);
     fclose(fp);
     ASSERT_THAT(variable->retrieve("file"), StrEq("1"));
-    unlink("MYFILE");
+    platform::unlink("MYFILE");
     ASSERT_THAT(variable->retrieve("file"), StrEq("0"));
+
+#if defined(_WIN32)
+    ASSERT_THAT(variable->retrieve("iswin"), StrEq("1"));
+    ASSERT_THAT(variable->retrieve("islin"), StrEq("0"));
+#elif defined(__linux__)
+    ASSERT_THAT(variable->retrieve("iswin"), StrEq("0"));
+    ASSERT_THAT(variable->retrieve("islin"), StrEq("1"));
+#else
+    ASSERT_THAT(variable->retrieve("iswin"), StrEq("0"));
+    ASSERT_THAT(variable->retrieve("islin"), StrEq("0"));
+#endif
 
     BEGIN_HIDE_OUTPUT();
     command("variable seven delete");
@@ -185,11 +195,11 @@ TEST_F(VariableTest, CreateDelete)
     ASSERT_EQ(variable->internalstyle(variable->find("ten")), 1);
 
     TEST_FAILURE(".*ERROR: Illegal variable command.*", command("variable"););
-    TEST_FAILURE(".*ERROR: Illegal variable command.*", command("variable dummy index"););
-    TEST_FAILURE(".*ERROR: Illegal variable command.*", command("variable dummy delete xxx"););
-    TEST_FAILURE(".*ERROR: Illegal variable command.*", command("variable dummy loop -1"););
-    TEST_FAILURE(".*ERROR: Illegal variable command.*", command("variable dummy loop 10 1"););
-    TEST_FAILURE(".*ERROR: Illegal variable command.*", command("variable dummy xxxx"););
+    TEST_FAILURE(".*ERROR: Illegal variable index command.*", command("variable dummy index"););
+    TEST_FAILURE(".*ERROR: Illegal variable delete command: expected 2 arguments but found 3.*", command("variable dummy delete xxx"););
+    TEST_FAILURE(".*ERROR: Invalid variable loop argument: -1.*", command("variable dummy loop -1"););
+    TEST_FAILURE(".*ERROR: Illegal variable loop command.*", command("variable dummy loop 10 1"););
+    TEST_FAILURE(".*ERROR: Unknown variable keyword: xxx.*", command("variable dummy xxxx"););
     TEST_FAILURE(".*ERROR: Cannot redefine variable as a different style.*",
                  command("variable two string xxx"););
     TEST_FAILURE(".*ERROR: Cannot redefine variable as a different style.*",
@@ -208,7 +218,7 @@ TEST_F(VariableTest, CreateDelete)
                  command("variable ten4   uloop     2"););
     TEST_FAILURE(".*ERROR: Incorrect conversion in format string.*",
                  command("variable ten11  format    two \"%08f\""););
-    TEST_FAILURE(".*ERROR: Variable name 'ten@12' must have only alphanumeric characters or.*",
+    TEST_FAILURE(".*ERROR: Variable name 'ten@12' must have only letters, numbers, or undersc.*",
                  command("variable ten@12  index    one two three"););
     TEST_FAILURE(".*ERROR: Variable evaluation before simulation box is defined.*",
                  variable->compute_equal("c_thermo_press"););
@@ -218,7 +228,9 @@ TEST_F(VariableTest, CreateDelete)
 
 TEST_F(VariableTest, AtomicSystem)
 {
-    HIDE_OUTPUT([&] { command("atom_modify map array"); });
+    HIDE_OUTPUT([&] {
+        command("atom_modify map array");
+    });
     atomic_system();
     file_vars();
 
@@ -316,7 +328,7 @@ TEST_F(VariableTest, Expressions)
     ASSERT_TRUE(variable->equalstyle(ivar));
     ASSERT_DOUBLE_EQ(variable->compute_equal(ivar), 2.0);
     ASSERT_DOUBLE_EQ(variable->compute_equal("v_three"), 3.0);
-    ASSERT_FLOAT_EQ(variable->compute_equal("v_four"), MY_PI);
+    ASSERT_NEAR(variable->compute_equal("v_four"), MY_PI, 1.0e-14);
     ASSERT_GE(variable->compute_equal("v_five"), 20210310);
     ASSERT_DOUBLE_EQ(variable->compute_equal("v_seven"), -1);
     ASSERT_DOUBLE_EQ(variable->compute_equal("v_eight"), 2.5);
@@ -366,6 +378,7 @@ TEST_F(VariableTest, Functions)
     command("variable ten1   equal     tan(v_eight/2.0)");
     command("variable ten2   equal     asin(-1.0)+acos(0.0)");
     command("variable ten3   equal     floor(100*random(0.2,0.8,v_seed)+1)");
+    command("variable ten4   equal     extract_setting(world_size)");
     END_HIDE_OUTPUT();
 
     ASSERT_GT(variable->compute_equal(variable->find("two")), 0.99);
@@ -379,72 +392,112 @@ TEST_F(VariableTest, Functions)
     ASSERT_FLOAT_EQ(variable->compute_equal(variable->find("ten1")), 1);
     ASSERT_GT(variable->compute_equal(variable->find("ten3")), 19);
     ASSERT_LT(variable->compute_equal(variable->find("ten3")), 81);
+    ASSERT_DOUBLE_EQ(variable->compute_equal(variable->find("ten4")), 1);
 
     TEST_FAILURE(".*ERROR: Variable four: Invalid syntax in variable formula.*",
                  command("print \"${four}\""););
+    TEST_FAILURE(".*ERROR on proc 0: Invalid immediate variable.*",
+                 command("print \"$(extract_setting()\""););
+    TEST_FAILURE(".*ERROR on proc 0: Invalid immediate variable.*",
+                 command("print \"$(extract_setting()\""););
+    TEST_FAILURE(".*ERROR: Invalid extract_setting.. function syntax in variable formula.*",
+                 command("print \"$(extract_setting(one,two))\""););
+    TEST_FAILURE(".*ERROR: Unknown setting nprocs for extract_setting.. function in variable formula.*",
+                 command("print \"$(extract_setting(nprocs))\""););
 }
 
 TEST_F(VariableTest, IfCommand)
 {
     BEGIN_HIDE_OUTPUT();
     command("variable one index 1");
+    command("variable two string xx");
+    command("variable three equal 1");
     END_HIDE_OUTPUT();
 
     BEGIN_CAPTURE_OUTPUT();
     command("if 1>0 then 'print \"bingo!\"'");
     auto text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if 1>2 then 'print \"bingo!\"' else 'print \"nope?\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*nope\?.*"));
+    ASSERT_THAT(text, ContainsRegex(".*nope\?.*"));
+
+    BEGIN_CAPTURE_OUTPUT();
+    command("if 0<1 then 'print \"bingo!\"'");
+    text = END_CAPTURE_OUTPUT();
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
+
+    BEGIN_CAPTURE_OUTPUT();
+    command("if 2<1 then 'print \"bingo!\"' else 'print \"nope?\"'");
+    text = END_CAPTURE_OUTPUT();
+    ASSERT_THAT(text, ContainsRegex(".*nope\?.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if (1<=0) then 'print \"bingo!\"' else 'print \"nope?\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*nope\?.*"));
+    ASSERT_THAT(text, ContainsRegex(".*nope\?.*"));
+
+    BEGIN_CAPTURE_OUTPUT();
+    command("if (0<=0) then 'print \"bingo!\"' else 'print \"nope?\"'");
+    text = END_CAPTURE_OUTPUT();
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
+
+    BEGIN_CAPTURE_OUTPUT();
+    command("if (0>=1) then 'print \"bingo!\"' else 'print \"nope?\"'");
+    text = END_CAPTURE_OUTPUT();
+    ASSERT_THAT(text, ContainsRegex(".*nope\?.*"));
+
+    BEGIN_CAPTURE_OUTPUT();
+    command("if (1>=1) then 'print \"bingo!\"' else 'print \"nope?\"'");
+    text = END_CAPTURE_OUTPUT();
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if (-1.0e-1<0.0E+0)|^(1<0) then 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if (${one}==1.0)&&(2>=1) then 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if !((${one}!=1.0)||(2|^1)) then 'print \"missed\"' else 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if (1>=2)&&(0&&1) then 'print \"missed\"' else 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if !1 then 'print \"missed\"' else 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if !(a==b) then 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if x==x|^1==0 then 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     BEGIN_CAPTURE_OUTPUT();
     command("if x!=x|^a!=b then 'print \"bingo!\"'");
     text = END_CAPTURE_OUTPUT();
-    
-    ASSERT_THAT(text, MatchesRegex(".*bingo!.*"));
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
+
+    BEGIN_CAPTURE_OUTPUT();
+    command("if (${three}) then 'print \"bingo!\"'");
+    text = END_CAPTURE_OUTPUT();
+    ASSERT_THAT(text, ContainsRegex(".*bingo!.*"));
 
     TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
                  command("if () then 'print \"bingo!\"'"););
@@ -454,8 +507,16 @@ TEST_F(VariableTest, IfCommand)
                  command("if 1a then 'print \"bingo!\"'"););
     TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
                  command("if 1=<2 then 'print \"bingo!\"'"););
-    TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
+    TEST_FAILURE(".*ERROR: If command boolean is comparing string to number.*",
                  command("if 1!=a then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean can only operate on numbers.*",
+                 command("if a<b then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean can only operate on numbers.*",
+                 command("if a>b then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean can only operate on numbers.*",
+                 command("if a<=b then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean can only operate on numbers.*",
+                 command("if a<=b then 'print \"bingo!\"'"););
     TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
                  command("if 1&<2 then 'print \"bingo!\"'"););
     TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
@@ -464,8 +525,14 @@ TEST_F(VariableTest, IfCommand)
                  command("if (1)( then 'print \"bingo!\"'"););
     TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
                  command("if (1)1 then 'print \"bingo!\"'"););
-    TEST_FAILURE(".*ERROR: Invalid Boolean syntax in if command.*",
+    TEST_FAILURE(".*ERROR: If command boolean is comparing string to number.*",
                  command("if (v_one==1.0)&&(2>=1) then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean cannot be single string.*",
+                 command("if (something) then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean cannot be single string.*",
+                 command("if (v_one) then 'print \"bingo!\"'"););
+    TEST_FAILURE(".*ERROR: If command boolean cannot be single string.*",
+                 command("if (${two}) then 'print \"bingo!\"'"););
 }
 
 TEST_F(VariableTest, NextCommand)
@@ -516,13 +583,12 @@ int main(int argc, char **argv)
     MPI_Init(&argc, &argv);
     ::testing::InitGoogleMock(&argc, argv);
 
-    if (Info::get_mpi_vendor() == "Open MPI" && !LAMMPS_NS::Info::has_exceptions())
-        std::cout << "Warning: using OpenMPI without exceptions. "
-                     "Death tests will be skipped\n";
+    if (LAMMPS_NS::platform::mpi_vendor() == "Open MPI" && !Info::has_exceptions())
+        std::cout << "Warning: using OpenMPI without exceptions. Death tests will be skipped\n";
 
     // handle arguments passed via environment variable
     if (const char *var = getenv("TEST_ARGS")) {
-        std::vector<std::string> env = split_words(var);
+        std::vector<std::string> env = LAMMPS_NS::utils::split_words(var);
         for (auto arg : env) {
             if (arg == "-v") {
                 verbose = true;
