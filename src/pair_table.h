@@ -40,7 +40,8 @@ class PairTable : public Pair {
   double single(int, int, int, int, double, double, double, double &) override;
   void *extract(const char *, int &) override;
 
-  enum { LOOKUP, LINEAR, SPLINE, BITMAP };
+  // enum starts at 4  now to tell older binary restarts apart
+  enum { LOOKUP = 4, LINEAR, SPLINE, BITMAP, SQUARED };
 
  protected:
   int tabstyle, tablength;
@@ -50,13 +51,16 @@ class PairTable : public Pair {
     double rlo, rhi, fplo, fphi, cut;
     double *rfile, *efile, *ffile;
     double *e2file, *f2file;
-    double innersq, delta, invdelta, deltasq6;
-    double *rsq, *drsq, *e, *de, *f, *df, *e2, *f2;
+    double inner, innersq, delta, invdelta, deltasq6;
+    double *r, *rsq, *drsq, *e, *de, *f, *df, *e2, *f2;
   };
-  int ntables;
+
+  int rstyle, ntables;
   Table *tables;
 
   int **tabindex;
+
+  template <int RSTYLE, int TABSTYLE, int EVFLAG, int EFLAG, int NEWTON_PAIR> void eval();
 
   virtual void allocate();
   void read_table(Table *, char *, char *);
@@ -64,10 +68,9 @@ class PairTable : public Pair {
   void bcast_table(Table *);
   void spline_table(Table *);
   virtual void compute_table(Table *);
+//  virtual void compute_table_linear(Table *);
   void null_table(Table *);
   void free_table(Table *);
-  static void spline(double *, double *, int, double, double, double *);
-  static double splint(double *, double *, double *, int, double);
 };
 
 }    // namespace LAMMPS_NS

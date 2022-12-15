@@ -23,6 +23,7 @@
 #include "force.h"
 #include "memory.h"
 #include "neigh_list.h"
+#include "suffix.h"
 #include "table_file_reader.h"
 #include "tokenizer.h"
 
@@ -36,11 +37,17 @@ enum { NONE, RLINEAR, RSQ, BMP };
 #define EPSILONR 1.0e-6
 
 /* ---------------------------------------------------------------------- */
+// helper functions
 
-PairTable::PairTable(LAMMPS *lmp) : Pair(lmp)
+static void spline(double *x, double *y, int n, double yp1, double ypn, double *y2);
+static double splint(const double *xa, const double *ya, const double *y2a, int n, double x);
+
+/* ---------------------------------------------------------------------- */
+
+PairTable::PairTable(LAMMPS *lmp) : Pair(lmp), tables(nullptr)
 {
+  rstyle = SQUARED;
   ntables = 0;
-  tables = nullptr;
   unit_convert_flag = utils::get_supported_conversions(utils::ENERGY);
 }
 
@@ -64,8 +71,136 @@ PairTable::~PairTable()
 
 void PairTable::compute(int eflag, int vflag)
 {
+  ev_init(eflag, vflag);
+  if (rstyle == LINEAR) {
+    if (tabstyle == LINEAR) {
+      if (evflag) {
+        if (eflag) {
+          if (force->newton_pair)
+            eval<LINEAR, LINEAR, 1, 1, 1>();
+          else
+            eval<LINEAR, LINEAR, 1, 1, 0>();
+        } else {
+          if (force->newton_pair)
+            eval<LINEAR, LINEAR, 1, 0, 1>();
+          else
+            eval<LINEAR, LINEAR, 1, 0, 0>();
+        }
+      } else {
+        if (force->newton_pair)
+          eval<LINEAR, LINEAR, 0, 0, 1>();
+        else
+          eval<LINEAR, LINEAR, 0, 0, 0>();
+      }
+    } else if (tabstyle == SPLINE) {
+      if (evflag) {
+        if (eflag) {
+          if (force->newton_pair)
+            eval<LINEAR, SPLINE, 1, 1, 1>();
+          else
+            eval<LINEAR, SPLINE, 1, 1, 0>();
+        } else {
+          if (force->newton_pair)
+            eval<LINEAR, SPLINE, 1, 0, 1>();
+          else
+            eval<LINEAR, SPLINE, 1, 0, 0>();
+        }
+      } else {
+        if (force->newton_pair)
+          eval<LINEAR, SPLINE, 0, 0, 1>();
+        else
+          eval<LINEAR, SPLINE, 0, 0, 0>();
+      }
+    }
+  } else if (rstyle == SQUARED) {
+    if (tabstyle == LOOKUP) {
+      if (evflag) {
+        if (eflag) {
+          if (force->newton_pair)
+            eval<SQUARED, LOOKUP, 1, 1, 1>();
+          else
+            eval<SQUARED, LOOKUP, 1, 1, 0>();
+        } else {
+          if (force->newton_pair)
+            eval<SQUARED, LOOKUP, 1, 0, 1>();
+          else
+            eval<SQUARED, LOOKUP, 1, 0, 0>();
+        }
+      } else {
+        if (force->newton_pair)
+          eval<SQUARED, LOOKUP, 0, 0, 1>();
+        else
+          eval<SQUARED, LOOKUP, 0, 0, 0>();
+      }
+    } else if (tabstyle == LINEAR) {
+      if (evflag) {
+        if (eflag) {
+          if (force->newton_pair)
+            eval<SQUARED, LINEAR, 1, 1, 1>();
+          else
+            eval<SQUARED, LINEAR, 1, 1, 0>();
+        } else {
+          if (force->newton_pair)
+            eval<SQUARED, LINEAR, 1, 0, 1>();
+          else
+            eval<SQUARED, LINEAR, 1, 0, 0>();
+        }
+      } else {
+        if (force->newton_pair)
+          eval<SQUARED, LINEAR, 0, 0, 1>();
+        else
+          eval<SQUARED, LINEAR, 0, 0, 0>();
+      }
+    } else if (tabstyle == SPLINE) {
+      if (evflag) {
+        if (eflag) {
+          if (force->newton_pair)
+            eval<SQUARED, SPLINE, 1, 1, 1>();
+          else
+            eval<SQUARED, SPLINE, 1, 1, 0>();
+        } else {
+          if (force->newton_pair)
+            eval<SQUARED, SPLINE, 1, 0, 1>();
+          else
+            eval<SQUARED, SPLINE, 1, 0, 0>();
+        }
+      } else {
+        if (force->newton_pair)
+          eval<SQUARED, SPLINE, 0, 0, 1>();
+        else
+          eval<SQUARED, SPLINE, 0, 0, 0>();
+      }
+    } else if (tabstyle == BITMAP) {
+      if (evflag) {
+        if (eflag) {
+          if (force->newton_pair)
+            eval<SQUARED, BITMAP, 1, 1, 1>();
+          else
+            eval<SQUARED, BITMAP, 1, 1, 0>();
+        } else {
+          if (force->newton_pair)
+            eval<SQUARED, BITMAP, 1, 0, 1>();
+          else
+            eval<SQUARED, BITMAP, 1, 0, 0>();
+        }
+      } else {
+        if (force->newton_pair)
+          eval<SQUARED, BITMAP, 0, 0, 1>();
+        else
+          eval<SQUARED, BITMAP, 0, 0, 0>();
+      }
+    }
+  }
+  if (vflag_fdotr) virial_fdotr_compute();
+}
+
+/* ---------------------------------------------------------------------- */
+
+template <int RSTYLE, int TABSTYLE, int EVFLAG, int EFLAG, int NEWTON_PAIR> void PairTable::eval()
+{
   int i, j, ii, jj, inum, jnum, itype, jtype, itable;
   double xtmp, ytmp, ztmp, delx, dely, delz, evdwl, fpair;
+  double fxtmp, fytmp, fztmp;
   double rsq, factor_lj, fraction, value, a, b;
   int *ilist, *jlist, *numneigh, **firstneigh;
   Table *tb;
@@ -74,14 +209,12 @@ void PairTable::compute(int eflag, int vflag)
   int tlm1 = tablength - 1;
 
   evdwl = 0.0;
-  ev_init(eflag, vflag);
 
   double **x = atom->x;
   double **f = atom->f;
   int *type = atom->type;
   int nlocal = atom->nlocal;
   double *special_lj = force->special_lj;
-  int newton_pair = force->newton_pair;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -99,6 +232,8 @@ void PairTable::compute(int eflag, int vflag)
     jlist = firstneigh[i];
     jnum = numneigh[i];
 
+    fxtmp = fytmp = fztmp = 0.0;
+
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
       factor_lj = special_lj[sbmask(j)];
@@ -115,13 +250,34 @@ void PairTable::compute(int eflag, int vflag)
         if (rsq < tb->innersq)
           error->one(FLERR, "Pair distance < table inner cutoff: ijtype {} {} dist {}", itype,
                      jtype, sqrt(rsq));
-        if (tabstyle == LOOKUP) {
+        if (TABSTYLE == LOOKUP) {
           itable = static_cast<int>((rsq - tb->innersq) * tb->invdelta);
           if (itable >= tlm1)
             error->one(FLERR, "Pair distance > table outer cutoff: ijtype {} {} dist {}", itype,
                        jtype, sqrt(rsq));
           fpair = factor_lj * tb->f[itable];
-        } else if (tabstyle == LINEAR) {
+        } else if ((RSTYLE == LINEAR) && (TABSTYLE == LINEAR)) {
+          const double r = sqrt(rsq);
+          itable = static_cast<int>((rsq - tb->inner) * tb->invdelta);
+          if (itable >= tlm1)
+            error->one(FLERR, "Pair distance > table outer cutoff: ijtype {} {} dist {}", itype,
+                       jtype, r);
+          fraction = (r - tb->r[itable]) * tb->invdelta;
+          value = tb->f[itable] + fraction * tb->df[itable];
+          fpair = factor_lj * value;
+        } else if ((RSTYLE == LINEAR) && (TABSTYLE == SPLINE)) {
+          const double r = sqrt(rsq);
+          itable = static_cast<int>((r - tb->inner) * tb->invdelta);
+          if (itable >= tlm1)
+            error->one(FLERR, "Pair distance > table outer cutoff: ijtype {} {} dist {}", itype,
+                       jtype, r);
+          b = (r - tb->r[itable]) * tb->invdelta;
+          a = 1.0 - b;
+          value = a * tb->f[itable] + b * tb->f[itable + 1] +
+              ((a * a * a - a) * tb->f2[itable] + (b * b * b - b) * tb->f2[itable + 1]) *
+                  tb->deltasq6;
+          fpair = factor_lj * value;
+        } else if ((RSTYLE == SQUARED) && (TABSTYLE == LINEAR)) {
           itable = static_cast<int>((rsq - tb->innersq) * tb->invdelta);
           if (itable >= tlm1)
             error->one(FLERR, "Pair distance > table outer cutoff: ijtype {} {} dist {}", itype,
@@ -129,7 +285,7 @@ void PairTable::compute(int eflag, int vflag)
           fraction = (rsq - tb->rsq[itable]) * tb->invdelta;
           value = tb->f[itable] + fraction * tb->df[itable];
           fpair = factor_lj * value;
-        } else if (tabstyle == SPLINE) {
+        } else if ((RSTYLE == SQUARED) && (TABSTYLE == SPLINE)) {
           itable = static_cast<int>((rsq - tb->innersq) * tb->invdelta);
           if (itable >= tlm1)
             error->one(FLERR, "Pair distance > table outer cutoff: ijtype {} {} dist {}", itype,
@@ -149,19 +305,19 @@ void PairTable::compute(int eflag, int vflag)
           fpair = factor_lj * value;
         }
 
-        f[i][0] += delx * fpair;
-        f[i][1] += dely * fpair;
-        f[i][2] += delz * fpair;
-        if (newton_pair || j < nlocal) {
+        fxtmp += delx * fpair;
+        fytmp += dely * fpair;
+        fztmp += delz * fpair;
+        if (NEWTON_PAIR || j < nlocal) {
           f[j][0] -= delx * fpair;
           f[j][1] -= dely * fpair;
           f[j][2] -= delz * fpair;
         }
 
-        if (eflag) {
-          if (tabstyle == LOOKUP)
+        if (EFLAG) {
+          if (TABSTYLE == LOOKUP)
             evdwl = tb->e[itable];
-          else if (tabstyle == LINEAR || tabstyle == BITMAP)
+          else if (TABSTYLE == LINEAR || TABSTYLE == BITMAP)
             evdwl = tb->e[itable] + fraction * tb->de[itable];
           else
             evdwl = a * tb->e[itable] + b * tb->e[itable + 1] +
@@ -170,12 +326,13 @@ void PairTable::compute(int eflag, int vflag)
           evdwl *= factor_lj;
         }
 
-        if (evflag) ev_tally(i, j, nlocal, newton_pair, evdwl, 0.0, fpair, delx, dely, delz);
+        if (EVFLAG) ev_tally(i, j, nlocal, NEWTON_PAIR, evdwl, 0.0, fpair, delx, dely, delz);
       }
     }
+    f[i][0] += fxtmp;
+    f[i][1] += fytmp;
+    f[i][2] += fztmp;
   }
-
-  if (vflag_fdotr) virial_fdotr_compute();
 }
 
 /* ----------------------------------------------------------------------
@@ -202,7 +359,7 @@ void PairTable::allocate()
 
 void PairTable::settings(int narg, char **arg)
 {
-  if (narg < 2) error->all(FLERR, "Illegal pair_style command");
+  if (narg < 2) utils::missing_cmd_args(FLERR, "pair_style table", error);
 
   // new settings
 
@@ -215,14 +372,15 @@ void PairTable::settings(int narg, char **arg)
   else if (strcmp(arg[0], "bitmap") == 0)
     tabstyle = BITMAP;
   else
-    error->all(FLERR, "Unknown table style in pair_style command: {}", arg[0]);
+    error->all(FLERR, "Unknown evaluation style in pair_style command: {}", arg[0]);
 
   tablength = utils::inumeric(FLERR, arg[1], false, lmp);
-  if (tablength < 2) error->all(FLERR, "Illegal number of pair table entries");
+  if (tablength < 2) error->all(FLERR, "Number of pair table entries must be > 1");
 
   // optional keywords
   // assert the tabulation is compatible with a specific long-range solver
 
+  rstyle = SQUARED;
   int iarg = 2;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "ewald") == 0)
@@ -235,10 +393,27 @@ void PairTable::settings(int narg, char **arg)
       dispersionflag = 1;
     else if (strcmp(arg[iarg], "tip4p") == 0)
       tip4pflag = 1;
+    else if (strcmp(arg[iarg], "rlinear") == 0)
+      rstyle = LINEAR;
+    else if (strcmp(arg[iarg], "rsquared") == 0)
+      rstyle = SQUARED;
     else
-      error->all(FLERR, "Illegal pair_style command");
-    iarg++;
+      error->all(FLERR, "Unknown pair_style table keyword: {}", arg[iarg]);
+    ++iarg;
   }
+
+  // check for supported combinations of options
+  if ((rstyle == LINEAR) && ((tabstyle != LINEAR) && (tabstyle != SPLINE)))
+    error->all(FLERR, "Must use 'linear' or 'spline' evaluation style with 'rlinear'");
+
+  if ((rstyle == LINEAR) && (suffix_flag & Suffix::GPU))
+    error->all(FLERR, "Keyword 'rlinear' not compatible with pair style table/gpu");
+
+  if ((rstyle == LINEAR) && (suffix_flag & Suffix::OMP))
+    error->all(FLERR, "Keyword 'rlinear' not compatible with pair style table/omp");
+
+  if ((rstyle == LINEAR) && kokkosable)
+    error->all(FLERR, "Keyword 'rlinear' not compatible with pair style table/kk");
 
   // delete old tables, since cannot just change settings
 
@@ -308,10 +483,14 @@ void PairTable::coeff(int narg, char **arg)
   // for tabstyle SPLINE, always need to build spline tables
 
   tb->match = 0;
-  if (tabstyle == LINEAR && tb->ninput == tablength && tb->rflag == RSQ && tb->rhi == tb->cut)
+  if ((tabstyle == LINEAR) && (tb->ninput == tablength) && (tb->rhi == tb->cut)) {
+    if ((rstyle == LINEAR) && (tb->rflag == RLINEAR)) tb->match = 1;
+    if ((rstyle == SQUARED) && (tb->rflag == RSQ)) tb->match = 1;
+  }
+  if ((tabstyle == BITMAP) && (tb->ninput == (1 << tablength)) && (tb->rflag == BMP) &&
+      (tb->rhi == tb->cut) && (rstyle == SQUARED))
     tb->match = 1;
-  if (tabstyle == BITMAP && tb->ninput == 1 << tablength && tb->rflag == BMP && tb->rhi == tb->cut)
-    tb->match = 1;
+
   if (tb->rflag == BMP && tb->match == 0)
     error->all(FLERR, "Bitmapped table in file does not match requested table");
 
@@ -832,7 +1011,7 @@ void PairTable::null_table(Table *tb)
 {
   tb->rfile = tb->efile = tb->ffile = nullptr;
   tb->e2file = tb->f2file = nullptr;
-  tb->rsq = tb->drsq = tb->e = tb->de = nullptr;
+  tb->r = tb->rsq = tb->drsq = tb->e = tb->de = nullptr;
   tb->f = tb->df = tb->e2 = tb->f2 = nullptr;
 }
 
@@ -848,6 +1027,7 @@ void PairTable::free_table(Table *tb)
   memory->destroy(tb->e2file);
   memory->destroy(tb->f2file);
 
+  memory->destroy(tb->r);
   memory->destroy(tb->rsq);
   memory->destroy(tb->drsq);
   memory->destroy(tb->e);
@@ -856,65 +1036,6 @@ void PairTable::free_table(Table *tb)
   memory->destroy(tb->df);
   memory->destroy(tb->e2);
   memory->destroy(tb->f2);
-}
-
-/* ----------------------------------------------------------------------
-   spline and splint routines modified from Numerical Recipes
-------------------------------------------------------------------------- */
-
-void PairTable::spline(double *x, double *y, int n, double yp1, double ypn, double *y2)
-{
-  int i, k;
-  double p, qn, sig, un;
-  auto u = new double[n];
-
-  if (yp1 > 0.99e30)
-    y2[0] = u[0] = 0.0;
-  else {
-    y2[0] = -0.5;
-    u[0] = (3.0 / (x[1] - x[0])) * ((y[1] - y[0]) / (x[1] - x[0]) - yp1);
-  }
-  for (i = 1; i < n - 1; i++) {
-    sig = (x[i] - x[i - 1]) / (x[i + 1] - x[i - 1]);
-    p = sig * y2[i - 1] + 2.0;
-    y2[i] = (sig - 1.0) / p;
-    u[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
-    u[i] = (6.0 * u[i] / (x[i + 1] - x[i - 1]) - sig * u[i - 1]) / p;
-  }
-  if (ypn > 0.99e30)
-    qn = un = 0.0;
-  else {
-    qn = 0.5;
-    un = (3.0 / (x[n - 1] - x[n - 2])) * (ypn - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
-  }
-  y2[n - 1] = (un - qn * u[n - 2]) / (qn * y2[n - 2] + 1.0);
-  for (k = n - 2; k >= 0; k--) y2[k] = y2[k] * y2[k + 1] + u[k];
-
-  delete[] u;
-}
-
-/* ---------------------------------------------------------------------- */
-
-double PairTable::splint(double *xa, double *ya, double *y2a, int n, double x)
-{
-  int klo, khi, k;
-  double h, b, a, y;
-
-  klo = 0;
-  khi = n - 1;
-  while (khi - klo > 1) {
-    k = (khi + klo) >> 1;
-    if (xa[k] > x)
-      khi = k;
-    else
-      klo = k;
-  }
-  h = xa[khi] - xa[klo];
-  a = (xa[khi] - x) / h;
-  b = (x - xa[klo]) / h;
-  y = a * ya[klo] + b * ya[khi] +
-      ((a * a * a - a) * y2a[klo] + (b * b * b - b) * y2a[khi]) * (h * h) / 6.0;
-  return y;
 }
 
 /* ----------------------------------------------------------------------
@@ -949,6 +1070,7 @@ void PairTable::write_restart_settings(FILE *fp)
   fwrite(&msmflag, sizeof(int), 1, fp);
   fwrite(&dispersionflag, sizeof(int), 1, fp);
   fwrite(&tip4pflag, sizeof(int), 1, fp);
+  fwrite(&rstyle, sizeof(int), 1, fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -965,6 +1087,7 @@ void PairTable::read_restart_settings(FILE *fp)
     utils::sfread(FLERR, &msmflag, sizeof(int), 1, fp, nullptr, error);
     utils::sfread(FLERR, &dispersionflag, sizeof(int), 1, fp, nullptr, error);
     utils::sfread(FLERR, &tip4pflag, sizeof(int), 1, fp, nullptr, error);
+    utils::sfread(FLERR, &rstyle, sizeof(int), 1, fp, nullptr, error);
   }
   MPI_Bcast(&tabstyle, 1, MPI_INT, 0, world);
   MPI_Bcast(&tablength, 1, MPI_INT, 0, world);
@@ -973,6 +1096,13 @@ void PairTable::read_restart_settings(FILE *fp)
   MPI_Bcast(&msmflag, 1, MPI_INT, 0, world);
   MPI_Bcast(&dispersionflag, 1, MPI_INT, 0, world);
   MPI_Bcast(&tip4pflag, 1, MPI_INT, 0, world);
+  MPI_Bcast(&rstyle, 1, MPI_INT, 0, world);
+
+  // this restart was written with an older version of pair style table and is incompatible.
+  if (tabstyle < LOOKUP)
+    error->all(FLERR,
+               "Binary restart files written with LAMMPS version 3 Nov 2022 and older "
+               "are not compatible with this version of pair style table");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1048,4 +1178,60 @@ void *PairTable::extract(const char *str, int &dim)
     return &tables[0].cut;
   } else
     return nullptr;
+}
+
+/* ----------------------------------------------------------------------
+   spline and splint routines modified from Numerical Recipes
+------------------------------------------------------------------------- */
+
+static void spline(double *x, double *y, int n, double yp1, double ypn, double *y2)
+{
+  int i, k;
+  double p, qn, sig, un;
+  auto u = new double[n];
+
+  if (yp1 > 0.99e30)
+    y2[0] = u[0] = 0.0;
+  else {
+    y2[0] = -0.5;
+    u[0] = (3.0 / (x[1] - x[0])) * ((y[1] - y[0]) / (x[1] - x[0]) - yp1);
+  }
+  for (i = 1; i < n - 1; i++) {
+    sig = (x[i] - x[i - 1]) / (x[i + 1] - x[i - 1]);
+    p = sig * y2[i - 1] + 2.0;
+    y2[i] = (sig - 1.0) / p;
+    u[i] = (y[i + 1] - y[i]) / (x[i + 1] - x[i]) - (y[i] - y[i - 1]) / (x[i] - x[i - 1]);
+    u[i] = (6.0 * u[i] / (x[i + 1] - x[i - 1]) - sig * u[i - 1]) / p;
+  }
+  if (ypn > 0.99e30)
+    qn = un = 0.0;
+  else {
+    qn = 0.5;
+    un = (3.0 / (x[n - 1] - x[n - 2])) * (ypn - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
+  }
+  y2[n - 1] = (un - qn * u[n - 2]) / (qn * y2[n - 2] + 1.0);
+  for (k = n - 2; k >= 0; k--) y2[k] = y2[k] * y2[k + 1] + u[k];
+
+  delete[] u;
+}
+
+/* ---------------------------------------------------------------------- */
+
+static double splint(const double *xa, const double *ya, const double *y2a, int n, double x)
+{
+  int klo = 0;
+  int khi = n - 1;
+  while (khi - klo > 1) {
+    const int k = (khi + klo) >> 1;
+    if (xa[k] > x)
+      khi = k;
+    else
+      klo = k;
+  }
+  const double h = xa[khi] - xa[klo];
+  const double a = (xa[khi] - x) / h;
+  const double b = (x - xa[klo]) / h;
+  const double y = a * ya[klo] + b * ya[khi] +
+      ((a * a * a - a) * y2a[klo] + (b * b * b - b) * y2a[khi]) * (h * h) / 6.0;
+  return y;
 }
