@@ -19,6 +19,8 @@ from __future__ import print_function
 
 import sys
 import argparse
+from os import path
+from datetime import datetime
 
 ########################################################################
 
@@ -71,11 +73,13 @@ class Tabulate(object):
     """Base tabulation class. Contains all shared functionality: common argument parsing,
     output file handling, table writing"""
 
-    def __init__(self, style, efunc, ffunc=None):
+    def __init__(self, style, efunc, ffunc=None, units=None, comment=None):
         self.fp = sys.stdout
         self.tstyle = style
         self.energyfunc = efunc
         self.forcefunc = ffunc
+        self.units = units
+        self.comment = comment
         self.eshift = 0.0
         self.args = None
         self.diff = True
@@ -97,7 +101,20 @@ class Tabulate(object):
     def openfile(self, label):
         """Open table file, if needed and print label for new table entry"""
         if self.args and self.args.filename != '-':
-            self.fp = open(self.args.filename, 'a')
+            try:
+                if path.isfile(self.args.filename):
+                    self.fp = open(self.args.filename, 'a')
+                    print("# Appending table to file " + self.args.filename)
+                else:
+                    self.fp = open(self.args.filename, 'w')
+                    print("# Writing table to new file " + self.args.filename)
+                    self.fp.write('# DATE: ' + datetime.now().date().isoformat())
+                    if self.units:
+                        self.fp.write(' UNITS: ' + str(self.units))
+                    if self.comment:
+                        self.fp.write(' COMMENT: ' + str(self.comment) + '\n')
+            except IOError:
+                sys.exit("Cannot open file %s for writing table data" % self.args.filename)
         self.fp.write('\n' + label + '\n')
 
     def writetable(self, table, offset):
@@ -112,8 +129,8 @@ class Tabulate(object):
 ################################################################################
 # create tabulation for pair styles
 class PairTabulate(Tabulate):
-    def __init__(self, efunc, ffunc=None):
-        super(PairTabulate, self).__init__('pair', efunc, ffunc)
+    def __init__(self, efunc, ffunc=None, units=None, comment=None):
+        super(PairTabulate, self).__init__('pair', efunc, ffunc, units, comment)
         self.parser.add_argument('--eshift', '-e', dest='eshift', default=False,
                                  action='store_true',
                                  help="Shift potential energy to be zero at outer cutoff")
@@ -138,8 +155,8 @@ class PairTabulate(Tabulate):
         if self.args.eshift:
             offset=self.energyfunc(self.args.xmax)
 
-        (table, dummy) = mktable(self.tstyle, label, self.args.num, self.args.xmin, self.args.xmax,
-                                 self.energyfunc, self.args.diff, self.forcefunc)
+        table, dummy = mktable(self.tstyle, label, self.args.num, self.args.xmin, self.args.xmax,
+                               self.energyfunc, self.args.diff, self.forcefunc)
 
         # open table file
         self.openfile(label)
@@ -161,8 +178,8 @@ class PairTabulate(Tabulate):
 ################################################################################
 # shared functionality to create tabulation for bond or angle styles
 class BondAngleTabulate(Tabulate):
-    def __init__(self, style, efunc, ffunc=None):
-        super(BondAngleTabulate, self).__init__(style, efunc, ffunc)
+    def __init__(self, style, efunc, ffunc=None, units=None, comment=None):
+        super(BondAngleTabulate, self).__init__(style, efunc, ffunc, units, comment)
         self.parser.add_argument('--eshift', '-e', dest='eshift', default=False,
                                  action='store_true',
                                  help="Shift potential energy to be zero at minimum")
@@ -191,8 +208,8 @@ class BondAngleTabulate(Tabulate):
         if not self.forcefunc:
             self.diff = True
 
-        (table, xzero) = mktable(self.tstyle, label, self.args.num, self.args.xmin, self.args.xmax,
-                                 self.energyfunc, self.args.diff, self.forcefunc)
+        table, xzero = mktable(self.tstyle, label, self.args.num, self.args.xmin, self.args.xmax,
+                               self.energyfunc, self.args.diff, self.forcefunc)
         print("# Minimum energy of tabulated potential is at %g" % xzero)
         offset = 0.0
         if self.args.eshift:
@@ -214,19 +231,19 @@ class BondAngleTabulate(Tabulate):
 
 ################################################################################
 class BondTabulate(BondAngleTabulate):
-    def __init__(self, efunc, ffunc=None):
-        super(BondTabulate, self).__init__('bond', efunc, ffunc)
+    def __init__(self, efunc, ffunc=None, units=None, comment=None):
+        super(BondTabulate, self).__init__('bond', efunc, ffunc, units, comment)
 
 ################################################################################
 class AngleTabulate(BondAngleTabulate):
-    def __init__(self, efunc, ffunc=None):
-        super(AngleTabulate, self).__init__('angle', efunc, ffunc)
+    def __init__(self, efunc, ffunc=None, units=None, comment=None):
+        super(AngleTabulate, self).__init__('angle', efunc, ffunc, units, comment)
 
 ################################################################################
 # create tabulation for dihdedral
 class DihedralTabulate(Tabulate):
-    def __init__(self, efunc, ffunc=None):
-        super(DihedralTabulate, self).__init__('dihedral', efunc, ffunc)
+    def __init__(self, efunc, ffunc=None, units=None, comment=None):
+        super(DihedralTabulate, self).__init__('dihedral', efunc, ffunc, units, comment)
         idx = [a.dest for a in self.parser._actions].index('xmin')
         self.parser._actions[idx].required=False
         self.parser._actions[idx].default=-180.0
@@ -253,9 +270,8 @@ class DihedralTabulate(Tabulate):
         if not self.forcefunc:
             self.diff = True
 
-        (table, xzero) = mktable(self.tstyle, label, self.args.num, self.args.xmin, self.args.xmax,
-                                 self.energyfunc, self.args.diff, self.forcefunc)
-
+        table, dummy = mktable(self.tstyle, label, self.args.num, self.args.xmin, self.args.xmax,
+                               self.energyfunc, self.args.diff, self.forcefunc)
         self.openfile(label)
         self.fp.write("N %d DEGREES \n\n" % (self.args.num))
         self.writetable(table, 0.0)

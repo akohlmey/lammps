@@ -24,5 +24,5 @@ def morse_force(r):
 ################################################################################
 
 if __name__ == "__main__":
-    btable = BondTabulate(morse_energy, morse_force)
+    btable = BondTabulate(morse_energy, morse_force, units='lj')
     btable.run('MORSE')

@@ -27,5 +27,5 @@ def hybrid_energy(r):
 ################################################################################
 
 if __name__ == "__main__":
-    ptable = PairTabulate(hybrid_energy)
+    ptable = PairTabulate(hybrid_energy, units='lj', comment='Morse repulsion + LJ attraction')
     ptable.run('MORSE_LJ')

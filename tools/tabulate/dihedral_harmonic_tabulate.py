@@ -15,5 +15,5 @@ def harmonic_energy(theta):
 ################################################################################
 
 if __name__ == "__main__":
-    dtable = DihedralTabulate(harmonic_energy)
+    dtable = DihedralTabulate(harmonic_energy, units='metal')
     dtable.run('HARM')

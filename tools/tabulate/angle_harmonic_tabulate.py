@@ -17,5 +17,5 @@ def harmonic_energy(theta):
 ################################################################################
 
 if __name__ == "__main__":
-    atable = AngleTabulate(harmonic_energy)
+    atable = AngleTabulate(harmonic_energy, units='real')
     atable.run('HARM')
