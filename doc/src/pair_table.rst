@@ -2,15 +2,11 @@
 .. index:: pair_style table/gpu
 .. index:: pair_style table/kk
 .. index:: pair_style table/omp
-.. index:: pair_style table/mod
 
 pair_style table command
 ========================
 
 Accelerator Variants: *table/gpu*, *table/kk*, *table/omp*
-
-pair_style table/mod command
-============================
 
 Syntax
 """"""
@@ -24,7 +20,7 @@ Syntax
 * N = use 2\^N values in *bitmap* tables
 * zero or more keywords may be appended
 * keyword = *ewald* or *pppm* or *msm* or *dispersion* or *tip4p* or *rlinear* or *rsquared*
-   *ewald* = flag compatibilty with kspace style ewald (and compatible)
+   *ewald* = flag compatibility with kspace style ewald (and compatible)
    *pppm* = flag compatibility with kspace style pppm (and compatible)
    *msm* = flag compatibility with kspace style msm (and compatible)
    *dispersion* = flag compatibility with a dispersion kspace style
@@ -65,7 +61,7 @@ A detailed discussion of these options follows below.
 
 The internal tables can be created with linear spacing for improved
 accuracy and consistency at small distances at a slightly increased
-compatational cost.  Previously only squared spacing was available.
+computational cost.  Previously only squared spacing was available.
 
 The internal tables are in most cases created as a pre-computation by
 fitting cubic splines to the values in the provided table files and
@@ -93,12 +89,12 @@ For the *spline* style, cubic spline coefficients are pre-computed and
 stored for each of the *N* values in the internal table, one set of
 splines for energy, another for force.  Note that these splines are
 fitted to the **internal** tabulated data which may have already be
-determined from a spline interpolation of the orignal tabulated data
+determined from a spline interpolation of the original tabulated data
 read from a file (see above).  The distance :math:`r_{ij}` is used to
 find the appropriate set of spline coefficients which are used to
-evaluate a cubic polynomial which computes the energy or force.
-This is the most accurate evaluation style available but also the one
-with the largest computational cost.
+evaluate a cubic polynomial which computes the energy or force.  This is
+the most accurate evaluation style available but also the one with the
+largest computational cost.
 
 The *bitmap* style is similar to *linear*, only that the lookup is done
 using a fast bit-mapping technique due to :ref:`(Wolff) <Wolff2>`, which
@@ -134,7 +130,7 @@ The filename specifies a file containing tabulated energy and force
 values.  The keyword specifies a section of the file.  The cutoff is an
 optional coefficient.  If not specified, the outer cutoff in the table
 itself (see below) will be used to build the internal table for forces
-and energy.  If the custoff is specified, only data from the file to the
+and energy.  If the cutoff is specified, only data from the file to the
 cutoff is used to create the internal table.  The format of this file is
 described below.
 
