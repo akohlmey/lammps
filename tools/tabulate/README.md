@@ -6,16 +6,17 @@ table, and angle style table
 
 To create tables, you need to define your energy and - optionally -
 force functions and then an instance of either the PairTabulate(),
-BondTabulate(), or AngleTabulate() class from the tabulate module and
-call its run() method to generate the table.  Most of the settings
-(number of points, minimum, maximum etc.) are provided as command line
-flags.  The run() method may be called multiple times to generate
-multiple tables, for instance after changing parameters of the
+BondTabulate(), AngleTabulate(), or DihedralTabulate() class from the
+tabulate module and call its run() method to generate the table.  Most
+of the settings (number of points, minimum, maximum etc.) are provided
+as command line flags.  The run() method may be called multiple times to
+generate multiple tables, for instance after changing parameters of the
 energy/force functions.  If the force function is not provided, the
 force will be determined through numerical differentiation.
 
 Please see the individual tabulation scripts in this folder for examples:
 
+| ------------------------------|----------------------------------------------------------------------------|
 | File                          | Description                                                                |
 | ------------------------------|----------------------------------------------------------------------------|
 | pair_lj_tabulate.py           | creates two Lennard-Jones pair potential tables with different parameters  |
@@ -23,6 +24,7 @@ Please see the individual tabulation scripts in this folder for examples:
 | angle_harmonic_tabulate.py    | creates a table for a harmonic angle potential table                       |
 | dihedral_harmonic_tabulate.py | creates a table for a harmonic dihedral potential table                    |
 | pair_hybrid_tabulate.py       | creates a Morse/Lennard-Jones hybrid potential table with smooth switching |
+| ------------------------------|----------------------------------------------------------------------------|
 
 Common command line flags:
 
