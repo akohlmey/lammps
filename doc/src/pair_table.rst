@@ -20,6 +20,9 @@ Syntax
 * N = use 2\^N values in *bitmap* tables
 * zero or more keywords may be appended
 * keyword = *ewald* or *pppm* or *msm* or *dispersion* or *tip4p* or *rlinear* or *rsquared*
+
+.. parsed-literal::
+
    *ewald* = flag compatibility with kspace style ewald (and compatible)
    *pppm* = flag compatibility with kspace style pppm (and compatible)
    *msm* = flag compatibility with kspace style msm (and compatible)
@@ -46,16 +49,17 @@ Description
 Pair style *table* uses tabulated data to compute pair-wise forces and
 energies instead of analytical functions.  When performing dynamics or
 minimization internal tables are used to evaluate energy and forces for
-pairwise interactions between particles.  The internal tabulated data is
-imported from table files where the energy and force are listed as a
-function of distance into internal tables.  The pair style supports
-multiple "evaluation styles" (*lookup*, *linear*, *spline*, and
-*bitmap*) that differ in how the values from the internal tables are
-looked up and evaluated, resulting in different computational effort and
-accuracy.  The internal tables use equidistant spacing in either *r*
-(*rlinear*) or :math:`r^2` (*rsquared*) that also result in different
-computational cost and accuracy across the range of the tabulated data.
-A detailed discussion of these options follows below.
+pairwise interactions between particles.  The internal tables are
+generated from table files that list energy and force as a function of
+distance.  This is done only once when the :doc:`pair_coeff
+<pair_coeff>` commands are processed.  The pair style supports multiple
+"evaluation styles" (*lookup*, *linear*, *spline*, and *bitmap*) that
+differ in how the values from the internal tables are looked up and
+evaluated, resulting in different computational effort and accuracy.
+The internal tables use uniform spacing in either *r* (*rlinear*) or
+:math:`r^2` (*rsquared*) that also result in different computational
+cost and accuracy across the range of the tabulated data.  A detailed
+discussion of these options follows below.
 
 .. versionchanged:: TBD
 
@@ -75,33 +79,33 @@ energy and force values as needed for each pair of particles separated
 by a distance :math:`r_{ij}`.  This evaluation is done in one of 4
 styles: *lookup*, *linear*, *spline*, or *bitmap*\ .
 
-For the *lookup* style, the distance :math:`r_{ij}` is used to find the
-closest table entry which is then used directly.  This is fast but incurs
-a significant error depending on the granularity of the data.  The *lookup*
-evaluation style is not available for *rlinear* spacing.
+- For the *lookup* style, the distance :math:`r_{ij}` is used to find
+  the closest table entry which is then used directly.  This is fast but
+  incurs a significant error depending on the granularity of the data.
+  The *lookup* evaluation style is not available for *rlinear* spacing.
 
-For the *linear* style, the distance :math:`r_{ij}` is used to find the
-2 surrounding table values from which an energy or force is computed by
-linear interpolation.  This is significantly more accurate than *lookup*
-at only a small additional computational cost.
+- For the *linear* style, the distance :math:`r_{ij}` is used to find
+  the 2 surrounding table values from which an energy or force is
+  computed by linear interpolation.  This is significantly more accurate
+  than *lookup* at only a small additional computational cost.
 
-For the *spline* style, cubic spline coefficients are pre-computed and
-stored for each of the *N* values in the internal table, one set of
-splines for energy, another for force.  Note that these splines are
-fitted to the **internal** tabulated data which may have already be
-determined from a spline interpolation of the original tabulated data
-read from a file (see above).  The distance :math:`r_{ij}` is used to
-find the appropriate set of spline coefficients which are used to
-evaluate a cubic polynomial which computes the energy or force.  This is
-the most accurate evaluation style available but also the one with the
-largest computational cost.
+- For the *spline* style, cubic spline coefficients are pre-computed and
+  stored for each of the *N* values in the internal table, one set of
+  splines for energy, another for force.  Note that these splines are
+  fitted to the **internal** tabulated data which may have already be
+  determined from a spline interpolation of the original tabulated data
+  read from a file (see above).  The distance :math:`r_{ij}` is used to
+  find the appropriate set of spline coefficients which are used to
+  evaluate a cubic polynomial which computes the energy or force.  This
+  is the most accurate evaluation style available but also the one with
+  the largest computational cost.
 
-The *bitmap* style is similar to *linear*, only that the lookup is done
-using a fast bit-mapping technique due to :ref:`(Wolff) <Wolff2>`, which
-requires the number of tabulated data points in the internal table to be
-a power of 2.  Thus a value of *N* will result in :math:`2^N` data
-points in the internal table.  The *bitmap* style is not available for
-*rlinear* spacing.
+- The *bitmap* style is similar to *linear*, only that the lookup is
+  done using a fast bit-mapping technique due to :ref:`(Wolff)
+  <Wolff2>`, which requires the number of tabulated data points in the
+  internal table to be a power of 2.  Thus a value of *N* will result in
+  :math:`2^N` data points in the internal table.  The *bitmap* style is
+  not available for *rlinear* spacing.
 
 The performance and accuracy of the tabulation depends on multiple
 factors like the number of values, the evaluation style, the spacing
@@ -110,13 +114,14 @@ is usually more accurate, but less efficient since it requires more
 memory.  A tabulation with *rlinear* (internal) spacing is more accurate
 at small distances (where the curvature of typical atomic potential
 functions tends to be larger) but incurs additional computational cost
-compared to the *rsquared* style.  Spline interpolation is usually more
-accurate than a linear interpolation, and that more accurate than
-lookup.  How large the difference is depends on the curvature of the
-potential.  The added cost of a spline interpolation may be offset by
-needing fewer tabulation values to represent the potential with the
-desired accuracy.  The optimal choice typically requires some
-experimentation and testing.
+compared to the *rsquared* style because of the need to calculate
+:math:`r_{ij} = \sqrt{\Delta x_{ij}^2 + \Delta y_{ij}^2 + \Delta
+z_{ij}^2}`.  Spline interpolation is usually more accurate than a linear
+interpolation, and that more accurate than lookup.  How large the
+difference is depends on the curvature of the potential.  The added cost
+of a spline interpolation may be offset by needing fewer tabulation
+values to represent the potential with the desired accuracy.  The
+optimal choice typically requires some experimentation and testing.
 
 The following coefficients must be defined for each pair of atoms
 types via the :doc:`pair_coeff <pair_coeff>` command as in the examples
@@ -237,8 +242,8 @@ parameter is needed to avoid interpolation during import of the table.
 All other parameters are optional.  If "R" or "RSQ" or "BITMAP" does not
 appear, then the distances in each line of the table are used as-is to
 perform spline interpolation.  In this case, the table values can be
-spaced in *r* uniformly or however you wish to position table values in
-regions of large gradients.
+spaced uniformly in *r* or however else you wish to position table
+values in regions of large gradients.
 
 If used, the parameters "R" or "RSQ" are followed by 2 values *rlo* and
 *rhi*\ .  If specified, the distance associated with each energy and
