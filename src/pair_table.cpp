@@ -375,7 +375,7 @@ void PairTable::settings(int narg, char **arg)
     error->all(FLERR, "Unknown evaluation style in pair_style command: {}", arg[0]);
 
   tablength = utils::inumeric(FLERR, arg[1], false, lmp);
-  if (tablength < 2) error->all(FLERR, "Number of pair table entries must be > 1");
+  if (tablength < 2) error->all(FLERR, "Illegal number of pair table entries: {}", tablength);
 
   // optional keywords
   // assert the tabulation is compatible with a specific long-range solver
@@ -544,7 +544,7 @@ void PairTable::read_table(Table *tb, char *file, char *keyword)
   double conversion_factor = utils::get_conversion_factor(utils::ENERGY, unit_convert);
   char *line = reader.find_section_start(keyword);
 
-  if (!line) { error->one(FLERR, "Did not find keyword in table file"); }
+  if (!line) error->one(FLERR, "Did not find keyword {} in table file", keyword);
 
   // read args on 2nd line of section
   // allocate table arrays for file values
