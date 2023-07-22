@@ -202,6 +202,7 @@ else()
 endif()
 
 include(GNUInstallDirs)
+
 file(GLOB ALL_SOURCES ${CONFIGURE_DEPENDS} ${LAMMPS_SOURCE_DIR}/[^.]*.cpp)
 file(GLOB MAIN_SOURCES ${CONFIGURE_DEPENDS} ${LAMMPS_SOURCE_DIR}/main.cpp)
 list(REMOVE_ITEM ALL_SOURCES ${MAIN_SOURCES})
@@ -797,7 +798,7 @@ include(Documentation)
 ###############################################################################
 # Install potential and force field files in data directory
 ###############################################################################
-set(LAMMPS_INSTALL_DATADIR ${CMAKE_INSTALL_FULL_DATADIR}/lammps)
+set(LAMMPS_INSTALL_DATADIR ${CMAKE_INSTALL_DATADIR}/lammps)
 install(DIRECTORY ${LAMMPS_POTENTIALS_DIR} DESTINATION ${LAMMPS_INSTALL_DATADIR})
 if(BUILD_TOOLS)
   install(DIRECTORY ${LAMMPS_TOOLS_DIR}/msi2lmp/frc_files DESTINATION ${LAMMPS_INSTALL_DATADIR})
@@ -1030,4 +1031,19 @@ if(ENABLE_TESTING)
   if(ENABLE_COVERAGE)
     message(STATUS "Collecting code coverage data")
   endif()
+endif()
+
+if(CPACK_GENERATOR STREQUAL "DragNDrop")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "LAMMPS")
+  set(CPACK_PACKAGE_VENDOR "The LAMMPS Developers")
+  set(CPACK_PACKAGE_NAME "LAMMPS")
+  set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+  set(CPACK_DMG_VOLUME_NAME "LAMMPS-macos-universal")
+  set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/packaging/LAMMPS_DMG_Background.png")
+  set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/packaging/LAMMPS_DMG_Setup.scpt")
+  
+  install(DIRECTORY ${LAMMPS_DIR}/bench DESTINATION LAMMPS)
+  install(FILES ${LAMMPS_DIR}/cmake/packaging/README.txt DESTINATION .)
+  
+  include(CPack)
 endif()
