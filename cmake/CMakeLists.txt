@@ -811,19 +811,19 @@ install(
   DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/profile.d)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "LinuxMUSL")
-  file(WRITE ${CMAKE_BINARY_DIR}/README.txt
+  file(WRITE ${CMAKE_BINARY_DIR}/README.LAMMPS
     "Statically linked, portable, serial LAMMPS binary archive for x86_64 Linux\n\n")
 endif()
 if(APPLE AND CMAKE_OSX_ARCHITECTURES)
-  file(WRITE ${CMAKE_BINARY_DIR}/README.txt
+  file(WRITE ${CMAKE_BINARY_DIR}/README.LAMMPS
     "Multi-arch, serial LAMMPS binary archive for macOS 11 (Big Sur) and later\n\n")
 endif()
 if((CMAKE_SYSTEM_NAME STREQUAL "LinuxMUSL") OR (APPLE AND CMAKE_OSX_ARCHITECTURES))
-  file(APPEND ${CMAKE_BINARY_DIR}/README.txt
+  file(APPEND ${CMAKE_BINARY_DIR}/README.LAMMPS
     "Executables are in 'bin', potential files in 'share/lammps/potentials',\n")
-  file(APPEND ${CMAKE_BINARY_DIR}/README.txt
+  file(APPEND ${CMAKE_BINARY_DIR}/README.LAMMPS
     "benchmark and simple input examples are in 'share/lammps/bench'.\n")
-  install(FILES ${CMAKE_BINARY_DIR}/README.txt
+  install(FILES ${CMAKE_BINARY_DIR}/README.LAMMPS
     DESTINATION ${CMAKE_INSTALL_PREFIX})
 endif()
 
@@ -1048,16 +1048,20 @@ if(ENABLE_TESTING)
   endif()
 endif()
 
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "LAMMPS Molecular Dynamics Simulator")
+set(CPACK_PACKAGE_VENDOR "The LAMMPS Developers")
+set(CPACK_PACKAGE_NAME "LAMMPS")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_DESCRIPTION_FILE "${LAMMPS_DIR}/README")
+set(CPACK_RESOURCE_FILE_LICENSE "${LAMMPS_DIR}/LICENSE")
+set(CPACK_PACKAGE_CONTACT "developers@lammps.org")
+
 if(CPACK_GENERATOR STREQUAL "DragNDrop")
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "LAMMPS")
-  set(CPACK_PACKAGE_VENDOR "The LAMMPS Developers")
-  set(CPACK_PACKAGE_NAME "LAMMPS")
-  set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
   set(CPACK_DMG_VOLUME_NAME "LAMMPS-macos-universal")
   set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/packaging/LAMMPS_DMG_Background.png")
   set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_SOURCE_DIR}/packaging/LAMMPS_DMG_Setup.scpt")
-  
-  install(FILES ${LAMMPS_DIR}/cmake/packaging/README.txt DESTINATION .)
-  
-  include(CPack)
+  install(FILES ${LAMMPS_DIR}/cmake/packaging/lammps.icns  DESTINATION ${LAMMPS_INSTALL_DATADIR})
+  install(FILES ${LAMMPS_DIR}/cmake/packaging/README.macos DESTINATION . RENAME README.txt)
 endif()
+
+include(CPack)
