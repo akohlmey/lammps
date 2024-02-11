@@ -60,16 +60,11 @@ Force::Force(LAMMPS *lmp) :
   special_onefive = 0;
   special_extra = 0;
 
+  boltz = hplanck = mvv2e = ftm2v = mv2d = nktv2p = qqr2e = qe2f = vxmu2f = xxt2kmu = 0.0;
+  qqrd2e = e_mass = hhmrr2e = mvh2r = mass2amu = angstrom = femtosecond = qelectron = 0.0;
   dielectric = 1.0;
   qqr2e_lammps_real = 332.06371;    // these constants are toggled
   qqr2e_charmm_real = 332.0716;     // by new CHARMM pair styles
-
-  pair = nullptr;
-  bond = nullptr;
-  angle = nullptr;
-  dihedral = nullptr;
-  improper = nullptr;
-  kspace = nullptr;
 
   pair_style = utils::strdup("none");
   bond_style = utils::strdup("none");

@@ -152,6 +152,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 0.0;    // undefined
     force->angstrom = 1.0;
     force->femtosecond = 1.0;
     force->qelectron = 1.0;
@@ -173,6 +174,7 @@ void Update::set_units(const char *style)
     force->e_mass = 1.0 / 1836.1527556560675;
     force->hhmrr2e = 0.0957018663603261;
     force->mvh2r = 1.5339009481951;
+    force->mass2amu = 1.0;
     force->angstrom = 1.0;
     force->femtosecond = 1.0;
     force->qelectron = 1.0;
@@ -194,6 +196,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 1.0;
     force->angstrom = 1.0;
     force->femtosecond = 1.0e-3;
     force->qelectron = 1.0;
@@ -215,6 +218,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 1.0/1.66053906660e-27;
     force->angstrom = 1.0e-10;
     force->femtosecond = 1.0e-15;
     force->qelectron = 1.6021765e-19;
@@ -236,6 +240,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 1.0/1.66053906660e-24;
     force->angstrom = 1.0e-8;
     force->femtosecond = 1.0e-15;
     force->qelectron = 4.8032044e-10;
@@ -257,6 +262,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 1.0;
     force->angstrom = 1.88972612;
     force->femtosecond = 1.0;
     force->qelectron = 1.0;
@@ -278,6 +284,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 1.0/1.66053906660e-12;
     force->angstrom = 1.0e-4;
     force->femtosecond = 1.0e-9;
     force->qelectron = 1.6021765e-7;
@@ -299,6 +306,7 @@ void Update::set_units(const char *style)
     force->e_mass = 0.0;    // not yet set
     force->hhmrr2e = 0.0;
     force->mvh2r = 0.0;
+    force->mass2amu = 1.0/1.66053906660e-6;
     force->angstrom = 1.0e-1;
     force->femtosecond = 1.0e-6;
     force->qelectron = 1.0;
@@ -307,16 +315,17 @@ void Update::set_units(const char *style)
     neighbor->skin = 0.1;
 
   } else
-    error->all(FLERR, "Illegal units command");
-
-  delete[] unit_style;
-  unit_style = utils::strdup(style);
+    error->all(FLERR, "Unknown units style: {}", style);
 
   // check if timestep was changed from default value
   if (!dt_default && (comm->me == 0)) {
-    error->warning(FLERR, "Changing timestep from {:.6} to {:.6} due to changing units to {}",
-                   dt_old, dt, unit_style);
+    error->warning(FLERR,
+                   "Changing timestep from {:.6} to {:.6} due to changing units from {} to {}",
+                   dt_old, dt, unit_style, style);
   }
+  delete[] unit_style;
+  unit_style = utils::strdup(style);
+
   dt_default = 1;
 }
 
