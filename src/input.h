@@ -108,6 +108,7 @@ class Input : protected Pointers {
   void dimension();
   void dump();
   void dump_modify();
+  void element();
   void fix();
   void fix_modify();
   void group_command();

@@ -26,6 +26,7 @@
 #include "compute.h"
 #include "dihedral.h"
 #include "domain.h"
+#include "element_map.h"
 #include "error.h"
 #include "fix.h"
 #include "force.h"
@@ -799,6 +800,7 @@ int Input::execute_command()
   else if (mycmd == "dimension") dimension();
   else if (mycmd == "dump") dump();
   else if (mycmd == "dump_modify") dump_modify();
+  else if (mycmd == "element") element();
   else if (mycmd == "fix") fix();
   else if (mycmd == "fix_modify") fix_modify();
   else if (mycmd == "group") group_command();
@@ -1538,6 +1540,16 @@ void Input::dump_modify()
   output->modify_dump(narg,arg);
 }
 
+/* ---------------------------------------------------------------------- */
+
+void Input::element()
+{
+  if (narg != 2)
+    error->all(FLERR,"Illegal element command: expected 2 arguments but found {}", narg);
+  if (domain->box_exist == 0)
+    error->all(FLERR,"Element command before simulation box is defined");
+  lmp->element_map->modify_emap(narg, arg);
+}
 /* ---------------------------------------------------------------------- */
 
 void Input::fix()
