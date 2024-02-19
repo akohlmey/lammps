@@ -38,6 +38,7 @@
 #include "comm.h"
 #include "comm_brick.h"
 #include "domain.h"
+#include "element_map.h"
 #include "error.h"
 #include "force.h"
 #include "group.h"
@@ -115,7 +116,7 @@ using namespace LAMMPS_NS;
  * \param args list of arguments
  * \param communicator MPI communicator used by this LAMMPS instance
  */
-LAMMPS::LAMMPS(argv & args, MPI_Comm communicator) :
+LAMMPS::LAMMPS(argv &args, MPI_Comm communicator) :
   LAMMPS(args.size(), argv_pointers(args).data(), communicator) {
 }
 
@@ -134,7 +135,7 @@ LAMMPS::LAMMPS(int narg, char **arg, MPI_Comm communicator) :
   memory(nullptr), error(nullptr), universe(nullptr), input(nullptr), atom(nullptr),
   update(nullptr), neighbor(nullptr), comm(nullptr), domain(nullptr), force(nullptr),
   modify(nullptr), group(nullptr), output(nullptr), timer(nullptr), kokkos(nullptr),
-  atomKK(nullptr), memoryKK(nullptr), python(nullptr), citeme(nullptr)
+  atomKK(nullptr), memoryKK(nullptr), python(nullptr), citeme(nullptr), element_map(nullptr)
 {
   memory = new Memory(this);
   error = new Error(this);
@@ -865,6 +866,8 @@ void LAMMPS::create()
 
   python = new Python(this);
 
+  element_map = new ElementMap(this);
+
   // auto-load plugins
 #if defined(LMP_PLUGIN)
   plugin_auto_load(this);
@@ -977,6 +980,9 @@ void LAMMPS::destroy()
 #if defined(LMP_PLUGIN)
   plugin_clear(this);
 #endif
+
+  delete element_map;
+  element_map = nullptr;
 
   delete update;
   update = nullptr;
@@ -1490,7 +1496,7 @@ void LAMMPS::print_config(FILE *fp)
  *
  * \param args list of arguments
  */
-std::vector<char*> LAMMPS::argv_pointers(argv & args){
+std::vector<char*> LAMMPS::argv_pointers(argv &args){
   std::vector<char*> r;
   r.reserve(args.size()+1);
   for(auto & a : args) {

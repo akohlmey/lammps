@@ -45,6 +45,7 @@ class LAMMPS {
   class MemoryKokkos *memoryKK;    // KOKKOS version of Memory class
   class Python *python;            // Python interface
   class CiteMe *citeme;            // handle citation info
+  class ElementMap *element_map;   // type to element mapping
 
   const char *version;    // LAMMPS version string = date
   int num_ver;            // numeric version id derived from *version*
