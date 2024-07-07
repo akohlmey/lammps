@@ -117,7 +117,7 @@ TEST_F(InputConvertTest, numeric)
     TEST_FAILURE(".*ERROR: Expected floating point.*", utils::numeric(FLERR, nullptr, false, lmp););
     TEST_FAILURE(".*ERROR: Expected floating point.*",
                  utils::numeric(FLERR, "2.56D+3", false, lmp););
-    TEST_FAILURE(".*ERROR: Floating point number.*out of range.*",
+    TEST_FAILURE(".*ERROR: Floating point number 1.0e2000 in input script or data file is invalid: stod.*",
                  utils::numeric(FLERR, "1.0e2000", false, lmp););
     TEST_FAILURE(".*ERROR: Expected floating .*", utils::numeric(FLERR, "--546700-", false, lmp););
     TEST_FAILURE(".*ERROR: Expected floating.*", utils::numeric(FLERR, "546700+", false, lmp););

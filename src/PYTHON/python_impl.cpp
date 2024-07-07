@@ -351,7 +351,7 @@ void PythonImpl::invoke_function(int ifunc, char *result)
         if (!str)
           error->all(FLERR, "Could not evaluate Python function {} input variable: {}",
                      pfuncs[ifunc].name, pfuncs[ifunc].svalue[i]);
-        pValue = PyFloat_FromDouble(atof(str));
+        pValue = PyFloat_FromDouble(std::stod(str));
       } else {
         pValue = PyFloat_FromDouble(pfuncs[ifunc].dvalue[i]);
       }

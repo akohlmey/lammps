@@ -479,12 +479,13 @@ void ReaderNative::read_atoms(int n, int nfield, double **fields)
       // tokenize the line
       std::vector<std::string> words = Tokenizer(line).as_vector();
 
-      if ((int)words.size() < nwords) error->one(FLERR,"Insufficient columns in dump file");
+      if ((int)words.size() < nwords)
+        error->one(FLERR,"Insufficient number of columns (<{}) in dump file", nwords);
 
       // convert selected fields to floats
 
       for (int m = 0; m < nfield; m++)
-        fields[i][m] = atof(words[fieldindex[m]].c_str());
+        fields[i][m] = std::stod(words[fieldindex[m]]);
     }
   }
 }

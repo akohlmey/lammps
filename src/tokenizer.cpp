@@ -288,7 +288,10 @@ int ValueTokenizer::next_int()
 {
   std::string current = tokens.next();
   if (!utils::is_integer(current)) { throw InvalidIntegerException(current); }
-  return atoi(current.c_str());
+  std::size_t endpos;
+  tagint rv = std::stoi(current, &endpos);
+  if (current.length() != endpos) { throw InvalidIntegerException(current); }
+  return rv;
 }
 
 /*! Retrieve next token and convert to bigint
@@ -298,7 +301,10 @@ bigint ValueTokenizer::next_bigint()
 {
   std::string current = tokens.next();
   if (!utils::is_integer(current)) { throw InvalidIntegerException(current); }
-  return ATOBIGINT(current.c_str());
+  std::size_t endpos;
+  tagint rv = STOBIGINT(current, &endpos);
+  if (current.length() != endpos) { throw InvalidIntegerException(current); }
+  return rv;
 }
 
 /*! Retrieve next token and convert to tagint
@@ -308,7 +314,10 @@ tagint ValueTokenizer::next_tagint()
 {
   std::string current = tokens.next();
   if (!utils::is_integer(current)) { throw InvalidIntegerException(current); }
-  return ATOTAGINT(current.c_str());
+  std::size_t endpos;
+  tagint rv = STOTAGINT(current, &endpos);
+  if (current.length() != endpos) { throw InvalidIntegerException(current); }
+  return rv;
 }
 
 /*! Retrieve next token and convert to double
@@ -318,7 +327,10 @@ double ValueTokenizer::next_double()
 {
   std::string current = tokens.next();
   if (!utils::is_double(current)) { throw InvalidFloatException(current); }
-  return atof(current.c_str());
+  std::size_t endpos;
+  double rv = std::stod(current, &endpos);
+  if (current.length() != endpos) { throw InvalidFloatException(current); }
+  return rv;
 }
 
 /*! Skip over a given number of tokens

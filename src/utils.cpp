@@ -399,16 +399,12 @@ double utils::numeric(const char *file, int line, const std::string &str, bool d
 
   double rv = 0;
   try {
-    rv = stod(buf);
-  } catch (std::invalid_argument const &) {
-    auto msg = fmt::format("Floating point number {} in input script or data file is invalid", buf);
-    if (do_abort)
-      lmp->error->one(file, line, msg);
-    else
-      lmp->error->all(file, line, msg);
-  } catch (std::out_of_range const &) {
-    auto msg =
-        fmt::format("Floating point number {} in input script or data file is out of range", buf);
+    std::size_t endpos;
+    rv = std::stod(buf, &endpos);
+    if (buf.length() != endpos)
+      throw std::range_error(fmt::format("Floating point text {} not fully converted -> {}", buf, buf.substr(0,endpos)));
+  } catch (std::exception const &e) {
+    auto msg = fmt::format("Floating point number {} in input script or data file is invalid: {}", buf, e.what());
     if (do_abort)
       lmp->error->one(file, line, msg);
     else
@@ -460,9 +456,12 @@ int utils::inumeric(const char *file, int line, const std::string &str, bool do_
 
   int rv = 0;
   try {
-    rv = stoi(buf);
-  } catch (std::out_of_range const &) {
-    auto msg = fmt::format("Integer {} in input script or data file is out of range", buf);
+    std::size_t endpos;
+    rv = std::stoi(buf, &endpos);
+    if (buf.length() != endpos)
+      throw std::range_error(fmt::format("Integer text {} not fully converted -> {}", buf, buf.substr(0,endpos)));
+  } catch (std::exception const &e) {
+    auto msg = fmt::format("Integer {} in input script or data file is out of range: {}", buf, e.what());
     if (do_abort)
       lmp->error->one(file, line, msg);
     else
@@ -513,18 +512,20 @@ bigint utils::bnumeric(const char *file, int line, const std::string &str, bool 
       lmp->error->all(file, line, msg);
   }
 
-  long long rv = 0;
+  bigint rv = 0;
   try {
-    rv = stoll(buf);
-    if (rv > MAXBIGINT) throw std::out_of_range("64-bit");
-  } catch (std::out_of_range const &) {
-    auto msg = fmt::format("Integer {} in input script or data file is out of range", buf);
+    std::size_t endpos;
+    rv = STOBIGINT(buf, &endpos);
+    if (buf.length() != endpos)
+      throw std::range_error(fmt::format("Integer text {} not fully converted -> {}", buf, buf.substr(0,endpos)));
+  } catch (std::exception const &e) {
+    auto msg = fmt::format("Integer number {} in input script or data file is invalid: {}", buf, e.what());
     if (do_abort)
       lmp->error->one(file, line, msg);
     else
       lmp->error->all(file, line, msg);
   }
-  return static_cast<bigint>(rv);
+  return rv;
 }
 
 /* ----------------------------------------------------------------------
@@ -569,12 +570,14 @@ tagint utils::tnumeric(const char *file, int line, const std::string &str, bool 
       lmp->error->all(file, line, msg);
   }
 
-  long long rv = 0;
+  tagint rv = 0;
   try {
-    rv = stoll(buf);
-    if (rv > MAXTAGINT) throw std::out_of_range("64-bit");
-  } catch (std::out_of_range const &) {
-    auto msg = fmt::format("Integer {} in input script or data file is out of range", buf);
+    std::size_t endpos;
+    rv = STOTAGINT(buf, &endpos);
+    if (buf.length() != endpos)
+      throw std::range_error(fmt::format("Integer text {} not fully converted -> {}", buf, buf.substr(0,endpos)));
+  } catch (std::exception const &e) {
+    auto msg = fmt::format("Integer number {} in input script or data file is invalid: {}", buf, e.what());
     if (do_abort)
       lmp->error->one(file, line, msg);
     else

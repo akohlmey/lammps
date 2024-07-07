@@ -538,7 +538,7 @@ std::string ReadRestart::file_search(const std::string &inpfile)
 
     for (const auto &candidate : platform::list_directory(dirname)) {
       if (utils::strmatch(candidate,pattern)) {
-        bigint num = ATOBIGINT(utils::strfind(candidate.substr(loc),"\\d+").c_str());
+        bigint num = STOBIGINT(utils::strfind(candidate.substr(loc),"\\d+"));
         if (num > maxnum) maxnum = num;
       }
     }

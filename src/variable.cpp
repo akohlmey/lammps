@@ -3566,7 +3566,7 @@ tagint Variable::int_between_brackets(char *&ptr, int varallow)
 
   *ptr = '\0';
 
-  // evaluate index as floating point variable or as tagint via ATOTAGINT()
+  // evaluate index as floating point variable or as tagint via STOTAGINT()
 
   if (varflag) {
     char *id = start+2;
@@ -3577,9 +3577,9 @@ tagint Variable::int_between_brackets(char *&ptr, int varallow)
     char *var = retrieve(id);
     if (var == nullptr)
       error->all(FLERR,"Invalid variable evaluation for variable {} in variable formula", id);
-    index = static_cast<tagint> (atof(var));
+    index = static_cast<tagint> (std::stod(var));
 
-  } else index = ATOTAGINT(start);
+  } else index = STOTAGINT(start);
 
   *ptr = ']';
 

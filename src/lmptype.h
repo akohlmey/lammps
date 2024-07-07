@@ -74,10 +74,10 @@ namespace LAMMPS_NS {
 
 #ifdef LAMMPS_LONGLONG_TO_LONG
 #define MPI_LL MPI_LONG
-#define ATOLL atoll
+#define STOLL std::stol
 #else
 #define MPI_LL MPI_LONG_LONG
-#define ATOLL atol
+#define STOLL std::stoll
 #endif
 
 // for atomic problems that exceed 2 billion (2^31) atoms
@@ -103,8 +103,8 @@ typedef int64_t bigint;
 #define TAGINT_FORMAT "%d"
 #define BIGINT_FORMAT "%" PRId64
 
-#define ATOTAGINT atoi
-#define ATOBIGINT ATOLL
+#define STOTAGINT std::stoi
+#define STOBIGINT STOLL
 
 #define LAMMPS_TAGINT LAMMPS_INT
 #define LAMMPS_TAGINT_2D LAMMPS_INT_2D
@@ -141,8 +141,8 @@ typedef int64_t bigint;
 #define TAGINT_FORMAT "%" PRId64
 #define BIGINT_FORMAT "%" PRId64
 
-#define ATOTAGINT ATOLL
-#define ATOBIGINT ATOLL
+#define STOTAGINT STOLL
+#define STOBIGINT STOLL
 
 #define LAMMPS_TAGINT LAMMPS_INT64
 #define LAMMPS_TAGINT_2D LAMMPS_INT64_2D
@@ -178,8 +178,8 @@ typedef int bigint;
 #define TAGINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
 
-#define ATOTAGINT atoi
-#define ATOBIGINT atoi
+#define STOTAGINT std::stoi
+#define STOBIGINT std::stoi
 
 #define LAMMPS_TAGINT LAMMPS_INT
 #define LAMMPS_TAGINT_2D LAMMPS_INT_2D
