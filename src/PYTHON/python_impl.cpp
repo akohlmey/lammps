@@ -341,7 +341,7 @@ void PythonImpl::invoke_function(int ifunc, char *result)
         if (!str)
           error->all(FLERR, "Could not evaluate Python function {} input variable: {}",
                      pfuncs[ifunc].name, pfuncs[ifunc].svalue[i]);
-        pValue = PY_INT_FROM_LONG(atoi(str));
+        pValue = PY_INT_FROM_LONG(PY_LONG_FROM_STRING(str));
       } else {
         pValue = PY_INT_FROM_LONG(pfuncs[ifunc].ivalue[i]);
       }
