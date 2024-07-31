@@ -6,13 +6,27 @@ AlignConsecutiveAssignments:          false
 AlignConsecutiveDeclarations:         false
 AlignEscapedNewlines:                 Left
 AlignOperands:                        false
+AllowAllArgumentsOnNextLine:          true
+AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortBlocksOnASingleLine:        true
+AllowShortEnumsOnASingleLine:         true
 AllowShortFunctionsOnASingleLine:     Inline
 AllowShortIfStatementsOnASingleLine:  WithoutElse
 AllowShortLambdasOnASingleLine:       None
 AllowShortLoopsOnASingleLine:         true
 BraceWrapping:
+  AfterCaseLabel:                     false
+  AfterEnum:                          false
   AfterFunction:                      true
+  AfterClass:                         false
+  AfterNamespace:                     false
+  AfterStruct:                        false
+  AfterUnion:                         false
+  AfterExternBlock:                   true
+  BeforeCatch:                        false
+  BeforeElse:                         false
+  BeforeWhile:                        false
+  AfterControlStatement:              Never
 BreakBeforeBraces:                    Custom
 BreakConstructorInitializers:         AfterColon
 BreakInheritanceList:                 AfterColon
@@ -24,9 +38,21 @@ ObjCBlockIndentWidth:                 2
 PenaltyBreakAssignment:               4
 ReflowComments:                       false
 SpaceAfterCStyleCast:                 true
+SpaceBeforeCpp11BracedList:           false
+SpaceBeforeCtorInitializerColon:      true
+SpaceBeforeInheritanceColon:          true
+SpaceBeforeParens:                    Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements:             true
+  AfterFunctionDeclarationName:       false
+  AfterOverloadedOperator:            false
+  AfterPlacementOperator:             false
+  BeforeNonEmptyParentheses:          false
+SpaceBeforeRangeBasedForLoopColon:    false
+SpaceInEmptyBlock:                    false
 SpacesBeforeTrailingComments:         4
 SpacesInContainerLiterals:            false
-Standard:                             Cpp11
+Standard:                             c++11
 TabWidth:                             2
 UseTab:                               Never
 ...
