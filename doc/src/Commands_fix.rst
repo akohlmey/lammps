@@ -1,19 +1,5 @@
-.. table_from_list::
-   :columns: 3
-
-   * :doc:`General commands <Commands_all>`
-   * :doc:`Fix styles <Commands_fix>`
-   * :doc:`Compute styles <Commands_compute>`
-   * :doc:`Pair styles <Commands_pair>`
-   * :ref:`Bond styles <bond>`
-   * :ref:`Angle styles <angle>`
-   * :ref:`Dihedral styles <dihedral>`
-   * :ref:`Improper styles <improper>`
-   * :doc:`KSpace styles <Commands_kspace>`
-   * :doc:`Dump styles <Commands_dump>`
-
-Fix commands
-============
+Fix styles
+==========
 
 An alphabetic list of all LAMMPS :doc:`fix <fix>` commands.  Some styles
 have accelerated versions.  This is indicated by additional letters in
@@ -21,13 +7,14 @@ parenthesis: g = GPU, i = INTEL, k = KOKKOS, o = OPENMP, t =
 OPT.
 
 .. table_from_list::
-   :columns: 5
+   :columns: 4
 
    * :doc:`accelerate/cos <fix_accelerate_cos>`
    * :doc:`acks2/reaxff (k) <fix_acks2_reaxff>`
    * :doc:`adapt <fix_adapt>`
    * :doc:`adapt/fep <fix_adapt_fep>`
    * :doc:`addforce <fix_addforce>`
+   * :doc:`add/heat <fix_add_heat>`
    * :doc:`addtorque <fix_addtorque>`
    * :doc:`alchemy <fix_alchemy>`
    * :doc:`amoeba/bitorsion <fix_amoeba_bitorsion>`
@@ -56,11 +43,12 @@ OPT.
    * :doc:`brownian/asphere <fix_brownian>`
    * :doc:`brownian/sphere <fix_brownian>`
    * :doc:`charge/regulation <fix_charge_regulation>`
-   * :doc:`cmap <fix_cmap>`
+   * :doc:`cmap (k) <fix_cmap>`
    * :doc:`colvars <fix_colvars>`
    * :doc:`controller <fix_controller>`
    * :doc:`damping/cundall <fix_damping_cundall>`
    * :doc:`deform (k) <fix_deform>`
+   * :doc:`deform/pressure <fix_deform_pressure>`
    * :doc:`deposit <fix_deposit>`
    * :doc:`dpd/energy (k) <fix_dpd_energy>`
    * :doc:`drag <fix_drag>`
@@ -146,7 +134,7 @@ OPT.
    * :doc:`nve/dot <fix_nve_dot>`
    * :doc:`nve/dotc/langevin <fix_nve_dotc_langevin>`
    * :doc:`nve/eff <fix_nve_eff>`
-   * :doc:`nve/limit <fix_nve_limit>`
+   * :doc:`nve/limit (k) <fix_nve_limit>`
    * :doc:`nve/line <fix_nve_line>`
    * :doc:`nve/manifold/rattle <fix_nve_manifold_rattle>`
    * :doc:`nve/noforce <fix_nve_noforce>`
@@ -190,6 +178,7 @@ OPT.
    * :doc:`python/move <fix_python_move>`
    * :doc:`qbmsst <fix_qbmsst>`
    * :doc:`qeq/comb (o) <fix_qeq_comb>`
+   * :doc:`qeq/ctip <fix_qeq>`
    * :doc:`qeq/dynamic <fix_qeq>`
    * :doc:`qeq/fire <fix_qeq>`
    * :doc:`qeq/point <fix_qeq>`
@@ -198,11 +187,17 @@ OPT.
    * :doc:`qeq/slater <fix_qeq>`
    * :doc:`qmmm <fix_qmmm>`
    * :doc:`qtb <fix_qtb>`
+   * :doc:`qtpie/reaxff <fix_qtpie_reaxff>`
    * :doc:`rattle <fix_shake>`
    * :doc:`reaxff/bonds (k) <fix_reaxff_bonds>`
    * :doc:`reaxff/species (k) <fix_reaxff_species>`
-   * :doc:`recenter <fix_recenter>`
+   * :doc:`recenter (k) <fix_recenter>`
    * :doc:`restrain <fix_restrain>`
+   * :doc:`rheo <fix_rheo>`
+   * :doc:`rheo/oxidation <fix_rheo_oxidation>`
+   * :doc:`rheo/pressure <fix_rheo_pressure>`
+   * :doc:`rheo/thermal <fix_rheo_thermal>`
+   * :doc:`rheo/viscosity <fix_rheo_viscosity>`
    * :doc:`rhok <fix_rhok>`
    * :doc:`rigid (o) <fix_rigid>`
    * :doc:`rigid/meso <fix_rigid_meso>`
@@ -262,6 +257,7 @@ OPT.
    * :doc:`wall/body/polyhedron <fix_wall_body_polyhedron>`
    * :doc:`wall/colloid <fix_wall>`
    * :doc:`wall/ees <fix_wall_ees>`
+   * :doc:`wall/flow (k) <fix_wall_flow>`
    * :doc:`wall/gran (k) <fix_wall_gran>`
    * :doc:`wall/gran/region <fix_wall_gran_region>`
    * :doc:`wall/harmonic <fix_wall>`
@@ -273,7 +269,7 @@ OPT.
    * :doc:`wall/piston <fix_wall_piston>`
    * :doc:`wall/reflect (k) <fix_wall_reflect>`
    * :doc:`wall/reflect/stochastic <fix_wall_reflect_stochastic>`
-   * :doc:`wall/region <fix_wall_region>`
+   * :doc:`wall/region (k) <fix_wall_region>`
    * :doc:`wall/region/ees <fix_wall_ees>`
    * :doc:`wall/srd <fix_wall_srd>`
    * :doc:`wall/table <fix_wall>`

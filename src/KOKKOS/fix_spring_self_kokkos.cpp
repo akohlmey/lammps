@@ -20,17 +20,10 @@
 
 #include "atom_kokkos.h"
 #include "update.h"
-#include "modify.h"
 #include "domain_kokkos.h"
-#include "region.h"
-#include "input.h"
-#include "variable.h"
 #include "memory_kokkos.h"
 #include "error.h"
 #include "atom_masks.h"
-#include "kokkos_base.h"
-
-#include <cstring>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -85,6 +78,9 @@ template<class DeviceType>
 void FixSpringSelfKokkos<DeviceType>::init()
 {
   FixSpringSelf::init();
+
+  if (kstyle != CONSTANT)
+    error->all(FLERR, "Fix spring/self/kk does not support variable spring constants (yet)");
 
   if (utils::strmatch(update->integrate_style,"^respa"))
     error->all(FLERR,"Cannot (yet) use respa with Kokkos");

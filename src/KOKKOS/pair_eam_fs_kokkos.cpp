@@ -309,10 +309,10 @@ void PairEAMFSKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
 
   // free duplicated memory
   if (need_dup) {
-    dup_rho   = decltype(dup_rho)();
-    dup_f     = decltype(dup_f)();
-    dup_eatom = decltype(dup_eatom)();
-    dup_vatom = decltype(dup_vatom)();
+    dup_rho   = {};
+    dup_f     = {};
+    dup_eatom = {};
+    dup_vatom = {};
   }
 }
 
@@ -449,12 +449,11 @@ void PairEAMFSKokkos<DeviceType>::interpolate(int n, double delta, double *f, t_
 /* ---------------------------------------------------------------------- */
 
 template<class DeviceType>
-int PairEAMFSKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_int_2d k_sendlist,
-                                                          int iswap_in, DAT::tdual_xfloat_1d &buf,
+int PairEAMFSKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_int_1d k_sendlist,
+                                                          DAT::tdual_xfloat_1d &buf,
                                                           int /*pbc_flag*/, int * /*pbc*/)
 {
   d_sendlist = k_sendlist.view<DeviceType>();
-  iswap = iswap_in;
   v_buf = buf.view<DeviceType>();
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType,TagPairEAMFSPackForwardComm>(0,n),*this);
   return n;
@@ -463,7 +462,7 @@ int PairEAMFSKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_int_
 template<class DeviceType>
 KOKKOS_INLINE_FUNCTION
 void PairEAMFSKokkos<DeviceType>::operator()(TagPairEAMFSPackForwardComm, const int &i) const {
-  int j = d_sendlist(iswap, i);
+  int j = d_sendlist(i);
   v_buf[i] = d_fp[j];
 }
 

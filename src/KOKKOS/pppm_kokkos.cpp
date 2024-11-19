@@ -46,9 +46,6 @@ static constexpr double SMALL = 0.00001;
 static constexpr double EPS_HOC = 1.0e-7;
 static constexpr FFT_SCALAR ZEROF = 0.0;
 
-enum { REVERSE_RHO };
-enum { FORWARD_IK, FORWARD_IK_PERATOM };
-
 /* ---------------------------------------------------------------------- */
 
 template<class DeviceType>
@@ -794,7 +791,7 @@ void PPPMKokkos<DeviceType>::allocate()
   // 2nd FFT returns data in 3d brick decomposition
   // remap takes data from 3d brick to FFT decomposition
 
-  int collective_flag = 0; // not yet supported in Kokkos version
+  int collective_flag = force->kspace->collective_flag;
   int gpu_aware_flag = lmp->kokkos->gpu_aware_flag;
   int tmp;
 

@@ -56,8 +56,9 @@ Examples
    compute 1 all reduce sum c_force
    compute 1 all reduce/region subbox sum c_force
    compute 2 all reduce min c_press[2] f_ave v_myKE
-   compute 2 all reduce min c_press[*] f_ave v_myKE
+   compute 2 all reduce min c_press[*] f_ave v_myKE inputs peratom
    compute 3 fluid reduce max c_index[1] c_index[2] c_dist replace 1 3 replace 2 3
+   compute 4 all reduce max c_bond inputs local
 
 Description
 """""""""""
@@ -192,7 +193,7 @@ with maximum stretch, you can do it as follows:
    thermo_style custom step temp c_3[1] c_3[2] c_3[3]
 
 The first two input values in the compute reduce command are vectors
-with the IDs of the 2 atoms in each bond, using the
+with the IDs of the two atoms in each bond, using the
 :doc:`compute property/local <compute_property_local>` command.  The last input
 value is bond distance, using the
 :doc:`compute bond/local <compute_bond_local>` command.  Instead of taking the
@@ -205,11 +206,13 @@ IDs and the bond stretch will be printed with thermodynamic output.
 
 The *inputs* keyword allows selection of whether all the inputs are
 per-atom or local quantities.  As noted above, all the inputs must be
-the same kind (per-atom or local).  Per-atom is the default setting.
-If a compute or fix is specified as an input, it must produce per-atom
-or local data to match this setting.  If it produces both, e.g. for
+the same kind (per-atom or local).  Per-atom is the default setting.  If
+a compute or fix is specified as an input, it must produce per-atom or
+local data to match this setting.  If it produces both, like for example
 the :doc:`compute voronoi/atom <compute_voronoi_atom>` command, then
-this keyword selects between them.
+this keyword selects between them.  If a compute *only* produces local
+data, like for example the :doc:`compute bond/local command
+<compute_bond_local>`, the setting "inputs local" is *required*.
 
 ----------
 

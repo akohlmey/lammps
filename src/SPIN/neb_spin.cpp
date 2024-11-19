@@ -16,7 +16,7 @@
    Contributing authors: Julien Tranchida (SNL)
 
    Please cite the related publication:
-   Bessarab, P. F., Uzdin, V. M., & Jónsson, H. (2015).
+   Bessarab, P. F., Uzdin, V. M., & Jonsson, H. (2015).
    Method for finding mechanism and activation energy of magnetic transitions,
    applied to skyrmion and antivortex annihilation.
    Computer Physics Communications, 196, 335-347.
@@ -44,6 +44,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <exception>
 
 using namespace LAMMPS_NS;
 
@@ -78,7 +79,7 @@ NEBSpin::NEBSpin(LAMMPS *lmp) : Command(lmp), fp(nullptr) {
 
 NEBSpin::~NEBSpin()
 {
-  MPI_Comm_free(&roots);
+  if (roots != MPI_COMM_NULL) MPI_Comm_free(&roots);
   memory->destroy(all);
   delete[] rdist;
   if (fp) {
@@ -163,8 +164,10 @@ void NEBSpin::run()
   // create MPI communicator for root proc from each world
 
   int color;
-  if (me == 0) color = 0;
-  else color = 1;
+  if (me == 0)
+    color = 0;
+  else
+    color = MPI_UNDEFINED;
   MPI_Comm_split(uworld,color,0,&roots);
 
   // search for neb_spin fix, allocate it
@@ -727,19 +730,21 @@ void NEBSpin::print_status()
     local_norm_inf = MAX(temp_inf,local_norm_inf);
   }
 
-  double fmaxreplica;
-  MPI_Allreduce(&tnorm2,&fmaxreplica,1,MPI_DOUBLE,MPI_MAX,roots);
+  double fmaxreplica = 0.0;
+  double fmaxatom = 0.0;
 
   double fnorminf = 0.0;
   MPI_Allreduce(&local_norm_inf,&fnorminf,1,MPI_DOUBLE,MPI_MAX,world);
-  double fmaxatom;
-  MPI_Allreduce(&fnorminf,&fmaxatom,1,MPI_DOUBLE,MPI_MAX,roots);
 
-  if (verbose) {
-    freplica = new double[nreplica];
-    MPI_Allgather(&tnorm2,1,MPI_DOUBLE,&freplica[0],1,MPI_DOUBLE,roots);
-    fmaxatomInRepl = new double[nreplica];
-    MPI_Allgather(&fnorminf,1,MPI_DOUBLE,&fmaxatomInRepl[0],1,MPI_DOUBLE,roots);
+  if (me == 0) {
+    MPI_Allreduce(&tnorm2,&fmaxreplica,1,MPI_DOUBLE,MPI_MAX,roots);
+    MPI_Allreduce(&fnorminf,&fmaxatom,1,MPI_DOUBLE,MPI_MAX,roots);
+    if (verbose) {
+      freplica = new double[nreplica];
+      MPI_Allgather(&tnorm2,1,MPI_DOUBLE,&freplica[0],1,MPI_DOUBLE,roots);
+      fmaxatomInRepl = new double[nreplica];
+      MPI_Allgather(&fnorminf,1,MPI_DOUBLE,&fmaxatomInRepl[0],1,MPI_DOUBLE,roots);
+    }
   }
 
   double one[7];
@@ -826,6 +831,10 @@ void NEBSpin::print_status()
       }
       fprintf(ulogfile,"\n");
       fflush(ulogfile);
+    }
+    if ((me == 0) && verbose) {
+      delete[] freplica;
+      delete[] fmaxatomInRepl;
     }
   }
 }

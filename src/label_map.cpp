@@ -14,6 +14,7 @@
 #include "label_map.h"
 
 #include "atom.h"
+#include "citeme.h"
 #include "comm.h"
 #include "error.h"
 #include "force.h"
@@ -22,12 +23,24 @@
 
 using namespace LAMMPS_NS;
 
+static const char cite_type_label_framework[] =
+    "Type Label Framework: https://doi.org/10.1021/acs.jpcb.3c08419\n\n"
+    "@Article{Gissinger24,\n"
+    " author = {Jacob R. Gissinger, Ilia Nikiforov, Yaser Afshar, Brendon Waters, Moon-ki Choi,"
+    " Daniel S. Karls, Alexander Stukowski, Wonpil Im, Hendrik Heinz, Axel Kohlmeyer, and Ellad B. Tadmor},\n"
+    " title = {Type Label Framework for Bonded Force Fields in LAMMPS},\n"
+    " journal = {J. Phys. Chem. B},\n"
+    " year =    2024,\n"
+    " volume =  128,\n"
+    " number =  13,\n"
+    " pages =   {3282--3297}\n"
+    "}\n\n";
+
 /* ---------------------------------------------------------------------- */
 
 LabelMap::LabelMap(LAMMPS *_lmp, int _natomtypes, int _nbondtypes, int _nangletypes,
                    int _ndihedraltypes, int _nimpropertypes) :
-    Pointers(_lmp),
-    natomtypes(_natomtypes), nbondtypes(_nbondtypes), nangletypes(_nangletypes),
+    Pointers(_lmp), natomtypes(_natomtypes), nbondtypes(_nbondtypes), nangletypes(_nangletypes),
     ndihedraltypes(_ndihedraltypes), nimpropertypes(_nimpropertypes)
 {
   lmap2lmap.atom = lmap2lmap.bond = lmap2lmap.angle = lmap2lmap.dihedral = lmap2lmap.improper =
@@ -96,6 +109,8 @@ void LabelMap::modify_lmap(int narg, char **arg)
 {
   if ((narg < 1) || ((narg > 2) && ((narg % 2) == 0)))
     error->all(FLERR, "Incorrect number of arguments for labelmap command");
+
+  if (lmp->citeme) lmp->citeme->add(cite_type_label_framework);
 
   int ntypes;
   std::vector<std::string> *labels;
@@ -222,6 +237,8 @@ int LabelMap::find_or_create(const std::string &mylabel, std::vector<std::string
 {
   auto search = labels_map.find(mylabel);
   if (search != labels_map.end()) return search->second;
+
+  if (lmp->citeme) lmp->citeme->add(cite_type_label_framework);
 
   // if no match found, create new label at next available index
   // label map assumed to be intialized with numeric index
@@ -354,35 +371,35 @@ void LabelMap::read_restart(FILE *fp)
   for (int i = 0; i < natomtypes; i++) {
     charlabel = read_string(fp);
     typelabel[i] = charlabel;
-    typelabel_map[charlabel] = i + 1;
+    if (strlen(charlabel) > 0) typelabel_map[charlabel] = i + 1;
     delete[] charlabel;
   }
 
   for (int i = 0; i < nbondtypes; i++) {
     charlabel = read_string(fp);
     btypelabel[i] = charlabel;
-    btypelabel_map[charlabel] = i + 1;
+    if (strlen(charlabel) > 0) btypelabel_map[charlabel] = i + 1;
     delete[] charlabel;
   }
 
   for (int i = 0; i < nangletypes; i++) {
     charlabel = read_string(fp);
     atypelabel[i] = charlabel;
-    atypelabel_map[charlabel] = i + 1;
+    if (strlen(charlabel) > 0) atypelabel_map[charlabel] = i + 1;
     delete[] charlabel;
   }
 
   for (int i = 0; i < ndihedraltypes; i++) {
     charlabel = read_string(fp);
     dtypelabel[i] = charlabel;
-    dtypelabel_map[charlabel] = i + 1;
+    if (strlen(charlabel) > 0) dtypelabel_map[charlabel] = i + 1;
     delete[] charlabel;
   }
 
   for (int i = 0; i < nimpropertypes; i++) {
     charlabel = read_string(fp);
     itypelabel[i] = charlabel;
-    itypelabel_map[charlabel] = i + 1;
+    if (strlen(charlabel) > 0) itypelabel_map[charlabel] = i + 1;
     delete[] charlabel;
   }
 }

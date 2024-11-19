@@ -325,8 +325,9 @@ int Dump::count()
 
 void Dump::write()
 {
-  imageint *imagehold;
-  double **xhold,**vhold;
+  imageint *imagehold = nullptr;
+  double **xhold = nullptr;
+  double **vhold = nullptr;
 
   // simulation box bounds
 
@@ -573,7 +574,7 @@ void Dump::openfile()
         nameslist[numfiles] = utils::strdup(filecurrent);
         ++numfiles;
       } else {
-        remove(nameslist[fileidx]);
+        (void) remove(nameslist[fileidx]);
         delete[] nameslist[fileidx];
         nameslist[fileidx] = utils::strdup(filecurrent);
         fileidx = (fileidx + 1) % maxfiles;

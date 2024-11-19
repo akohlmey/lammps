@@ -57,7 +57,7 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
   reverse_pair_comm_changed = 0;
   forward_fix_comm_changed = 0;
   reverse_comm_changed = 0;
-  sort_changed = 0;
+  sort_changed = atom_map_changed = 0;
 
   delete memory;
   memory = new MemoryKokkos(lmp);
@@ -104,14 +104,14 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
       int set_flag = 0;
       char *str;
       if ((str = getenv("SLURM_LOCALID"))) {
-        int local_rank = atoi(str);
+        int local_rank = std::stoi(str);
         device = local_rank % ngpus;
         if (device >= skip_gpu) device++;
         set_flag = 1;
       }
       if ((str = getenv("FLUX_TASK_LOCAL_ID"))) {
         if (ngpus > 0) {
-          int local_rank = atoi(str);
+          int local_rank = std::stoi(str);
           device = local_rank % ngpus;
           if (device >= skip_gpu) device++;
           set_flag = 1;
@@ -119,7 +119,7 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
       }
       if ((str = getenv("MPT_LRANK"))) {
         if (ngpus > 0) {
-          int local_rank = atoi(str);
+          int local_rank = std::stoi(str);
           device = local_rank % ngpus;
           if (device >= skip_gpu) device++;
           set_flag = 1;
@@ -127,7 +127,7 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
       }
       if ((str = getenv("MV2_COMM_WORLD_LOCAL_RANK"))) {
         if (ngpus > 0) {
-          int local_rank = atoi(str);
+          int local_rank = std::stoi(str);
           device = local_rank % ngpus;
           if (device >= skip_gpu) device++;
           set_flag = 1;
@@ -135,13 +135,21 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
       }
       if ((str = getenv("OMPI_COMM_WORLD_LOCAL_RANK"))) {
         if (ngpus > 0) {
-          int local_rank = atoi(str);
+          int local_rank = std::stoi(str);
           device = local_rank % ngpus;
           if (device >= skip_gpu) device++;
           set_flag = 1;
         }
       }
       if ((str = getenv("PMI_LOCAL_RANK"))) {
+        if (ngpus > 0) {
+          int local_rank = std::stoi(str);
+          device = local_rank % ngpus;
+          if (device >= skip_gpu) device++;
+          set_flag = 1;
+        }
+      }
+      if ((str = getenv("PALS_LOCAL_RANKID"))) {
         if (ngpus > 0) {
           int local_rank = atoi(str);
           device = local_rank % ngpus;
@@ -225,6 +233,7 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
     exchange_comm_classic = forward_comm_classic = reverse_comm_classic = 0;
     forward_pair_comm_classic = reverse_pair_comm_classic = forward_fix_comm_classic = 0;
     sort_classic = 0;
+    atom_map_classic = 0;
 
     exchange_comm_on_host = forward_comm_on_host = reverse_comm_on_host = 0;
   } else {
@@ -240,6 +249,7 @@ KokkosLMP::KokkosLMP(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
     exchange_comm_classic = forward_comm_classic = reverse_comm_classic = 1;
     forward_pair_comm_classic = reverse_pair_comm_classic = forward_fix_comm_classic = 1;
     sort_classic = 1;
+    atom_map_classic = 1;
 
     exchange_comm_on_host = forward_comm_on_host = reverse_comm_on_host = 0;
   }
@@ -503,6 +513,14 @@ void KokkosLMP::accelerator(int narg, char **arg)
       else error->all(FLERR,"Illegal package kokkos command");
       sort_changed = 0;
       iarg += 2;
+    } else if (strcmp(arg[iarg],"atom/map") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
+      else if (strcmp(arg[iarg+1],"no") == 0) atom_map_classic = 1;
+      else if (strcmp(arg[iarg+1],"host") == 0) atom_map_classic = 1;
+      else if (strcmp(arg[iarg+1],"device") == 0) atom_map_classic = 0;
+      else error->all(FLERR,"Illegal package kokkos command");
+      atom_map_changed = 0;
+      iarg += 2;
     } else if ((strcmp(arg[iarg],"gpu/aware") == 0)
                || (strcmp(arg[iarg],"cuda/aware") == 0)) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
@@ -563,6 +581,10 @@ void KokkosLMP::accelerator(int narg, char **arg)
       sort_classic = 1;
       sort_changed = 1;
     }
+    if (atom_map_classic == 0) {
+      atom_map_classic = 1;
+      atom_map_changed = 1;
+    }
   }
 
   // if "gpu/aware on" and "pair/only off", and comm flags were changed previously, change them back
@@ -599,6 +621,10 @@ void KokkosLMP::accelerator(int narg, char **arg)
       sort_classic = 0;
       sort_changed = 0;
     }
+    if (atom_map_changed) {
+      atom_map_classic = 0;
+      atom_map_changed = 0;
+    }
   }
 
 #endif
@@ -607,23 +633,32 @@ void KokkosLMP::accelerator(int narg, char **arg)
   // set neighbor binsize, same as neigh_modify command
 
   force->newton = force->newton_pair = force->newton_bond = newtonflag;
-
-  if (neigh_thread && newtonflag)
-    error->all(FLERR,"Must use KOKKOS package option 'newton off' with 'neigh/thread on'");
+  newton_check();
 
   neighbor->binsize_user = binsize;
   if (binsize <= 0.0) neighbor->binsizeflag = 0;
   else neighbor->binsizeflag = 1;
 }
 
+/* ---------------------------------------------------------------------- */
+
+void KokkosLMP::newton_check()
+{
+  if (neighflag == FULL && force->newton)
+    error->all(FLERR,"Must use 'newton off' with KOKKOS package option 'neigh full'");
+
+  if (neigh_thread && force->newton)
+    error->all(FLERR,"Must use 'newton off' with KOKKOS package option 'neigh/thread on'");
+}
+
 /* ----------------------------------------------------------------------
    called by Finish
 ------------------------------------------------------------------------- */
 
-int KokkosLMP::neigh_count(int m)
+bigint KokkosLMP::neigh_count(int m)
 {
   int inum = 0;
-  int nneigh = 0;
+  bigint nneigh = 0;
 
   ArrayTypes<LMPHostType>::t_int_1d h_ilist;
   ArrayTypes<LMPHostType>::t_int_1d h_numneigh;

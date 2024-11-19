@@ -34,6 +34,7 @@
 #include "update.h"
 #include "variable.h"
 
+#include <cmath>
 #include <cstring>
 
 using namespace LAMMPS_NS;
@@ -164,6 +165,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     wallstyle = REGION;
     idregion = utils::strdup(arg[iarg+1]);
     iarg += 2;
+    // This option is only compatible with fix wall/gran/region
+    if (!utils::strmatch(style, "^wall/gran/region"))
+      error->all(FLERR, "Region option only compatible with fix wall/gran/region");
   } else wallstyle = NOSTYLE;
 
   // optional args

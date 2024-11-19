@@ -20,7 +20,7 @@ Syntax
   .. parsed-literal::
 
      keyword = *checkqeq* or *lgvdw* or *safezone* or *mincap* or *minhbonds* or *tabulate* or *list/blocking*
-       *checkqeq* value = *yes* or *no* = whether or not to require qeq/reaxff or acks2/reaxff fix
+       *checkqeq* value = *yes* or *no* = whether or not to require one of fix qeq/reaxff, fix acks2/reaxff or fix qtpie/reaxff
        *enobonds* value = *yes* or *no* = whether or not to tally energy of atoms with no bonds
        *lgvdw* value = *yes* or *no* = whether or not to use a low gradient vdW correction
        *safezone* = factor used for array allocation
@@ -120,20 +120,22 @@ up that process.
 
 The ReaxFF parameter files provided were created using a charge
 equilibration (QEq) model for handling the electrostatic interactions.
-Therefore, by default, LAMMPS requires that either the
-:doc:`fix qeq/reaxff <fix_qeq_reaxff>` or the
-:doc:`fix qeq/shielded <fix_qeq>` or :doc:`fix acks2/reaxff <fix_acks2_reaxff>`
-command be used with
-*pair_style reaxff* when simulating a ReaxFF model, to equilibrate
-the charges each timestep.
+Therefore, by default, LAMMPS requires that
+:doc:`fix qeq/reaxff <fix_qeq_reaxff>` or :doc:`fix qeq/shielded <fix_qeq>`
+or :doc:`fix acks2/reaxff <fix_acks2_reaxff>`
+or :doc:`fix qtpie/reaxff <fix_qtpie_reaxff>`
+is used with *pair_style reaxff* when simulating a ReaxFF model,
+to equilibrate the charges at each timestep.
+See the :doc:`fix qeq/reaxff <fix_qeq_reaxff>` or :doc:`fix qeq/shielded <fix_qeq>`
+or :doc:`fix acks2/reaxff <fix_acks2_reaxff>`
+or :doc:`fix qtpie/reaxff <fix_qtpie_reaxff>`
+command documentation for more details.
 
 Using the keyword *checkqeq* with the value *no* turns off the check
 for the QEq fixes, allowing a simulation to be run without charge
 equilibration. In this case, the static charges you assign to each
 atom will be used for computing the electrostatic interactions in
-the system. See the :doc:`fix qeq/reaxff <fix_qeq_reaxff>` or
-:doc:`fix qeq/shielded <fix_qeq>` or :doc:`fix acks2/reaxff <fix_acks2_reaxff>`
-command documentation for more details.
+the system.
 
 Using the optional keyword *lgvdw* with the value *yes* turns on the
 low-gradient correction of ReaxFF for long-range London Dispersion,
@@ -372,8 +374,8 @@ Related commands
 """"""""""""""""
 
 :doc:`pair_coeff <pair_coeff>`, :doc:`fix qeq/reaxff <fix_qeq_reaxff>`,
-:doc:`fix acks2/reaxff <fix_acks2_reaxff>`, :doc:`fix reaxff/bonds <fix_reaxff_bonds>`,
-:doc:`fix reaxff/species <fix_reaxff_species>`,
+:doc:`fix acks2/reaxff <fix_acks2_reaxff>`, :doc:`fix qtpie/reaxff <fix_qtpie_reaxff>`,
+:doc:`fix reaxff/bonds <fix_reaxff_bonds>`, :doc:`fix reaxff/species <fix_reaxff_species>`,
 :doc:`compute reaxff/atom <compute_reaxff_atom>`
 
 Default

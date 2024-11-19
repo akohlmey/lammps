@@ -34,9 +34,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
-#include <string>
+#include <exception>
+#include <iterator>
+#include <stdexcept>
 #include <unordered_map>
-#include <vector>
 
 using namespace LAMMPS_NS;
 using namespace MathExtra;

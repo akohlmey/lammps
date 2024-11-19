@@ -248,13 +248,10 @@ std::string platform::os_info()
     buf = "Windows 11 22H2";
   } else if (build == "22631") {
     buf = "Windows 11 23H2";
+  } else if (build == "26100") {
+    buf = "Windows 11 24H2";
   } else {
-    const char *entry = "ProductName";
-    RegGetValue(HKEY_LOCAL_MACHINE, subkey, entry, RRF_RT_REG_SZ, nullptr, &value,
-                (LPDWORD) &value_length);
-    // enforce zero termination
-    value[1023] = '\0';
-    buf = value;
+    buf = "Windows Build " + build;
   }
   DWORD fullversion, majorv, minorv, buildv = 0;
   fullversion = GetVersion();
@@ -317,8 +314,10 @@ std::string platform::os_info()
 
 std::string platform::cxx_standard()
 {
-#if __cplusplus > 202002L
-  return "newer than C++20";
+#if __cplusplus > 202302L
+  return "newer than C++23";
+#elif __cplusplus == 202302L
+  return "C++23";
 #elif __cplusplus == 202002L
   return "C++20";
 #elif __cplusplus == 201703L
@@ -945,7 +944,7 @@ int platform::ftruncate(FILE *fp, bigint length)
     return 1;
   }
 #else
-  platform::fseek(fp, length);
+  (void) platform::fseek(fp, length);
   return ::ftruncate(fileno(fp), (off_t) length);
 #endif
 }

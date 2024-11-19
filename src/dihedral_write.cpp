@@ -25,7 +25,6 @@
 #include "error.h"
 #include "force.h"
 #include "input.h"
-#include "lammps.h"
 #include "math_const.h"
 #include "update.h"
 
@@ -150,8 +149,9 @@ void DihedralWrite::command(int narg, char **arg)
     FILE *coeffs;
     char line[MAXLINE] = {'\0'};
     coeffs = fopen(coeffs_file.c_str(), "r");
+    if (!coeffs) error->one(FLERR, "Unable to open temporary file {}: {}", utils::getsyserror());
     for (int i = 0; i < atom->ndihedraltypes; ++i) {
-      fgets(line, MAXLINE, coeffs);
+      utils::sfgets(FLERR, line, MAXLINE, coeffs, coeffs_file.c_str(), error);
       writer->input->one(fmt::format("dihedral_coeff {}", line));
     }
     fclose(coeffs);

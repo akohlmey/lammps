@@ -12,9 +12,12 @@
 ------------------------------------------------------------------------- */
 
 #include "gran_sub_mod_normal.h"
+
 #include "error.h"
 #include "granular_model.h"
 #include "math_const.h"
+
+#include <cmath>
 
 using namespace LAMMPS_NS;
 using namespace Granular_NS;
