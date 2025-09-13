@@ -40,6 +40,34 @@ project(lammps
 set(SOVERSION 0)
 get_property(BUILD_IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 
+# We *require* C++17 without extensions
+# Kokkos also requires at least C++17 (currently)
+if(NOT CMAKE_CXX_STANDARD)
+# uncomment in case we plan to switch to C++20 as minimum standard
+#  if(cxx_std_20 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+#    set(CMAKE_CXX_STANDARD 20)
+#  else()
+    set(CMAKE_CXX_STANDARD 17)
+#  endif()
+endif()
+if(CMAKE_CXX_STANDARD LESS 17)
+  message(FATAL_ERROR "C++ standard must be set to at least 17")
+endif()
+if(PKG_KOKKOS AND (CMAKE_CXX_STANDARD LESS 17))
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+# turn off C++20 check in lmptype.h
+#if(LAMMPS_CXX17)
+#  add_compile_definitions(LAMMPS_CXX17)
+#endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Use compiler extensions")
+
+# do not include the (obsolete) MPI C++ bindings which makes for leaner object files
+# and avoids namespace conflicts. Put this early to increase its visbility.
+set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ Bindings" FORCE)
+
+# set up variables for installation
 include(GNUInstallDirs)
 get_filename_component(LAMMPS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.. ABSOLUTE)
 get_filename_component(LAMMPS_LIB_BINARY_DIR ${CMAKE_BINARY_DIR}/lib ABSOLUTE)
@@ -61,13 +89,84 @@ set(LAMMPS_POTENTIALS_URL "${LAMMPS_DOWNLOADS_URL}/potentials")
 set(LAMMPS_THIRDPARTY_URL "${LAMMPS_DOWNLOADS_URL}/thirdparty")
 mark_as_advanced(LAMMPS_DOWNLOADS_URL)
 
-# export all symbols when building a .dll file on windows
-if((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND BUILD_SHARED_LIBS)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
+########################################################################
+# define main targets for LAMMPS library and LAMMPS executable.
+# Add sources for the library later with target_sources()
 add_library(lammps)
 add_executable(lmp ${LAMMPS_SOURCE_DIR}/main.cpp)
+
+###########################################################################
+# create INTERFACE targets to consistently manage compiler options and warnings
+# all targets that should use these settings just linke with the INTERFACE target
+add_library(LAMMPS_CXX_FLAGS INTERFACE)
+add_library(LAMMPS_WARNINGS INTERFACE)
+# need dummy exports to avoid CMake errors
+install(TARGETS LAMMPS_CXX_FLAGS EXPORT LAMMPS_Targets DESTINATION ${CMAKE_INSTALL_DATADIR})
+install(TARGETS LAMMPS_WARNINGS EXPORT LAMMPS_Targets DESTINATION ${CMAKE_INSTALL_DATADIR})
+
+# we require only C++17 features, even if CMAKE_CXX_STANDARD enables a later standard
+target_compile_features(LAMMPS_CXX_FLAGS INTERFACE cxx_std_17)
+set_target_properties(LAMMPS_CXX_FLAGS PROPERTIES CXX_EXTENSIONS ${CMAKE_CXX_EXTENSIONS})
+
+# selecting verbose warnings here instead of messing with CMAKE_CXX_*FLAGS
+option(LAMMPS_EXTRA_WARNINGS "Enable additional compiler warnings" OFF)
+if(LAMMPS_EXTRA_WARNINGS)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(LAMMPS_WARNINGS INTERFACE -Wall -Wextra -Wvla -Wno-maybe-uninitialized)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(LAMMPS_WARNINGS INTERFACE -Wall -Wextra -Wvla -Wno-bitwise-instead-of-logical)
+    # TODO: add settings for other compilers / platforms
+  endif()
+endif()
+
+# export all symbols when building a .dll file on windows
+if(BUILD_SHARED_LIBS AND (CMAKE_SYSTEM_NAME STREQUAL "Windows"))
+  if(CMAKE_CROSSCOMPILING)
+    target_link_options(LAMMPS_CXX_FLAGS INTERFACE "-Wl,--export-all-symbols")
+  else()
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+  endif()
+endif()
+
+# set default compiler options and silence excessive warnings for new Intel Compilers
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+  target_compile_options(LAMMPS_CXX_FLAGS INTERFACE -fp-model precise )
+  target_compile_options(LAMMPS_WARNINGS INTERFACE -Wno-tautological-constant-compare -Wno-unused-command-line-argument)
+endif()
+
+# silence excessive warnings for PGI/NVHPC compilers
+if((CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "PGI"))
+  target_compile_options(LAMMPS_WARNINGS INTERFACE -Minform=severe)
+endif()
+
+# silence nvcc warnings when using nvcc_wrapper
+get_filename_component(LAMMPS_CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER}" NAME CACHE)
+if((PKG_KOKKOS) AND (Kokkos_ENABLE_CUDA) AND (LAMMPS_CXX_COMPILER_NAME STREQUAL "nvcc_wrapper"))
+  target_compile_options(LAMMPS_WARNINGS INTERFACE
+    -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128,--diag_suppress=186)
+endif()
+
+# adjust settings for MSVC which by default always reports an old C++ standard in the __cplusplus
+# macro and prints lots of pointless warnings about "unsafe" functions
+if(MSVC)
+  if((CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Intel"))
+    add_compile_options(LAMMPS_CXX_FLAGS INTERFACE
+      /Zc:__cplusplus /wd4244 /wd4267 /wd4250 /EHsc /utf-8)
+  endif()
+  add_compile_definitions(LAMMPS_CXX_FLAGS INTERFACE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+# warn about potentially problematic compiler versions
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if (CMAKE_CXX_STANDARD GREATER_EQUAL 17)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.3)
+      message(WARNING "Using the GNU compilers version ${CMAKE_CXX_COMPILER_VERSION} with C++17 "
+              "or later is not recommended. Please use the GNU compilers version 9.3 or later")
+    endif()
+  endif()
+endif()
+
+########################################################################
 
 # by default, install into $HOME/.local (not /usr/local), so that no root access (and sudo!!) is needed
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -136,72 +235,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
   endif()
 endif()
 
-# silence excessive warnings for new Intel Compilers
-if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fp-model precise -Wno-tautological-constant-compare -Wno-unused-command-line-argument")
-endif()
-
-# silence excessive warnings for PGI/NVHPC compilers
-if((CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "PGI"))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minform=severe")
-endif()
-
-# silence nvcc warnings when using nvcc_wrapper
-get_filename_component(LAMMPS_CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER}" NAME CACHE)
-if((PKG_KOKKOS) AND (Kokkos_ENABLE_CUDA) AND (LAMMPS_CXX_COMPILER_NAME STREQUAL "nvcc_wrapper"))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128,--diag_suppress=186")
-endif()
-
-# We *require* C++17 without extensions
-# Kokkos also requires at least C++17 (currently)
-if(NOT CMAKE_CXX_STANDARD)
-# uncomment in case we plan to switch to C++20 as minimum standard
-#  if(cxx_std_20 IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-#    set(CMAKE_CXX_STANDARD 20)
-#  else()
-    set(CMAKE_CXX_STANDARD 17)
-#  endif()
-endif()
-if(CMAKE_CXX_STANDARD LESS 17)
-  message(FATAL_ERROR "C++ standard must be set to at least 17")
-endif()
-if(PKG_KOKKOS AND (CMAKE_CXX_STANDARD LESS 17))
-  set(CMAKE_CXX_STANDARD 17)
-endif()
-# turn off C++20 check in lmptype.h
-#if(LAMMPS_CXX17)
-#  add_compile_definitions(LAMMPS_CXX17)
-#endif()
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "Use compiler extensions")
-# ugly hacks for MSVC which by default always reports an old C++ standard in the __cplusplus macro
-# and prints lots of pointless warnings about "unsafe" functions
-if(MSVC)
-  if((CMAKE_CXX_COMPILER_ID STREQUAL "MSVC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Intel"))
-    add_compile_options(/Zc:__cplusplus)
-    add_compile_options(/wd4244)
-    add_compile_options(/wd4267)
-    add_compile_options(/wd4250)
-    add_compile_options(/EHsc)
-    add_compile_options(/utf-8)
-  endif()
-  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-endif()
-
-# warn about potentially problematic GCC compiler versions
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  if (CMAKE_CXX_STANDARD GREATER_EQUAL 17)
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.3)
-      message(WARNING "Using the GNU compilers version ${CMAKE_CXX_COMPILER_VERSION} with C++17 "
-              "or later is not recommended. Please use the GNU compilers version 9.3 or later")
-    endif()
-  endif()
-endif()
-
-# do not include the (obsolete) MPI C++ bindings which makes for leaner object files
-# and avoids namespace conflicts. Put this early to increase its visbility.
-set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ Bindings" FORCE)
-
 ########################################################################
 # User input options                                                   #
 ########################################################################
@@ -240,8 +273,7 @@ option(BUILD_TOOLS "Build and install LAMMPS tools (msi2lmp, binary2txt, chain)"
 option(BUILD_LAMMPS_GUI "Build and install the LAMMPS GUI" OFF)
 
 file(GLOB ALL_SOURCES CONFIGURE_DEPENDS ${LAMMPS_SOURCE_DIR}/[^.]*.cpp)
-file(GLOB MAIN_SOURCES CONFIGURE_DEPENDS ${LAMMPS_SOURCE_DIR}/main.cpp)
-list(REMOVE_ITEM ALL_SOURCES ${MAIN_SOURCES})
+list(REMOVE_ITEM ALL_SOURCES ${LAMMPS_SOURCE_DIR}/main.cpp)
 target_sources(lammps PRIVATE ${ALL_SOURCES})
 
 # add extra libraries for std::filesystem with older compilers
@@ -251,17 +283,13 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VER
   target_link_libraries(lammps PRIVATE c++fs)
 endif()
 
-# tell CMake to export all symbols to a .dll on Windows with MinGW cross-compilers
-if(BUILD_SHARED_LIBS AND (CMAKE_SYSTEM_NAME STREQUAL "Windows") AND CMAKE_CROSSCOMPILING)
-  set_target_properties(lammps PROPERTIES LINK_FLAGS "-Wl,--export-all-symbols")
-endif()
-
 target_link_libraries(lmp PRIVATE lammps)
 set_target_properties(lmp PROPERTIES OUTPUT_NAME ${LAMMPS_BINARY})
 # re-export all symbols for plugins
 if(PKG_PLUGIN AND (NOT ((CMAKE_SYSTEM_NAME STREQUAL "Windows"))))
   set_target_properties(lmp PROPERTIES ENABLE_EXPORTS TRUE)
 endif()
+target_link_libraries(lmp PRIVATE LAMMPS_CXX_FLAGS LAMMPS_WARNINGS)
 install(TARGETS lmp EXPORT LAMMPS_Targets DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 option(CMAKE_VERBOSE_MAKEFILE "Generate verbose Makefiles" OFF)
@@ -531,6 +559,7 @@ if(PKG_ML-QUIP OR PKG_ML-POD OR PKG_ELECTRODE OR PKG_RHEO OR BUILD_TOOLS)
     set_target_properties(linalg PROPERTIES OUTPUT_NAME lammps_linalg${LAMMPS_MACHINE})
     set(BLAS_LIBRARIES "$<TARGET_FILE:linalg>")
     set(LAPACK_LIBRARIES "$<TARGET_FILE:linalg>")
+    target_link_libraries(linalg PRIVATE LAMMPS_CXX_FLAGS)
     target_link_libraries(lammps PRIVATE linalg)
   else()
     list(APPEND LAPACK_LIBRARIES ${BLAS_LIBRARIES})
@@ -688,6 +717,7 @@ foreach(PKG_LIB H5MD)
       ${LAMMPS_LIB_SOURCE_DIR}/${PKG_LIB}/[^.]*.c ${LAMMPS_LIB_SOURCE_DIR}/${PKG_LIB}/[^.]*.cpp)
     add_library(${PKG_LIB} STATIC ${${PKG_LIB}_SOURCES})
     set_target_properties(${PKG_LIB} PROPERTIES OUTPUT_NAME lammps_${PKG_LIB}${LAMMPS_MACHINE})
+    target_link_libraries(${PKG_LIB} PRIVATE LAMMPS_CXX_FLAGS)
     target_link_libraries(lammps PRIVATE ${PKG_LIB})
     if(PKG_LIB STREQUAL "h5md")
       target_include_directories(h5md PUBLIC ${LAMMPS_LIB_SOURCE_DIR}/h5md/include ${HDF5_INCLUDE_DIRS})
@@ -726,7 +756,7 @@ endif()
 
 ######################################################################
 # the windows version of LAMMPS requires a couple extra libraries
-# and the MPI library - if use - has to be linked right before those
+# and the MPI library - if used - has to be linked right before those
 # and after everything else that is compiled locally
 ######################################################################
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -788,6 +818,7 @@ set(LAMMPS_CXX_HEADERS angle.h atom.h bond.h citeme.h comm.h command.h compute.h
   library.h lmppython.h lmptype.h memory.h modify.h neighbor.h neigh_list.h output.h pair.h
   platform.h pointers.h region.h timer.h universe.h update.h utils.h variable.h)
 set(LAMMPS_FMT_HEADERS core.h format.h)
+target_link_libraries(lammps PUBLIC LAMMPS_WARNINGS LAMMPS_CXX_FLAGS)
 
 set_target_properties(lammps PROPERTIES OUTPUT_NAME lammps${LAMMPS_MACHINE})
 set_target_properties(lammps PROPERTIES SOVERSION ${SOVERSION})

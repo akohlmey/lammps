@@ -465,6 +465,7 @@ elseif(GPU_API STREQUAL "HIP")
   endif()
 endif()
 
+target_link_libraries(gpu PRIVATE LAMMPS_CXX_FLAGS)
 if(BUILD_OMP)
   find_package(OpenMP COMPONENTS CXX REQUIRED)
   target_link_libraries(gpu PRIVATE OpenMP::OpenMP_CXX)
