@@ -28,7 +28,7 @@ if(POLICY CMP0135)
 endif()
 
 ########################################
-
+# General project settings
 project(lammps
         DESCRIPTION "The LAMMPS Molecular Dynamics Simulator"
         HOMEPAGE_URL "https://www.lammps.org"
@@ -57,7 +57,13 @@ set(LAMMPS_POTENTIALS_URL "${LAMMPS_DOWNLOADS_URL}/potentials")
 set(LAMMPS_THIRDPARTY_URL "${LAMMPS_DOWNLOADS_URL}/thirdparty")
 mark_as_advanced(LAMMPS_DOWNLOADS_URL)
 
-find_package(Git)
+# export all symbols when building a .dll file on windows
+if((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND BUILD_SHARED_LIBS)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
+add_library(lammps)
+add_executable(lmp ${LAMMPS_SOURCE_DIR}/main.cpp)
 
 # by default, install into $HOME/.local (not /usr/local), so that no root access (and sudo!!) is needed
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -188,11 +194,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   endif()
 endif()
 
-# export all symbols when building a .dll file on windows
-if((CMAKE_SYSTEM_NAME STREQUAL "Windows") AND BUILD_SHARED_LIBS)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
 # do not include the (obsolete) MPI C++ bindings which makes for leaner object files
 # and avoids namespace conflicts. Put this early to increase its visbility.
 # do not apply when compiling SCAFACOS since it uses the obsolete bindings
@@ -240,7 +241,7 @@ option(BUILD_LAMMPS_GUI "Build and install the LAMMPS GUI" OFF)
 file(GLOB ALL_SOURCES CONFIGURE_DEPENDS ${LAMMPS_SOURCE_DIR}/[^.]*.cpp)
 file(GLOB MAIN_SOURCES CONFIGURE_DEPENDS ${LAMMPS_SOURCE_DIR}/main.cpp)
 list(REMOVE_ITEM ALL_SOURCES ${MAIN_SOURCES})
-add_library(lammps ${ALL_SOURCES})
+target_sources(lammps PRIVATE ${ALL_SOURCES})
 
 # add extra libraries for std::filesystem with older compilers
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
@@ -264,7 +265,6 @@ if(BUILD_SHARED_LIBS AND (CMAKE_SYSTEM_NAME STREQUAL "Windows") AND CMAKE_CROSSC
   set_target_properties(lammps PROPERTIES LINK_FLAGS "-Wl,--export-all-symbols")
 endif()
 
-add_executable(lmp ${MAIN_SOURCES})
 target_link_libraries(lmp PRIVATE lammps)
 set_target_properties(lmp PROPERTIES OUTPUT_NAME ${LAMMPS_BINARY})
 # re-export all symbols for plugins
@@ -784,11 +784,12 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LAMMPS_STYLE_HE
 ######################################
 # Generate lmpgitversion.h
 ######################################
+find_package(Git)
 add_custom_target(gitversion COMMAND ${CMAKE_COMMAND}
-  -DLAMMPS_DIR="${LAMMPS_DIR}"
-  -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
-  -DGIT_FOUND="${GIT_FOUND}"
-  -DLAMMPS_STYLE_HEADERS_DIR="${LAMMPS_STYLE_HEADERS_DIR}"
+  -D LAMMPS_DIR="${LAMMPS_DIR}"
+  -D GIT_EXECUTABLE="${GIT_EXECUTABLE}"
+  -D GIT_FOUND="${GIT_FOUND}"
+  -D LAMMPS_STYLE_HEADERS_DIR="${LAMMPS_STYLE_HEADERS_DIR}"
   -P ${CMAKE_CURRENT_SOURCE_DIR}/Modules/generate_lmpgitversion.cmake)
 set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${LAMMPS_STYLE_HEADERS_DIR}/gitversion.h)
 add_dependencies(lammps gitversion)
