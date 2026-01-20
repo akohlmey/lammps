@@ -558,6 +558,193 @@ A file that would be parsed by the reader code fragment looks like this:
 
 ----------
 
+Type label mapping
+------------------
+
+The :cpp:class:`LabelMap <LAMMPS_NS::LabelMap>` class provides a powerful
+abstraction for mapping between symbolic type labels and numeric type indices
+in LAMMPS simulations. Instead of referring to atom types, bond types, angle
+types, dihedral types, and improper types by numeric indices (1, 2, 3, ...),
+users can assign meaningful string labels (e.g., "C", "H", "N", "C-H", "H-C-H")
+that improve readability and maintainability of input scripts.
+
+This feature is particularly useful for:
+
+* Complex molecular systems with many atom types
+* Making input scripts self-documenting
+* Avoiding errors from renumbering types
+* Reusing force field definitions across different systems
+
+Type labels are set using the ``labelmap`` command in LAMMPS input scripts:
+
+.. code-block:: LAMMPS
+
+   # Assign atom type labels
+   labelmap atom 1 C 2 H 3 N 4 O
+
+   # Assign bond type labels (hyphen-delimited format)
+   labelmap bond 1 C-H 2 C-C 3 C-N
+
+   # Assign angle type labels
+   labelmap angle 1 H-C-H 2 C-C-H 3 C-N-C
+
+Interaction types (bonds, angles, dihedrals, impropers) use a **hyphen-delimited
+format** that combines constituent atom type labels. For example, a bond between
+carbon and hydrogen atoms can be labeled "C-H", and an angle formed by
+H-C-H atoms can be labeled "H-C-H".
+
+The LabelMap class supports **bidirectional lookup**:
+
+* Forward lookup: Convert a type label string to its numeric type index
+* Reverse lookup: Convert a numeric type index to its label string
+
+It also provides **automatic type inference** for interactions based on their
+constituent atom types. For instance, given atom type labels, the class can
+infer the corresponding bond, angle, dihedral, or improper type from the
+hyphen-delimited format. This handles symmetric matching automatically (e.g.,
+"C-H" matches "H-C" for bonds).
+
+Integration with utils namespace
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Several utility functions in the ``utils`` namespace work with type labels and
+interact with the LabelMap class:
+
+* :cpp:func:`utils::is_type() <LAMMPS_NS::utils::is_type>` - Validates whether
+  a string is a valid type label. Returns 1 for valid labels, 0 for numeric
+  types, -1 for invalid strings. Type labels cannot start with digits, '*', or
+  '#', and cannot contain whitespace or UTF-8 characters.
+
+* :cpp:func:`utils::expand_type() <LAMMPS_NS::utils::expand_type>` - Converts
+  a type label string to its numeric equivalent using the LabelMap. Returns
+  ``nullptr`` if no label map exists or if the string is not a valid type label.
+
+* :cpp:func:`utils::bounds_typelabel() <LAMMPS_NS::utils::bounds_typelabel>` -
+  Extended version of ``utils::bounds()`` that accepts type labels in addition
+  to numeric ranges. Uses ``expand_type()`` internally to convert labels to
+  numeric bounds before processing.
+
+These functions enable seamless integration of type labels throughout LAMMPS,
+allowing commands that accept type specifications to work with both numeric
+indices and symbolic labels.
+
+Usage examples
+^^^^^^^^^^^^^^
+
+**Example 1: Basic type label lookup**
+
+.. code-block:: c++
+   :caption: Finding types from labels and vice versa
+
+   #include "label_map.h"
+   #include "atom.h"
+
+   // Access the label map (assumes atom->lmap exists and is initialized)
+   LabelMap *lmap = atom->lmap;
+
+   // Forward lookup: Get numeric type from label
+   int ctype = lmap->find("C", Atom::ATOM);    // Returns atom type for "C"
+   int htype = lmap->find("H", Atom::ATOM);    // Returns atom type for "H"
+   int missing = lmap->find("X", Atom::ATOM);  // Returns -1 (not found)
+
+   // Reverse lookup: Get label from numeric type
+   const std::string &label1 = lmap->find(1, Atom::ATOM);  // Returns label for type 1
+   const std::string &label2 = lmap->find(2, Atom::BOND);  // Returns bond label for type 2
+
+   // Check if all types have labels
+   bool complete = lmap->is_complete(Atom::ATOM);  // Returns true if all atom types labeled
+
+**Example 2: Inferring bond types from atom types**
+
+.. code-block:: c++
+   :caption: Using infer_bondtype() with numeric and label-based lookups
+
+   #include "label_map.h"
+   #include "atom.h"
+
+   LabelMap *lmap = atom->lmap;
+
+   // Assume we have: labelmap atom 1 C 2 H 3 N
+   // And: labelmap bond 1 C-H 2 C-C 3 C-N
+
+   // Infer bond type from numeric atom types
+   int bt1 = lmap->infer_bondtype(1, 2);  // Returns 1 (C-H bond)
+   int bt2 = lmap->infer_bondtype(1, 1);  // Returns 2 (C-C bond)
+   int bt3 = lmap->infer_bondtype(1, 3);  // Returns 3 (C-N bond)
+
+   // Infer bond type from atom type labels (handles symmetry automatically)
+   int bt4 = lmap->infer_bondtype({"C", "H"});  // Returns 1 (C-H)
+   int bt5 = lmap->infer_bondtype({"H", "C"});  // Returns 1 (symmetric match)
+   int bt6 = lmap->infer_bondtype({"C", "N"});  // Returns 3 (C-N)
+
+**Example 3: Inferring angle and dihedral types**
+
+.. code-block:: c++
+   :caption: Using infer_angletype() and infer_dihedraltype()
+
+   #include "label_map.h"
+   #include "atom.h"
+
+   LabelMap *lmap = atom->lmap;
+
+   // Assume: labelmap angle 1 H-C-H 2 C-C-H 3 C-N-C
+   // And: labelmap dihedral 1 H-C-C-H 2 C-C-N-H
+
+   // Infer angle type from numeric atom types
+   int at1 = lmap->infer_angletype(2, 1, 2);  // Returns 1 (H-C-H)
+   int at2 = lmap->infer_angletype(1, 1, 2);  // Returns 2 (C-C-H)
+
+   // Infer angle type from labels (supports bidirectional matching)
+   int at3 = lmap->infer_angletype({"H", "C", "H"});  // Returns 1
+   int at4 = lmap->infer_angletype({"H", "C", "H"});  // Returns 1 (same angle reversed)
+
+   // Infer dihedral type from labels
+   int dt1 = lmap->infer_dihedraltype({"H", "C", "C", "H"});  // Returns 1
+   int dt2 = lmap->infer_dihedraltype({"H", "C", "C", "H"});  // Returns 1 (bidirectional)
+   int dt3 = lmap->infer_dihedraltype({"C", "C", "N", "H"});  // Returns 2
+
+**Example 4: Using utils functions with type labels**
+
+.. code-block:: c++
+   :caption: Validating and expanding type labels with utils functions
+
+   #include "utils.h"
+   #include "lammps.h"
+
+   using namespace LAMMPS_NS;
+
+   LAMMPS *lmp = /* ... */;
+
+   // Validate type label strings
+   int result1 = utils::is_type("C");     // Returns 1 (valid label)
+   int result2 = utils::is_type("123");   // Returns 0 (numeric type)
+   int result3 = utils::is_type("*");     // Returns -1 (invalid - starts with *)
+   int result4 = utils::is_type("C H");   // Returns -1 (invalid - contains whitespace)
+
+   // Convert type label to numeric string
+   char *numstr = utils::expand_type(__FILE__, __LINE__, "C", Atom::ATOM, lmp);
+   if (numstr) {
+       // Use the numeric type string
+       delete[] numstr;  // Must delete after use
+   }
+
+   // Convert type label to integer
+   int type = utils::expand_type_int(__FILE__, __LINE__, "C", Atom::ATOM, lmp, true);
+   // The 'true' argument enables range verification
+
+   // Use bounds_typelabel for ranges with label support
+   int lo, hi;
+   utils::bounds_typelabel(__FILE__, __LINE__, "C:H", 1, 10, lo, hi, lmp, Atom::ATOM);
+   // Expands "C:H" to numeric range, e.g., "1:2" -> lo=1, hi=2
+
+----------
+
+.. doxygenclass:: LAMMPS_NS::LabelMap
+   :project: progguide
+   :members:
+
+----------
+
 Memory pool classes
 -------------------
 
