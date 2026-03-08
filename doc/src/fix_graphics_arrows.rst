@@ -193,8 +193,8 @@ Related commands
 :doc:`fix graphics/labels <fix_graphics_labels>`,
 :doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
 :doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics/lines <fix_graphics_lines>`,
 :doc:`fix graphics/periodic <fix_graphics_periodic>`,
-:doc:`fix graphics/objects <fix_graphics_objects>`,
 :doc:`compute hbond/local <compute_hbond_local>`
 
 Default

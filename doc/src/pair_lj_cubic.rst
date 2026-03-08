@@ -45,7 +45,7 @@ the energy and force are zero.
 The location of the inflection point :math:`r_s` is defined
 by the LJ diameter, :math:`r_s/\sigma = (26/7)^{1/6}`. The cutoff distance
 is defined by :math:`r_c/r_s = 67/48` or :math:`r_c/\sigma = 1.737...`
-The analytic expression for the
+The analytic expression for
 the cubic coefficient
 :math:`A_3 r_{min}^3/\epsilon = 27.93...` is given in the paper by
 Holian and Ravelo :ref:`(Holian) <Holian>`.

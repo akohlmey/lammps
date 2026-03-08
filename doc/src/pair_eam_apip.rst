@@ -94,7 +94,7 @@ The eam/apip pair styles can only be used via the *pair* keyword of the
 Restrictions
 """"""""""""
 
-This pair styles are part of the APIP package.  It is only enabled if
+These pair styles are part of the APIP package.  They are only enabled if
 LAMMPS was built with that package.  See the :doc:`Build package
 <Build_package>` page for more info.
 

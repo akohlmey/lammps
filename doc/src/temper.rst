@@ -16,7 +16,7 @@ Syntax
 * fix-ID = ID of the fix that will control temperature during the run
 * seed1 = random # seed used to decide on adjacent temperature to partner with
 * seed2 = random # seed for Boltzmann factor in Metropolis swap
-* index = which temperature (0 to N-1) I am simulating (optional)
+* index = which temperature (0 to number-of-replicas - 1) I am simulating (optional)
 
 Examples
 """"""""
