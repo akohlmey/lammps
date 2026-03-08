@@ -64,7 +64,7 @@ with MPI using something like:
 
 MPI parallelization will work for *all* functionality in LAMMPS and in
 many cases the MPI parallelization is more efficient than
-multi-threading since LAMMPS was designed from ground up for MPI
+multi-threading since LAMMPS was designed from the ground up for MPI
 parallelization using domain decomposition.  Multi-threading is only
 available for selected styles and implemented on top of the MPI
 parallelization.  Multi-threading is most useful for systems with large

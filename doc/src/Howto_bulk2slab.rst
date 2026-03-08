@@ -131,8 +131,8 @@ z-direction will experience a restoring force, nudging them back to the
 slab.  The force constant of :math:`10.0 \frac{\mathrm{kcal/mol}}{\AA}`
 was determined empirically.
 
-Adding these "restoring" soft walls assist in making the free surfaces
-above and below the slab flat, instead of having rugged or ondulated
+Adding these "restoring" soft walls assists in making the free surfaces
+above and below the slab flat, instead of having rugged or undulated
 surfaces.  The impact of the walls can be changed by adjusting the force
 constant, cutoff, and position of the wall.
 

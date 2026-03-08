@@ -266,7 +266,7 @@ These commands install/uninstall sets of packages:
     make no-most                        # remove most packages w/o libs'
 
 which install/uninstall various sets of packages.  Typing ``make
-package`` will list all the these commands.
+package`` will list all these commands.
 
 .. note::
 

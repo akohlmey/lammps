@@ -210,7 +210,7 @@ file called ``CMakeLists.txt`` (for LAMMPS it is located in the
 the build folder) or a build folder containing a file called
 ``CMakeCache.txt``, which is generated at the end of the CMake
 configuration step.  The cache file contains all current CMake settings.
-This is a "legacy mode" or running CMake and thus often found
+This is a "legacy mode" of running CMake and thus often found
 when searching the web.  We recommend to use the ``-S`` and ``-B``
 folders to explicitly set the path to the folder containing the
 ``CMakeLists.txt`` file and the build folder, respectively.
@@ -254,7 +254,7 @@ of them you can use the command:
 
 Especially, when programming LAMMPS and you are making just local
 changes, or only want to make certain that the code still compiles
-and links, you may want to skip may of the extra steps that are
+and links, you may want to skip many of the extra steps that are
 run by default and then append "/fast" to the target.  Example:
 
 .. code-block:: bash

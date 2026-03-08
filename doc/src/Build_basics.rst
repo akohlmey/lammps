@@ -138,8 +138,8 @@ to: e.g. ``KSPACE``, and ``COLVARS``.  See the :doc:`Packages details
 for their respective commands for OpenMP threading info.
 
 For CMake, if you use ``BUILD_OMP=yes``, you can use these packages
-and turn on their native OpenMP support and turn on their native OpenMP
-support at run time, by setting the ``OMP_NUM_THREADS`` environment
+and turn on their native OpenMP support at run time, by setting the
+``OMP_NUM_THREADS`` environment
 variable before you launch LAMMPS.
 
 For building via conventional make, the ``CCFLAGS`` and ``LINKFLAGS``

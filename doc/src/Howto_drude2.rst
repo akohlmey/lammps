@@ -47,11 +47,11 @@ fields:
 * Alternately :ref:`Schroeder and Steinhauser <Schroeder>` suggest adopting a global charge :math:`q_D` = -1.0e and a global mass :math:`m_D` = 0.1 g/mol (or u) for all Drude particles, and to calculate the force constant for each type of core-Drude bond from equation (1). The timesteps used by these authors are between 0.5 and 2 fs, with the degrees of freedom of the Drude oscillators kept cold at 1 K.
 * In both these force fields hydrogen atoms are treated as non-polarizable.
 
-The motion of of the Drude particles can be calculated by minimizing
+The motion of the Drude particles can be calculated by minimizing
 the energy of the induced dipoles at each timestep, by an iterative,
 self-consistent procedure. The Drude particles can be massless and
 therefore do not contribute to the kinetic energy. However, the
-relaxed method is computational slow. An extended-lagrangian method
+relaxed method is computationally slow. An extended-lagrangian method
 can be used to calculate the positions of the Drude particles, but
 this requires them to have mass. It is important in this case to
 decouple the degrees of freedom associated with the Drude oscillators
@@ -71,7 +71,7 @@ applicable to molecular/covalent systems the Drude model includes two
 important features:
 
 #. The possibility to thermostat the additional degrees of freedom associated with the induced dipoles at very low temperature, in terms of the reduced coordinates of the Drude particles with respect to their cores. This makes the trajectory close to that of relaxed induced dipoles.
-#. The Drude dipoles on covalently bonded atoms interact too strongly due to the short distances, so an atom may capture the Drude particle (shell) of a neighbor, or the induced dipoles within the same molecule may align too much.  To avoid this, damping at short of the interactions between the point charges composing the induced dipole can be done by :ref:`Thole <Thole2>` functions.
+#. The Drude dipoles on covalently bonded atoms interact too strongly due to the short distances, so an atom may capture the Drude particle (shell) of a neighbor, or the induced dipoles within the same molecule may align too much.  To avoid this, damping at short range of the interactions between the point charges composing the induced dipole can be done by :ref:`Thole <Thole2>` functions.
 
 ----------
 
@@ -244,7 +244,7 @@ The input file should now be ready for use!
 
 You will notice that the global temperature *thermo_temp* computed by
 LAMMPS is not 300. K as wanted.  This is because LAMMPS treats DPs as
-standard atoms in his default compute.  If you want to output the
+standard atoms in its default compute.  If you want to output the
 temperatures of the DC-DP pair centers of mass and of the DPs relative
 to their DCs, you should use the :doc:`compute temp_drude <compute_temp_drude>`
 

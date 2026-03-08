@@ -34,7 +34,7 @@ Compiler and OS compatibility
 
 The LAMMPS developers aim to keep LAMMPS very portable and usable -
 at least in parts - on most operating systems commonly used for
-running MD simulations.  Please see the :doc:`section on portablility
+running MD simulations.  Please see the :doc:`section on portability
 <Intro_portability>` for more details.
 
 .. admonition:: Warning: LLVM based Intel Compilers

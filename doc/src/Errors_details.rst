@@ -81,7 +81,7 @@ While a segmentation fault is likely an indication of a bug in LAMMPS,
 it need not always be; it can also be the consequence of too aggressive
 simulation settings.  For time critical code paths, LAMMPS will assume
 the user has chosen the settings carefully and will not make any checks
-to avoid to avoid performance penalties.
+to avoid performance penalties.
 
 A crucial step in resolving a segmentation fault is to identify the
 exact location in the code where it happens.  Please see `Errors_debug`

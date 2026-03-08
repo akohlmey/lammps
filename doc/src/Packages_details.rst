@@ -369,7 +369,7 @@ BROWNIAN package
 
 This package provides :doc:`fix brownian, fix brownian/sphere, and
 fix brownian/asphere <fix_brownian>` as well as
-:doc:`fix propel/self <fix_propel_self>` which allow to do Brownian
+:doc:`fix propel/self <fix_propel_self>` which allow doing Brownian
 Dynamics time integration of point, spherical and aspherical particles
 and also support self-propelled particles.
 
@@ -1408,7 +1408,7 @@ Ontario).
 
 **Install:**
 
-The LATBOLTZ package requires that LAMMPS is build in :ref:`MPI parallel mode <serial>`.
+The LATBOLTZ package requires that LAMMPS is built in :ref:`MPI parallel mode <serial>`.
 
 **Supporting info:**
 
@@ -1563,7 +1563,7 @@ MBX Package
 The pair_style mbx command implements the MBX library for
 MB-pol and MB-nrg data-driven many-body potential energy functions. MBX
 is called using :doc:`pair_style mbx <pair_mbx>` command, which
-allow for MB-nrg potentials such as MB-pol to be used in LAMMPS.
+allows for MB-nrg potentials such as MB-pol to be used in LAMMPS.
 For more information on MBX, see the `MBX library <https://mbxsimulations.com>`_ website.
 
 **Authors:** The `MBX library <https://mbxsimulations.com>`_ is developed
@@ -1797,7 +1797,7 @@ ML-HDNNP package
 
 **Contents:**
 
-A :doc:`pair_style hdnnp <pair_hdnnp>` command which allows to use
+A :doc:`pair_style hdnnp <pair_hdnnp>` command which allows the use of
 high-dimensional neural network potentials (HDNNPs), a form of machine learning
 potentials. HDNNPs must be carefully trained prior to their application in a
 molecular dynamics simulation.
@@ -2762,7 +2762,7 @@ the Forschungszentrum Juelich.
 **Install:**
 
 This package has :ref:`specific installation instructions <scafacos>` on the :doc:`Build extras <Build_extras>` page.
-The SCAFACOS package requires that LAMMPS is build in :ref:`MPI parallel mode <serial>`.
+The SCAFACOS package requires that LAMMPS is built in :ref:`MPI parallel mode <serial>`.
 
 **Supporting info:**
 
@@ -2829,7 +2829,7 @@ SPH package
 **Contents:**
 
 An atom style, fixes, computes, and several pair styles which
-implements smoothed particle hydrodynamics (SPH) for liquids.  See the
+implement smoothed particle hydrodynamics (SPH) for liquids.  See the
 related :ref:`MACHDYN package <PKG-MACHDYN>` package for smooth Mach dynamics
 (SMD) for solids.
 
@@ -2981,7 +2981,7 @@ VORONOI package
 A compute command which calculates the Voronoi tesselation of a
 collection of atoms by wrapping the `Voro++ library
 <https://math.lbl.gov/voro++/>`_.  This can be used to calculate the
-local volume or each atoms or its near neighbors.
+local volume of each atom or its near neighbors.
 
 To use this package you must have the Voro++ library available on your
 system.

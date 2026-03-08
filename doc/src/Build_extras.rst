@@ -841,7 +841,7 @@ This list was last updated for version 4.7.1 of the Kokkos library.
 
       .. versionchanged:: 11Feb2026
 
-      The KOKKOS package no longer supports the the traditional make build.
+      The KOKKOS package no longer supports the traditional make build.
       You need to build LAMMPS with CMake.
 
 Advanced KOKKOS compilation settings
@@ -1948,5 +1948,5 @@ your system.
 
       .. versionchanged:: 10Sep2025
 
-      The VTK package no longer supports the the traditional make build.
+      The VTK package no longer supports the traditional make build.
       You need to build LAMMPS with CMake.

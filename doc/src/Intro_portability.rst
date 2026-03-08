@@ -115,7 +115,7 @@ In addition to using automated tests, code contributed to LAMMPS is
 subject to a code review by core LAMMPS developers (that includes
 contributions by the core LAMMPS developers themselves).
 
-we also make use of a number static code analysis tools for maintaining
+we also make use of a number of static code analysis tools for maintaining
 and improving the quality of the LAMMPS source code through tools like
 `Coverity SCAN <https://scan.coverity.com/>`_, `CodeQL
 <https://codeql.github.com/>`_, `Clang Static Analyzer

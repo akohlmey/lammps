@@ -386,7 +386,7 @@ per-atom or local or per-grid values.  The values can be scalars or
 vectors or arrays of data.  These values can be output using the other
 commands described in this section.  The page for each compute command
 describes what it produces.  Computes that produce per-atom or local
-or per-grid values have the word "atom" or "local" or "grid as the
+or per-grid values have the word "atom" or "local" or "grid" as the
 last word in their style name.  Computes without the word "atom" or
 "local" or "grid" produce global values.
 

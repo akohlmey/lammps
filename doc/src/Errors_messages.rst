@@ -4297,13 +4297,13 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
    Use your older version of LAMMPS and convert the restart file
    to a data file.
 
-*Restart file is a MPI-IO file*
+*Restart file is an MPI-IO file*
    The file is inconsistent with the filename you specified for it.
 
 *Restart file is a multi-proc file*
    The file is inconsistent with the filename you specified for it.
 
-*Restart file is not a MPI-IO file*
+*Restart file is not an MPI-IO file*
    The file is inconsistent with the filename you specified for it.
 
 *Restart file is not a multi-proc file*
