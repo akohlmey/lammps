@@ -558,7 +558,7 @@ both the position and velocity of the particle are stored
 explicitly. The velocity-Verlet scheme is generally expressed in three
 steps. In :ref:`Algorithm 1 <algvelverlet>`, :math:`\rho_i` denotes the
 mass density of a particle and :math:`\widetilde{\textbf{f}}_i^n`
-denotes the the net force density on particle :math:`i` at timestep
+denotes the net force density on particle :math:`i` at timestep
 :math:`n`. The LAMMPS command :doc:`fix nve <fix_nve>` performs a
 velocity-Verlet integration.
 

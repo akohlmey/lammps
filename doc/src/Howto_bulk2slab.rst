@@ -104,7 +104,7 @@ potential energy, we reduce the thermostat time constant from 100.0 to
 Also the high potential energy of the surface atoms can cause that some
 of them are ejected from the slab.  In order to suppress that, we add
 soft harmonic walls to push back any atoms that want to leave the slab.
-To determine the position of the wall, we first need to to determine the
+To determine the position of the wall, we first need to determine the
 extent of the atoms in z-direction and then place the harmonic walls
 based on that information:
 

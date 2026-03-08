@@ -52,7 +52,7 @@ running MD simulations.  Please see the :doc:`section on portability
 
    Unfortunately there is no simple way to detect whether a binary is
    working correctly outside of running the unit and regression tests,
-   but those do not cover all of LAMMPS and and would be reliable only
+   but those do not cover all of LAMMPS and would be reliable only
    for no or moderate optimization anyway.  For most of LAMMPS there is
    not much of a benefit (if any) to use the Intel compilers over the
    GCC or Clang compilers, except for the INTEL package (which *can* be
