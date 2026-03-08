@@ -238,13 +238,13 @@ example to color atoms of type 1 in gray and type 2 in white, you would use:
 
    dump_modify img  acolor 1 gray acolor 2 white
 
-There are 144 predefined colors, but you can add new colors or modify
+There are 140 predefined colors, but you can add new colors or modify
 existing ones, too, with the *dump_modify color* keyword.  The *color*
 keyword is followed by the name of the color and the intensity of the
 red, green, and blue components (R/G/B) in a range from 0.0 to 1.0. Here
 is an example to create eight new color names followed by the *acolor*
 keyword with a wildcard to replace the default map of six atom colors
-with a new map of the either newly defined colors.
+with a new map of the eight newly defined colors.
 
 .. code-block:: LAMMPS
 
@@ -275,7 +275,7 @@ the charge:
 .. code-block:: LAMMPS
 
    dump viz peptide image 1000 image-*.png q type size 600 600 zoom 2.0
-   dump_modify amap -1.0 1.0 ca 0 3 min blue 0.0 white max red
+   dump_modify viz amap -1.0 1.0 ca 0 3 min blue 0.0 white max red
 
 
 .. |colors1| image:: img/colors-default.png
@@ -459,7 +459,7 @@ into "Slide Show Dialog".  This streamlines the process of building more
 complex visualizations once you have copied it into the input since you
 have editor and image viewer as part of the same program and can quickly
 start and stop LAMMPS with a mouse click or keystroke.  A large part of
-the visualization examples on shown in this Howto page have been created
+the visualization examples shown in this Howto page have been created
 this way.
 
 .. |gui1| image:: JPG/lammps-gui-main.png
@@ -477,7 +477,7 @@ Visualizing systems using potentials with implicit bonds
 --------------------------------------------------------
 
 There are several pair styles available in LAMMPS where the bond
-information is not taken from from the bond topology in a data file but
+information is not taken from the bond topology in a data file but
 the potentials first determine a "bond-order" parameter for pairs of
 atoms and - depending on the value of that parameter - apply forces for
 bonded interactions.  This applies to :doc:`ReaxFF <pair_reaxff>`,
@@ -501,7 +501,7 @@ currently three approaches to make those bonds visible.
    the computation of the model.  This is currently only available for
    ReaxFF by using :doc:`fix reaxff/bonds <fix_reaxff_bonds>`.
 
-#. Use the *autobonds* keyword of :doc:`dump image <dump_image>` to
+#. Use the *autobond* keyword of :doc:`dump image <dump_image>` to
    approximate the bonds based on a simple distance heuristic.  This is
    similar to the *Dynamic Bonds* representation in `VMD
    <https://www.ks.uiuc.edu/Research/vmd/>`_.  How accurate this option
@@ -525,7 +525,7 @@ currently three approaches to make those bonds visible.
    list and thus the forces computed by the pair style incorrect)
    through using the :doc:`special_bonds <special_bonds>` command.
    Unlike the two other options which were recently added when this
-   document when was written, this method also works with older versions
+   document was written, this method also works with older versions
    of LAMMPS.  Here is an example of the necessary commands for a carbon
    nanotube (that is modeled with AIREBO):
 
@@ -910,7 +910,7 @@ velocities:
    fix dipole all graphics/objects 1 arrow 1  v_dip1x v_dip1y v_dip1z v_dip2x v_dip2y v_dip2z 0.3 0.2
 
    dump viz all image 100 image-*.png element type size 600 600 zoom 1.3 view 70 20 shiny 0.1 &
-                bond atom 0.2box yes 0.025 axes no 0.0 0.0 center s 0.5 0.5 0.5 fsaa yes &
+                bond atom 0.2 box yes 0.025 axes no 0.0 0.0 center s 0.5 0.5 0.5 fsaa yes &
                 fix dipole const 0 0 fix vec const 0 0 fix vel const 0 0 ssao yes 315465 0.8
    dump_modify viz pad 6 boxcolor white backcolor gray element O H  bdiam 1 0.2 &
                 adiam 1 0.5 adiam 2 0.3 acolor 1 silver acolor 2 red fcolor vec goldenrod &

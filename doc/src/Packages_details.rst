@@ -1084,7 +1084,7 @@ GRAPHICS package
 Dump styles :doc:`image and movie <dump_image>`, supporting classes for
 rendering images and fonts, several fixes for adding graphics objects to
 visualizations, and the region2vmd command for exporting visualizations
-of regions scripted graphics in VMD.
+of regions as scripted graphics in VMD.
 
 **Supporting info:**
 

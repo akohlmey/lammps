@@ -17,7 +17,7 @@ Syntax
 * cut_lo = radius below which the weighting function for the local averaging is 1 (distance units)
 * cut_hi = radius above which the weighting function for the local averaging is 0 (distance units)
 * lattice = *fcc* or *bcc* or N = # of neighbors per atom to include in the CSP calculation
-* zero or one keyword/args pairs may be appended
+* zero or more keyword/args pairs may be appended
 * keyword = *csp_cut* or *csp_mode* or *forces* or *lambda_non_group* or *store_peratom*
 
   .. parsed-literal::
@@ -25,8 +25,8 @@ Syntax
        *csp_cut* args = float
            float = neighboring atoms outside of this cutoff radius may not be considered for the CSP calculation
        *csp_mode* args = *dynamic* or *static*
-           *dynamic* = use the differentiable CSP to calculate the switching parameter
-           *static* = use the non-differentiable CSP instead of the differentiable one
+           *dynamic* = use the non-differentiable CSP instead of the differentiable one
+           *static* = use the differentiable CSP to calculate the switching parameter
        *forces* args = *no* or *yes*
            *yes* = compute the forces caused by the differentiation of the switching parameter
            *no* = do not compute the forces caused by the differentiation of the switching parameter

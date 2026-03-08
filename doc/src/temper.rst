@@ -73,7 +73,7 @@ As a tempering run proceeds, multiple log files and screen output files
 are created, one per replica.  By default these files are named
 ``log.lammps.M`` and ``screen.M`` where *M* is the replica number from 0
 to *N*-1, with *N* = # of replicas.  See the :doc:`-log and -screen
-command-line swiches <Run_options>` for info on how to change these
+command-line switches <Run_options>` for info on how to change these
 names.
 
 The main screen and log file (``log.lammps``) will list information
@@ -123,7 +123,7 @@ manner:
    contain "continuous trajectories" for individual atoms, because two
    successive snapshots (in time) may be from different replicas. The
    reorder_remd_traj python script can do the reordering for you
-   (and additionally also calculated configurational log-weights of
+   (and additionally also calculates configurational log-weights of
    trajectory snapshots in the canonical ensemble). The script can be found
    in the tools/replica directory while instructions on how to use it is
    available in doc/Tools (in brief) and as a README file in tools/replica
