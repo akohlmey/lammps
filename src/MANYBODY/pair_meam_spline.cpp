@@ -43,6 +43,7 @@
 #include "neigh_request.h"
 #include "neighbor.h"
 #include "potential_file_reader.h"
+#include "safe_pointers.h"
 
 #include <cmath>
 #include <cstring>
@@ -740,7 +741,7 @@ void PairMEAMSpline::SplineFunction::communicate(MPI_Comm& world, int me)
 void PairMEAMSpline::SplineFunction::writeGnuplot(const char* filename,
                                                   const char* title) const
 {
-  FILE* fp = fopen(filename, "w");
+  SafeFilePtr fp = fopen(filename, "w");
   fprintf(fp, "#!/usr/bin/env gnuplot\n");
   if (title) fprintf(fp, "set title \"%s\"\n", title);
   double tmin = X[0] - (X[N-1] - X[0]) * 0.05;
@@ -757,7 +758,6 @@ void PairMEAMSpline::SplineFunction::writeGnuplot(const char* filename,
     fprintf(fp, "%f %f\n", X[i], Y[i]);
   }
   fprintf(fp, "e\n");
-  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
