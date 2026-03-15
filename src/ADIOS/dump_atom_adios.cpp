@@ -16,11 +16,13 @@
 ------------------------------------------------------------------------- */
 
 #include "dump_atom_adios.h"
+
 #include "atom.h"
 #include "domain.h"
 #include "error.h"
 #include "group.h"
 #include "memory.h"
+#include "safe_pointers.h"
 #include "universe.h"
 #include "update.h"
 
@@ -53,12 +55,11 @@ class DumpAtomADIOSInternal {
 DumpAtomADIOS::DumpAtomADIOS(LAMMPS *lmp, int narg, char **arg) : DumpAtom(lmp, narg, arg)
 {
   // create a default adios2_config.xml if it doesn't exist yet.
-  FILE *cfgfp = fopen("adios2_config.xml", "r");
+  SafeFilePtr cfgfp = fopen("adios2_config.xml", "r");
   if (!cfgfp) {
     cfgfp = fopen("adios2_config.xml", "w");
     if (cfgfp) fputs(default_config, cfgfp);
   }
-  if (cfgfp) fclose(cfgfp);
 
   internal = new DumpAtomADIOSInternal();
   try {

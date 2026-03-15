@@ -25,6 +25,7 @@
 #include "input.h"
 #include "memory.h"
 #include "modify.h"
+#include "safe_pointers.h"
 #include "update.h"
 #include "variable.h"
 
@@ -61,12 +62,11 @@ class DumpCustomADIOSInternal {
 DumpCustomADIOS::DumpCustomADIOS(LAMMPS *lmp, int narg, char **arg) : DumpCustom(lmp, narg, arg)
 {
   // create a default adios2_config.xml if it doesn't exist yet.
-  FILE *cfgfp = fopen("adios2_config.xml", "r");
+  SafeFilePtr cfgfp = fopen("adios2_config.xml", "r");
   if (!cfgfp) {
     cfgfp = fopen("adios2_config.xml", "w");
     if (cfgfp) fputs(default_config, cfgfp);
   }
-  if (cfgfp) fclose(cfgfp);
 
   internal = new DumpCustomADIOSInternal();
   try {

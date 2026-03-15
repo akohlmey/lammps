@@ -20,6 +20,7 @@
 #include "comm.h"
 #include "error.h"
 #include "memory.h"
+#include "safe_pointers.h"
 #include "tokenizer.h"
 
 #include <algorithm>
@@ -1346,29 +1347,27 @@ void FitPOD::descriptors_calculation(const datastruct &data)
 
       std::string filename0 =
           data.data_path + "/basedescriptors_config" + std::to_string(ci + 1) + ".bin";
-      FILE *fp0 = fopen(filename0.c_str(), "wb");
+      SafeFilePtr fp0 = fopen(filename0.c_str(), "wb");
       sz[0] = (double) data.num_atom[ci];
       sz[1] = (double) fastpodptr->Mdesc;
       fwrite(reinterpret_cast<char *>(sz), sizeof(double) * (2), 1, fp0);
       fwrite(reinterpret_cast<char *>(desc.bd),
              sizeof(double) * (data.num_atom[ci] * fastpodptr->Mdesc), 1, fp0);
-      fclose(fp0);
 
       if (desc.nClusters > 1) {
         std::string filename1 =
             data.data_path + "/environmentdescriptors_config" + std::to_string(ci + 1) + ".bin";
-        FILE *fp1 = fopen(filename1.c_str(), "wb");
+        SafeFilePtr fp1 = fopen(filename1.c_str(), "wb");
         sz[0] = (double) data.num_atom[ci];
         sz[1] = (double) fastpodptr->nClusters;
         fwrite(reinterpret_cast<char *>(sz), sizeof(double) * (2), 1, fp1);
         fwrite(reinterpret_cast<char *>(desc.pd),
                sizeof(double) * (data.num_atom[ci] * fastpodptr->nClusters), 1, fp1);
-        fclose(fp1);
       }
 
       std::string filename =
           data.data_path + "/globaldescriptors_config" + std::to_string(ci + 1) + ".bin";
-      FILE *fp = fopen(filename.c_str(), "wb");
+      SafeFilePtr fp = fopen(filename.c_str(), "wb");
 
       sz[0] = (double) data.num_atom[ci];
       sz[1] = (double) desc.nCoeffAll;
@@ -1378,7 +1377,6 @@ void FitPOD::descriptors_calculation(const datastruct &data)
         fwrite(reinterpret_cast<char *>(desc.gdd),
                sizeof(double) * (3 * data.num_atom[ci] * desc.nCoeffAll), 1, fp);
       }
-      fclose(fp);
     }
   }
 
@@ -1637,13 +1635,12 @@ void FitPOD::least_squares_fit(const datastruct &data)
       if (save_descriptors > 0) {
         std::string filename =
             data.data_path + "/descriptors_config" + std::to_string(ci + 1) + ".bin";
-        FILE *fp = fopen(filename.c_str(), "wb");
+        SafeFilePtr fp = fopen(filename.c_str(), "wb");
         fwrite(reinterpret_cast<char *>(desc.gd), sizeof(double) * (desc.nCoeffAll), 1, fp);
         if (save_descriptors == 2) {
           fwrite(reinterpret_cast<char *>(desc.gdd),
                  sizeof(double) * (3 * data.num_atom[ci] * desc.nCoeffAll), 1, fp);
         }
-        fclose(fp);
       }
 
       // assemble the least-squares linear system
@@ -1965,11 +1962,9 @@ void FitPOD::energyforce_calculation(const datastruct &data)
         force[0] = energy;
         std::string filename = "energyforce_config" + std::to_string(ci + 1) + ".bin";
 
-        FILE *fp = fopen(filename.c_str(), "wb");
+        SafeFilePtr fp = fopen(filename.c_str(), "wb");
 
         fwrite(reinterpret_cast<char *>(force.data()), sizeof(double) * (1 + nforce), 1, fp);
-
-        fclose(fp);
       }
       ci += 1;
     }
@@ -2226,24 +2221,22 @@ void FitPOD::KmeansClustering(double *points, double *centroids, int *assignment
 
 void FitPOD::savematrix2binfile(const std::string &filename, double *A, int nrows, int ncols)
 {
-  FILE *fp = fopen(filename.c_str(), "wb");
+  SafeFilePtr fp = fopen(filename.c_str(), "wb");
   double sz[2];
   sz[0] = (double) nrows;
   sz[1] = (double) ncols;
   fwrite(reinterpret_cast<char *>(sz), sizeof(double) * (2), 1, fp);
   fwrite(reinterpret_cast<char *>(A), sizeof(double) * (nrows * ncols), 1, fp);
-  fclose(fp);
 }
 
 void FitPOD::saveintmatrix2binfile(const std::string &filename, int *A, int nrows, int ncols)
 {
-  FILE *fp = fopen(filename.c_str(), "wb");
+  SafeFilePtr fp = fopen(filename.c_str(), "wb");
   int sz[2];
   sz[0] = nrows;
   sz[1] = ncols;
   fwrite(reinterpret_cast<char *>(sz), sizeof(int) * (2), 1, fp);
   fwrite(reinterpret_cast<char *>(A), sizeof(int) * (nrows * ncols), 1, fp);
-  fclose(fp);
 }
 
 void FitPOD::savedata2textfile(const std::string &filename, const std::string &text, double *A,
@@ -2251,7 +2244,7 @@ void FitPOD::savedata2textfile(const std::string &filename, const std::string &t
 {
   if (comm->me == 0) {
     int precision = 15;
-    FILE *fp = fopen(filename.c_str(), "w");
+    SafeFilePtr fp = fopen(filename.c_str(), "w");
     if (dim == 1) {
       utils::print(fp, text, n);
       for (int i = 0; i < n; i++) utils::print(fp, "{:<10.{}f} \n", A[i], precision);
@@ -2263,6 +2256,5 @@ void FitPOD::savedata2textfile(const std::string &filename, const std::string &t
         utils::print(fp, "   \n");
       }
     }
-    fclose(fp);
   }
 }
