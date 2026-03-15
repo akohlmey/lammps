@@ -48,6 +48,7 @@
 #include "pair_lj_cut_coul_long_dielectric.h"
 #include "pair_lj_cut_coul_msm_dielectric.h"
 #include "pppm_dielectric.h"
+#include "safe_pointers.h"
 #include "update.h"
 
 #include <cmath>
@@ -1014,9 +1015,8 @@ void FixPolarizeFunctional::calculate_qiRqw_cutoff()
 
 #ifdef _POLARIZE_DEBUG
   if (comm->me == 0) {
-    FILE *fp = fopen("qRqw-functional.txt", "w");
+    SafeFilePtr fp = fopen("qRqw-functional.txt", "w");
     for (int i = 0; i < num_induced_charges; i++) fprintf(fp, "%d %g\n", i, qiRqwVector[i]);
-    fclose(fp);
   }
 #endif
 }

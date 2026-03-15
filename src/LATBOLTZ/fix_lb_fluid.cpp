@@ -30,6 +30,7 @@
 #include "memory.h"
 #include "modify.h"
 #include "random_mars.h"
+#include "safe_pointers.h"
 #include "update.h"
 
 #include <algorithm>
@@ -3724,7 +3725,7 @@ void FixLbFluid::initializeGeometry()
       // Type dump
 #if GEODUMP
   auto datfile = fmt::format("subgeom_{}_end_type.dmp", me);
-  FILE *outfile = fopen(datfile.c_str(), "w");
+  SafeFilePtr outfile = fopen(datfile.c_str(), "w");
   if (!outfile)
     error->one(FLERR, " file {} could not be opened: {}", datfile, utils::getsyserror());
 
@@ -3747,7 +3748,6 @@ void FixLbFluid::initializeGeometry()
     fputs(" \n \n", outfile);
   }
   fputs("\n", outfile);
-  fclose(outfile);
 
   // Orientation dump
   datfile = fmt::format("subgeom_{}_end_ori.dmp", me);
@@ -3773,7 +3773,6 @@ void FixLbFluid::initializeGeometry()
     fputs(" \n \n", outfile);
   }
   fputs("\n", outfile);
-  fclose(outfile);
 #endif
 }
 

@@ -25,6 +25,7 @@
 #include "mgpt_splinetab.h"
 
 #include "mgpt_readpot.h"
+#include "safe_pointers.h"
 
 static double fgauss(double x,double al) {
   return exp(-al * pow(x-1.0, 2));
@@ -64,7 +65,7 @@ static void getparmindata(const char *potin_file,int nvol[1],double vol0[1],doub
   double *volarr;
   char metal[80],metalx[80];
   int ipot,ipotx,mode,modex;
-  FILE *in = fopen(potin_file,"r");
+  LAMMPS_NS::SafeFilePtr in = fopen(potin_file,"r");
   char line[1024];
 
   if (in == nullptr) {
@@ -123,7 +124,6 @@ static void getparmindata(const char *potin_file,int nvol[1],double vol0[1],doub
     for (i = 0; i<nrx; i++)
       (void) fgets(line,sizeof(line),in);
   }
-  fclose(in);
 
   if (n == 0) {
     fprintf(stderr,"@%s:%d: Invalid potin file \'%s\', no volume records.\n",
