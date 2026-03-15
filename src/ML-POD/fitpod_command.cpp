@@ -281,7 +281,7 @@ int FitPOD::read_data_file(double *fitting_weights, std::string &file_format,
   int precision = 8;
 
   std::string datafilename = data_file;
-  FILE *fpdata;
+  SafeFilePtr fpdata;
   if (comm->me == 0) {
 
     fpdata = utils::open_potential(datafilename, lmp, nullptr);
@@ -298,7 +298,6 @@ int FitPOD::read_data_file(double *fitting_weights, std::string &file_format,
       ptr = fgets(line, MAXLINE, fpdata);
       if (ptr == nullptr) {
         eof = 1;
-        fclose(fpdata);
       }
     }
     MPI_Bcast(&eof, 1, MPI_INT, 0, world);
@@ -460,7 +459,7 @@ void FitPOD::get_exyz_files(std::vector<std::string> &files, std::vector<std::st
 int FitPOD::get_number_atom_exyz(std::vector<int> &num_atom, int &num_atom_sum, std::string file)
 {
   std::string filename = std::move(file);
-  FILE *fp;
+  SafeFilePtr fp;
   if (comm->me == 0) {
     fp = utils::open_potential(filename, lmp, nullptr);
     if (fp == nullptr)
@@ -479,7 +478,6 @@ int FitPOD::get_number_atom_exyz(std::vector<int> &num_atom, int &num_atom_sum, 
       ptr = fgets(line, MAXLINE, fp);
       if (ptr == nullptr) {
         eof = 1;
-        fclose(fp);
       }
     }
     MPI_Bcast(&eof, 1, MPI_INT, 0, world);
@@ -533,7 +531,7 @@ void FitPOD::read_exyz_file(double *lattice, double *stress, double *energy, dou
 {
 
   std::string filename = std::move(file);
-  FILE *fp;
+  SafeFilePtr fp;
   if (comm->me == 0) {
     fp = utils::open_potential(filename, lmp, nullptr);
     if (fp == nullptr)
@@ -553,7 +551,6 @@ void FitPOD::read_exyz_file(double *lattice, double *stress, double *energy, dou
       ptr = fgets(line, MAXLINE, fp);
       if (ptr == nullptr) {
         eof = 1;
-        fclose(fp);
       }
     }
     MPI_Bcast(&eof, 1, MPI_INT, 0, world);

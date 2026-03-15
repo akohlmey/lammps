@@ -32,6 +32,7 @@
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
+#include "safe_pointers.h"
 
 #include <cassert>
 #include <cmath>
@@ -1924,15 +1925,13 @@ void PairMGPT::coeff(int narg, char **arg)
       printf("Volumetric pressure is %s.\n",volpres_flag ? "on" : "off");
 
     if (comm->me == 0) {
-      FILE *parmin_fp = utils::open_potential(arg[2],lmp,nullptr);
-      FILE *potin_fp = utils::open_potential(arg[3],lmp,nullptr);
+      SafeFilePtr parmin_fp = utils::open_potential(arg[2],lmp,nullptr);
+      SafeFilePtr potin_fp = utils::open_potential(arg[3],lmp,nullptr);
       if (parmin_fp == nullptr || potin_fp == nullptr) {
         char str[128];
         sprintf(str,"Cannot open MGPT potential files %s %s",arg[2],arg[3]);
         error->one(FLERR,str);
       }
-      fclose(parmin_fp);
-      fclose(potin_fp);
 
       splinepot.readpot(arg[2],arg[3],vol);
       printf("evol0 = %.10e\n",splinepot.evol0);
