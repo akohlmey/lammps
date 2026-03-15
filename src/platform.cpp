@@ -18,6 +18,7 @@
 #include "platform.h"
 
 #include "fmt/format.h"
+#include "safe_pointers.h"
 #include "text_file_reader.h"
 #include "utils.h"
 
@@ -973,9 +974,8 @@ std::string platform::path_join(const std::string &a, const std::string &b)
 
 bool platform::file_is_readable(const std::string &path)
 {
-  FILE *fp = fopen(path.c_str(), "r");
+  SafeFilePtr fp = fopen(path.c_str(), "r");
   if (fp) {
-    fclose(fp);
     return true;
   }
   return false;
@@ -990,15 +990,13 @@ bool platform::file_is_writable(const std::string &path)
   // if the file exists, try to append and don't delete
 
   if (file_is_readable(path)) {
-    FILE *fp = fopen(path.c_str(), "a");
+    SafeFilePtr fp = fopen(path.c_str(), "a");
     if (fp) {
-      fclose(fp);
       return true;
     }
   } else {
-    FILE *fp = fopen(path.c_str(), "w");
+    SafeFilePtr fp = fopen(path.c_str(), "w");
     if (fp) {
-      fclose(fp);
       unlink(path);
       return true;
     }
