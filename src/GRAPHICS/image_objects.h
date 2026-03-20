@@ -89,7 +89,7 @@ namespace ImageObjects {
 
   class EllipsoidObj {
    public:
-    // construct (spherical) triangle mesh by refinining the triangles of an octahedron
+    // construct (spherical) triangle mesh by refining the triangles of an icosahedron
     EllipsoidObj(int level = DEF_ELEVEL);
 
     // draw ellipsoid from triangle mesh for ellipsoid particles

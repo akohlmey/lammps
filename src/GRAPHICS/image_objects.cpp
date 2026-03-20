@@ -364,21 +364,40 @@ void EllipsoidObj::refine()
 }
 
 // Construct and draw an ellipsoid from primitives, triangles and cylinders.
-// Build a triangle mesh by refinining the triangles of an octahedron
+// Build a triangle mesh by refining the triangles of an icosahedron
 
 EllipsoidObj::EllipsoidObj(int level)
 {
-  // Define edges of an octahedron to approximate a sphere of radius 1 around the origin.
-  constexpr vec3 OCT1 = {-1.0, 0.0, 0.0};
-  constexpr vec3 OCT2 = {1.0, 0.0, 0.0};
-  constexpr vec3 OCT3 = {0.0, -1.0, 0.0};
-  constexpr vec3 OCT4 = {0.0, 1.0, 0.0};
-  constexpr vec3 OCT5 = {0.0, 0.0, -1.0};
-  constexpr vec3 OCT6 = {0.0, 0.0, 1.0};
+  // Define vertices of an icosahedron to approximate a sphere of radius 1 around the origin.
+  // A and B are the normalized coordinates derived from the golden ratio:
+  // phi = (1 + sqrt(5)) / 2; A = 1 / sqrt(1 + phi^2); B = phi / sqrt(1 + phi^2)
+  constexpr double A = 0.5257311121191336;
+  constexpr double B = 0.8506508083520399;
 
-  // define level 1 octahedron triangle mesh, normals pointing away from the center.
-  triangles = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2}, {OCT1, OCT4, OCT6},
-               {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2}, {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
+  constexpr vec3 ICO0  = {-A,  B, 0.0};
+  constexpr vec3 ICO1  = { A,  B, 0.0};
+  constexpr vec3 ICO2  = {-A, -B, 0.0};
+  constexpr vec3 ICO3  = { A, -B, 0.0};
+  constexpr vec3 ICO4  = {0.0, -A,  B};
+  constexpr vec3 ICO5  = {0.0,  A,  B};
+  constexpr vec3 ICO6  = {0.0, -A, -B};
+  constexpr vec3 ICO7  = {0.0,  A, -B};
+  constexpr vec3 ICO8  = { B, 0.0, -A};
+  constexpr vec3 ICO9  = { B, 0.0,  A};
+  constexpr vec3 ICO10 = {-B, 0.0, -A};
+  constexpr vec3 ICO11 = {-B, 0.0,  A};
+
+  // define level 1 icosahedron triangle mesh, normals pointing away from the center.
+  // clang-format off
+  triangles = {{ICO0,  ICO5,  ICO11}, {ICO0,  ICO1,  ICO5},  {ICO0,  ICO7,  ICO1},
+               {ICO0,  ICO10, ICO7},  {ICO0,  ICO11, ICO10},
+               {ICO1,  ICO9,  ICO5},  {ICO5,  ICO4,  ICO11}, {ICO11, ICO2,  ICO10},
+               {ICO10, ICO6,  ICO7},  {ICO7,  ICO8,  ICO1},
+               {ICO3,  ICO4,  ICO9},  {ICO3,  ICO2,  ICO4},  {ICO3,  ICO6,  ICO2},
+               {ICO3,  ICO8,  ICO6},  {ICO3,  ICO9,  ICO8},
+               {ICO4,  ICO5,  ICO9},  {ICO2,  ICO11, ICO4},  {ICO6,  ICO10, ICO2},
+               {ICO8,  ICO7,  ICO6},  {ICO9,  ICO1,  ICO8}};
+  // clang-format on
 
   // refine the list of triangles to the desired level
   for (int i = 1; i < level; ++i) refine();
