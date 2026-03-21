@@ -1272,8 +1272,8 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   double pixelWidth = (tanPerPixel > 0) ? tanPerPixel * dist : -tanPerPixel / zoom;
   double xf = xmap / pixelWidth;
   double yf = ymap / pixelWidth;
-  int xc = static_cast<int>(xf);
-  int yc = static_cast<int>(yf);
+  int xc = static_cast<int>(std::floor(xf));
+  int yc = static_cast<int>(std::floor(yf));
   double width_error = xf - xc;
   double height_error = yf - yc;
 
@@ -1286,10 +1286,10 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   double pixelRightFull = rasterRight / pixelWidth;
   double pixelDownFull = rasterDown / pixelWidth;
   double pixelUpFull = rasterUp / pixelWidth;
-  int pixelLeft = std::lround(pixelLeftFull);
-  int pixelRight = std::lround(pixelRightFull);
-  int pixelDown = std::lround(pixelDownFull);
-  int pixelUp = std::lround(pixelUpFull);
+  int pixelLeft = static_cast<int>(std::ceil(pixelLeftFull));
+  int pixelRight = static_cast<int>(std::ceil(pixelRightFull));
+  int pixelDown = static_cast<int>(std::ceil(pixelDownFull));
+  int pixelUp = static_cast<int>(std::ceil(pixelUpFull));
 
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; iy ++) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ix ++) {
