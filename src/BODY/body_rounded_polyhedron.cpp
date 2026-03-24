@@ -64,7 +64,7 @@ BodyRoundedPolyhedron::BodyRoundedPolyhedron(LAMMPS *lmp, int narg, char **arg) 
   maxexchange = 3 + 3*nmax+2*nmax+MAX_FACE_SIZE*nmax+1+1;  // icp max + dcp max
 
   memory->create(imflag,3*nmax,"body/rounded/polyhedron:imflag");
-  memory->create(imdata,3*nmax,9,"body/rounded/polyhedron:imdata");
+  memory->create(imdata,3*nmax,18,"body/rounded/polyhedron:imdata");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -666,7 +666,7 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
         // quadrilateral face requires two triangles. triangle has fourth vertex index set to -1
         if (pt4 >= 0) {
           // first triangle
-          imflag[nelements] = Graphics::TRI;
+          imflag[nelements] = Graphics::TRINORM;
           MathExtra::matvec(p,&bonus->dvalue[3*pt1],imdata[nelements]);
           MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[nelements][3]);
           MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[nelements][6]);
@@ -679,10 +679,16 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
           imdata[nelements][6] += x[0];
           imdata[nelements][7] += x[1];
           imdata[nelements][8] += x[2];
+          MathExtra::matvec(p,&bonus->dvalue[3*pt1],&imdata[nelements][9]);
+          MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[nelements][12]);
+          MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[nelements][15]);
+          MathExtra::norm3(&imdata[nelements][9]);
+          MathExtra::norm3(&imdata[nelements][12]);
+          MathExtra::norm3(&imdata[nelements][15]);
           ++nelements;
 
           // second triangle
-          imflag[nelements] = Graphics::TRI;
+          imflag[nelements] = Graphics::TRINORM;
           MathExtra::matvec(p,&bonus->dvalue[3*pt3],imdata[nelements]);
           MathExtra::matvec(p,&bonus->dvalue[3*pt4],&imdata[nelements][3]);
           MathExtra::matvec(p,&bonus->dvalue[3*pt1],&imdata[nelements][6]);
@@ -695,9 +701,18 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
           imdata[nelements][6] += x[0];
           imdata[nelements][7] += x[1];
           imdata[nelements][8] += x[2];
+          MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[nelements][9]);
+          MathExtra::matvec(p,&bonus->dvalue[3*pt4],&imdata[nelements][12]);
+          MathExtra::matvec(p,&bonus->dvalue[3*pt1],&imdata[nelements][15]);
+          MathExtra::norm3(&imdata[nelements][9]);
+          MathExtra::norm3(&imdata[nelements][12]);
+          MathExtra::norm3(&imdata[nelements][15]);
 
           // shift triangles toward the outside of the body by half diameter when also drawing edges
           if (edgeflag) {
+            // reset rounded triangles to flat triangles
+            imflag[nelements] = Graphics::TRI;
+            imflag[nelements-1] = Graphics::TRI;
             double vec1[3];
             // get center of face
             double vec2[3] = {imdata[nelements][0],imdata[nelements][1],imdata[nelements][2]};
@@ -733,7 +748,7 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
 
           ++nelements;
         } else {
-          imflag[nelements] = Graphics::TRI;
+          imflag[nelements] = Graphics::TRINORM;
           MathExtra::matvec(p,&bonus->dvalue[3*pt1],imdata[nelements]);
           MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[nelements][3]);
           MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[nelements][6]);
@@ -746,9 +761,17 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
           imdata[nelements][6] += x[0];
           imdata[nelements][7] += x[1];
           imdata[nelements][8] += x[2];
+          MathExtra::matvec(p,&bonus->dvalue[3*pt1],&imdata[nelements][9]);
+          MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[nelements][12]);
+          MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[nelements][15]);
+          MathExtra::norm3(&imdata[nelements][9]);
+          MathExtra::norm3(&imdata[nelements][12]);
+          MathExtra::norm3(&imdata[nelements][15]);
 
           // shift triangle toward the outside of the body by half diameter when also drawing edges
           if (edgeflag) {
+            // reset rounded triangle to flat triangle
+            imflag[nelements] = Graphics::TRI;
             double vec1[3];
             // get center of face
             double vec2[3] = {imdata[nelements][0],imdata[nelements][1],imdata[nelements][2]};

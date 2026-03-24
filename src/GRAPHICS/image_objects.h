@@ -67,6 +67,7 @@ namespace ImageObjects {
     double tipwidth;
     double diameter;
     std::vector<triangle> triangles;
+    std::vector<triangle> normals;
     int resolution;
   };
 
@@ -85,11 +86,12 @@ namespace ImageObjects {
 
    private:
     std::vector<triangle> triangles;
+    std::vector<triangle> normals;
   };
 
   class EllipsoidObj {
    public:
-    // construct (spherical) triangle mesh by refinining the triangles of an octahedron
+    // construct (spherical) triangle mesh by refining the triangles of an icosahedron
     EllipsoidObj(int level = DEF_ELEVEL);
 
     // draw ellipsoid from triangle mesh for ellipsoid particles
