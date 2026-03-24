@@ -516,8 +516,11 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
   const vec3 offs{center[0], center[1], center[2]};
   for (auto tri : triangles) {
 
-    // save unit sphere positions as normals before scaling
-    vec3 n1 = tri[0], n2 = tri[1], n3 = tri[2];
+    // compute ellipsoid surface normals from gradient of x^2/a^2 + y^2/b^2 + z^2/c^2
+    const double sa = shape[0] * shape[0], sb = shape[1] * shape[1], sc = shape[2] * shape[2];
+    vec3 n1 = vec3norm({tri[0][0] / sa, tri[0][1] / sb, tri[0][2] / sc});
+    vec3 n2 = vec3norm({tri[1][0] / sa, tri[1][1] / sb, tri[1][2] / sc});
+    vec3 n3 = vec3norm({tri[2][0] / sa, tri[2][1] / sb, tri[2][2] / sc});
 
     // set shape and move
     tri[0] = tri[0] * radscale(shape, tri[0]) + offs;
@@ -579,8 +582,11 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
   for (auto tri : triangles) {
 
     if (dotri) {
-      // save unit sphere positions as normals before scaling
-      vec3 n1 = tri[0], n2 = tri[1], n3 = tri[2];
+      // compute ellipsoid surface normals from gradient of x^2/a^2 + y^2/b^2 + z^2/c^2
+      const double sa = shape[0] * shape[0], sb = shape[1] * shape[1], sc = shape[2] * shape[2];
+      vec3 n1 = vec3norm({tri[0][0] / sa, tri[0][1] / sb, tri[0][2] / sc});
+      vec3 n2 = vec3norm({tri[1][0] / sa, tri[1][1] / sb, tri[1][2] / sc});
+      vec3 n3 = vec3norm({tri[2][0] / sa, tri[2][1] / sb, tri[2][2] / sc});
 
       // set shape by shifting each corner to the surface
       for (int i = 0; i < 3; ++i) {
