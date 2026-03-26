@@ -75,6 +75,32 @@ inline double superscale(const double *shape, const double *block, const vec3 &p
   return pow(pow(a, block[0] / block[1]) + b, -1.0 / block[0]);
 }
 
+// compute surface normal for a superellipsoid at a point on the unit sphere.
+// The superellipsoid surface is: ((|x/a|^e + |y/b|^e)^(n/e) + |z/c|^n)^(1/n) = 1
+// where n = block[0], e = block[1], a = shape[0], b = shape[1], c = shape[2].
+// The normal is proportional to the gradient of the implicit function:
+//   nx = u^(n/e - 1) * |x/a|^(e-1) * sign(x) / a
+//   ny = u^(n/e - 1) * |y/b|^(e-1) * sign(y) / b
+//   nz = |z/c|^(n-1) * sign(z) / c
+// where u = |x/a|^e + |y/b|^e.
+
+inline vec3 supernormal(const double *shape, const double *block, const vec3 &pos)
+{
+  const double n = block[0], e = block[1];
+  const double xa = fabs(pos[0] / shape[0]);
+  const double yb = fabs(pos[1] / shape[1]);
+  const double zc = fabs(pos[2] / shape[2]);
+
+  const double u = pow(xa, e) + pow(yb, e);
+  const double ufactor = (u > 0.0) ? pow(u, n / e - 1.0) : 0.0;
+
+  double nx = (xa > 0.0) ? ufactor * pow(xa, e - 1.0) * copysign(1.0, pos[0]) / shape[0] : 0.0;
+  double ny = (yb > 0.0) ? ufactor * pow(yb, e - 1.0) * copysign(1.0, pos[1]) / shape[1] : 0.0;
+  double nz = (zc > 0.0) ? pow(zc, n - 1.0) * copysign(1.0, pos[2]) / shape[2] : 0.0;
+
+  return vec3norm({nx, ny, nz});
+}
+
 // re-orient list of triangles to point along "dir", then scale and translate it.
 std::vector<triangle> transform(const std::vector<triangle> &triangles, const vec3 &dir,
                                 const vec3 &offs, double len, double width)
@@ -594,36 +620,47 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
   // draw triangles and edges as requested, work on copy of triangle since we modify it
   for (auto tri : triangles) {
 
+    // compute surface normals from unit sphere coordinates before scaling
+    vec3 n1, n2, n3;
     if (dotri) {
-      // compute ellipsoid surface normals from gradient of x^2/a^2 + y^2/b^2 + z^2/c^2
-      const double sa = shape[0] * shape[0], sb = shape[1] * shape[1], sc = shape[2] * shape[2];
-      vec3 n1 = vec3norm({tri[0][0] / sa, tri[0][1] / sb, tri[0][2] / sc});
-      vec3 n2 = vec3norm({tri[1][0] / sa, tri[1][1] / sb, tri[1][2] / sc});
-      vec3 n3 = vec3norm({tri[2][0] / sa, tri[2][1] / sb, tri[2][2] / sc});
-
-      // set shape by shifting each corner to the surface
       if (block) {
-        for (int i = 0; i < 3; ++i) {
-          auto &t = tri[i];
-          t = superscale(shape, block, t) * t;
-        }
+        // compute superellipsoid surface normals from gradient of implicit function
+        n1 = supernormal(shape, block, tri[0]);
+        n2 = supernormal(shape, block, tri[1]);
+        n3 = supernormal(shape, block, tri[2]);
       } else {
-        for (int i = 0; i < 3; ++i) {
-          auto &t = tri[i];
-          t = radscale(shape, t) * t;
-        }
+        // compute ellipsoid surface normals from gradient of x^2/a^2 + y^2/b^2 + z^2/c^2
+        const double sa = shape[0] * shape[0], sb = shape[1] * shape[1], sc = shape[2] * shape[2];
+        n1 = vec3norm({tri[0][0] / sa, tri[0][1] / sb, tri[0][2] / sc});
+        n2 = vec3norm({tri[1][0] / sa, tri[1][1] / sb, tri[1][2] / sc});
+        n3 = vec3norm({tri[2][0] / sa, tri[2][1] / sb, tri[2][2] / sc});
       }
+    }
 
-      // rotate
-      MathExtra::matvec(p, tri[0].data(), e1.data());
-      MathExtra::matvec(p, tri[1].data(), e2.data());
-      MathExtra::matvec(p, tri[2].data(), e3.data());
+    // set shape by shifting each corner to the surface
+    if (block) {
+      for (int i = 0; i < 3; ++i) {
+        auto &t = tri[i];
+        t = superscale(shape, block, t) * t;
+      }
+    } else {
+      for (int i = 0; i < 3; ++i) {
+        auto &t = tri[i];
+        t = radscale(shape, t) * t;
+      }
+    }
 
-      // translate
-      e1 = e1 + offs;
-      e2 = e2 + offs;
-      e3 = e3 + offs;
+    // rotate
+    MathExtra::matvec(p, tri[0].data(), e1.data());
+    MathExtra::matvec(p, tri[1].data(), e2.data());
+    MathExtra::matvec(p, tri[2].data(), e3.data());
 
+    // translate
+    e1 = e1 + offs;
+    e2 = e2 + offs;
+    e3 = e3 + offs;
+
+    if (dotri) {
       // rotate normals (no translation or scaling)
       vec3 rn1, rn2, rn3;
       MathExtra::matvec(p, n1.data(), rn1.data());
@@ -635,28 +672,6 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
     }
 
     if (doframe) {
-      // set shape
-      if (block) {
-        for (int i = 0; i < 3; ++i) {
-          auto &t = tri[i];
-          t = superscale(shape, block, t) * t;
-        }
-      } else {
-        for (int i = 0; i < 3; ++i) {
-          auto &t = tri[i];
-          t = radscale(shape, t) * t;
-        }
-      }
-
-      // rotate
-      MathExtra::matvec(p, tri[0].data(), e1.data());
-      MathExtra::matvec(p, tri[1].data(), e2.data());
-      MathExtra::matvec(p, tri[2].data(), e3.data());
-
-      // translate
-      e1 = e1 + offs;
-      e2 = e2 + offs;
-      e3 = e3 + offs;
       img->draw_cylinder(e1.data(), e2.data(), color, diameter, 3, opacity);
       img->draw_cylinder(e2.data(), e3.data(), color, diameter, 3, opacity);
       img->draw_cylinder(e3.data(), e1.data(), color, diameter, 3, opacity);
