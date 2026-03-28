@@ -525,7 +525,7 @@ EllipsoidObj::EllipsoidObj(int level)
       double cos_theta = best_dot;
       double omc = 1.0 - cos_theta;
 
-      // Rotation matrix: R = cos(theta)*I + sin(theta)*[k]_x + (1-cos(theta))*k(x)k
+      // Rotation matrix: R = cos(theta)*I + sin(theta)*[k]_x + (1-cos(theta))*k*k^T
       // clang-format off
       double R[3][3] = {
         {cos_theta + omc * k[0] * k[0],   omc * k[0] * k[1] - sin_theta * k[2],   omc * k[0] * k[2] + sin_theta * k[1]},
