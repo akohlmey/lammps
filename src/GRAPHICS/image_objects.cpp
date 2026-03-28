@@ -521,9 +521,12 @@ EllipsoidObj::EllipsoidObj(int level)
     // Build orthonormal frame {e1, e2, e3} from the two face center directions
     // using Gram-Schmidt orthogonalization. The resulting rotation matrix has
     // e1, e2, e3 as its rows so that e1 maps to +x, e2 maps to +y, and
-    // e3 = e1 x e2 maps to +z.
+    // e3 = e1 x e2 maps to +z. The face centers are already on the unit sphere
+    // since the icosahedron vertices and all refinement midpoints are normalized.
     vec3 e1 = cx;
-    vec3 e2 = vec3norm(cy - vec3dot(cy, e1) * e1);
+    vec3 e2_raw = cy - vec3dot(cy, e1) * e1;
+    if (vec3len(e2_raw) < SMALL) return;    // degenerate case: cx and cy are parallel
+    vec3 e2 = vec3norm(e2_raw);
     vec3 e3 = vec3cross(e1, e2);
 
     // clang-format off
