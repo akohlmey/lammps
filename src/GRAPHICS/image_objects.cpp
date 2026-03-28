@@ -492,6 +492,59 @@ EllipsoidObj::EllipsoidObj(int level)
 
   // refine the list of triangles to the desired level
   for (int i = 1; i < level; ++i) refine();
+
+  // Rotate the sphere mesh so that the Cartesian axes point through face centers
+  // rather than through vertices. This improves the visual quality of ellipsoids
+  // and superellipsoids by avoiding artifacts at the poles where multiple triangles
+  // meet at a single vertex on the axis.
+
+  if (!triangles.empty()) {
+
+    // Find the triangle whose center (normalized to unit sphere) is closest to the +x axis
+    const vec3 target = {1.0, 0.0, 0.0};
+    double best_dot = -1.0;
+    vec3 best_center = target;
+    for (const auto &tri : triangles) {
+      vec3 c = vec3norm(tri[0] + tri[1] + tri[2]);
+      double d = vec3dot(c, target);
+      if (d > best_dot) {
+        best_dot = d;
+        best_center = c;
+      }
+    }
+
+    // Compute rotation from best_center direction to the +x axis using Rodrigues' formula.
+    // Rotation axis: k = normalize(best_center x target)
+    // Rotation angle: cos(theta) = best_center . target, sin(theta) = |best_center x target|
+    vec3 cross = vec3cross(best_center, target);
+    double sin_theta = vec3len(cross);
+
+    // Only rotate if the face center is not already aligned with the target
+    if (sin_theta > SMALL) {
+      vec3 k = (1.0 / sin_theta) * cross;
+      double cos_theta = best_dot;
+      double omc = 1.0 - cos_theta;
+
+      // Rotation matrix: R = cos(theta)*I + sin(theta)*[k]_x + (1-cos(theta))*k(x)k
+      // clang-format off
+      double R[3][3] = {
+        {cos_theta + omc * k[0] * k[0],   omc * k[0] * k[1] - sin_theta * k[2],   omc * k[0] * k[2] + sin_theta * k[1]},
+        {omc * k[1] * k[0] + sin_theta * k[2],   cos_theta + omc * k[1] * k[1],   omc * k[1] * k[2] - sin_theta * k[0]},
+        {omc * k[2] * k[0] - sin_theta * k[1],   omc * k[2] * k[1] + sin_theta * k[0],   cos_theta + omc * k[2] * k[2]}};
+      // clang-format on
+
+      // Apply rotation to all triangle vertices
+      for (auto &tri : triangles) {
+        for (auto &v : tri) {
+          vec3 rv;
+          rv[0] = R[0][0] * v[0] + R[0][1] * v[1] + R[0][2] * v[2];
+          rv[1] = R[1][0] * v[0] + R[1][1] * v[1] + R[1][2] * v[2];
+          rv[2] = R[2][0] * v[0] + R[2][1] * v[1] + R[2][2] * v[2];
+          v = rv;
+        }
+      }
+    }
+  }
 }
 
 // draw method for drawing ellipsoids from a region which has its own transformation function
