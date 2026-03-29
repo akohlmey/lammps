@@ -46,7 +46,7 @@ DihedralNHarmonic::DihedralNHarmonic(LAMMPS *lmp) : Dihedral(lmp)
 
 DihedralNHarmonic::~DihedralNHarmonic()
 {
-  if (allocated) {
+  if (allocated && !copymode) {
     memory->destroy(setflag);
     for (int i = 1; i <= atom->ndihedraltypes; i++)
       delete [] a[i];
@@ -244,6 +244,7 @@ void DihedralNHarmonic::allocate()
   int n = atom->ndihedraltypes;
 
   nterms = new int[n+1];
+  for (int i = 0; i <= n; i++) nterms[i] = 0;
   a = new double *[n+1];
   for (int i = 1; i <= n; i++) a[i] = nullptr;
 
