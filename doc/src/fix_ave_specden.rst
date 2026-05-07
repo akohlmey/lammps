@@ -147,9 +147,12 @@ independent PSD estimate at each :math:`N_\text{freq}` timestep.
 
 If *ave* is set to *running*, the PSD estimates from all windows since
 the start (or since *start* Nstart) are averaged together.  The
-output at timestep :math:`t` is the average of all PSD estimates
-computed so far.  This is analogous to Welch's method and reduces
-statistical noise in the spectral estimate.
+output at timestep :math:`t` is the arithmetic mean of all PSD
+estimates (periodograms) computed so far.  This reduces statistical
+noise in the spectral estimate by averaging multiple periodograms,
+similar in spirit to Welch's method.  Note that, unlike Welch's
+method, this implementation uses non-overlapping windows and no
+windowing function is applied to the samples.
 
 ----------
 

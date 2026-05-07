@@ -160,11 +160,11 @@ FixAveSpecden::FixAveSpecden(LAMMPS *lmp, int narg, char **arg) :
   if (nfreq <= 0)
     error->all(FLERR, 5, "Illegal fix ave/specden nfreq value: {}", nfreq);
   if (nfreq % nevery || nrepeat*nevery > nfreq)
-    error->all(FLERR, Error::NOPOINTER,
-               "Inconsistent fix ave/specden nevery/nrepeat/nfreq values");
+    error->all(FLERR, Error::NOPOINTER, "Inconsistent fix ave/specden nevery/nrepeat/nfreq "
+               "values: nfreq must be a multiple of nevery, and nrepeat*nevery <= nfreq");
   if (ave != RUNNING && overwrite)
     error->all(FLERR, Error::NOPOINTER,
-               "Fix ave/specden overwrite keyword requires ave running setting");
+               "Fix ave/specden overwrite keyword requires ave running");
   if (nvalues == 0)
     error->all(FLERR, Error::NOPOINTER, "No values specified for fix ave/specden");
 
@@ -500,6 +500,7 @@ void FixAveSpecden::compute_specden()
         re += x * cos(angle);
         im -= x * sin(angle);
       }
+      // squared magnitude of DFT coefficient, normalized by window length
       specden[k][j] += prefactor * (re*re + im*im) * inv_nrepeat;
     }
   }
