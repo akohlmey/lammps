@@ -32,6 +32,7 @@ OPT.
    * :doc:`ave/histo <fix_ave_histo>`
    * :doc:`ave/histo/weight <fix_ave_histo>`
    * :doc:`ave/moments <fix_ave_moments>`
+   * :doc:`ave/specden <fix_ave_specden>`
    * :doc:`ave/time <fix_ave_time>`
    * :doc:`aveforce <fix_aveforce>`
    * :doc:`balance <fix_balance>`

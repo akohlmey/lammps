@@ -1737,6 +1737,8 @@
 /fix_ave_moments.h
 /fix_ave_momentum.cpp
 /fix_ave_momentum.h
+/fix_ave_specden.cpp
+/fix_ave_specden.h
 /fix_drude.cpp
 /fix_drude.h
 /fix_drude_transform.cpp
