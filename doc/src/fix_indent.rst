@@ -1,7 +1,10 @@
 .. index:: fix indent
+.. index:: fix indent/kk
 
 fix indent command
 ==================
+
+Accelerator Variant: *indent/kk*
 
 Syntax
 """"""
@@ -272,6 +275,12 @@ check if you have done this.
    the total potential energy of the system (the quantity being
    minimized), you must enable the :doc:`fix_modify <fix_modify>`
    *energy* option for this fix.
+
+----------
+
+.. include:: accel_styles.rst
+
+----------
 
 Restrictions
 """"""""""""

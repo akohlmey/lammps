@@ -140,6 +140,8 @@ action fix_acks2_reaxff_kokkos.cpp fix_acks2_reaxff.cpp
 action fix_acks2_reaxff_kokkos.h fix_acks2_reaxff.h
 action fix_addforce_kokkos.cpp
 action fix_addforce_kokkos.h
+action fix_aveforce_kokkos.cpp
+action fix_aveforce_kokkos.h
 action fix_cmap_kokkos.cpp fix_cmap.cpp
 action fix_cmap_kokkos.h fix_cmap.h
 action fix_colvars_kokkos.cpp fix_colvars.cpp
@@ -164,8 +166,12 @@ action fix_freeze_kokkos.cpp fix_freeze.cpp
 action fix_freeze_kokkos.h fix_freeze.h
 action fix_gravity_kokkos.cpp
 action fix_gravity_kokkos.h
+action fix_indent_kokkos.cpp
+action fix_indent_kokkos.h
 action fix_langevin_kokkos.cpp
 action fix_langevin_kokkos.h
+action fix_lineforce_kokkos.cpp
+action fix_lineforce_kokkos.h
 action fix_minimize_kokkos.cpp
 action fix_minimize_kokkos.h
 action fix_move_kokkos.cpp
@@ -192,6 +198,8 @@ action fix_nvt_kokkos.cpp
 action fix_nvt_kokkos.h
 action fix_nvt_sllod_kokkos.cpp
 action fix_nvt_sllod_kokkos.h
+action fix_planeforce_kokkos.cpp
+action fix_planeforce_kokkos.h
 action fix_property_atom_kokkos.cpp
 action fix_property_atom_kokkos.h
 action fix_qeq_reaxff_kokkos.cpp fix_qeq_reaxff.cpp
@@ -204,6 +212,8 @@ action fix_reaxff_species_kokkos.cpp fix_reaxff_species.cpp
 action fix_reaxff_species_kokkos.h fix_reaxff_species.h
 action fix_recenter_kokkos.cpp
 action fix_recenter_kokkos.h
+action fix_restrain_kokkos.cpp
+action fix_restrain_kokkos.h
 action fix_rx_kokkos.cpp fix_rx.cpp
 action fix_rx_kokkos.h fix_rx.h
 action fix_setforce_kokkos.cpp

@@ -13,32 +13,32 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(lineforce,FixLineForce);
+FixStyle(restrain/kk,FixRestrainKokkos<LMPDeviceType>);
+FixStyle(restrain/kk/device,FixRestrainKokkos<LMPDeviceType>);
+FixStyle(restrain/kk/host,FixRestrainKokkos<LMPHostType>);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_LINEFORCE_H
-#define LMP_FIX_LINEFORCE_H
+// clang-format off
+#ifndef LMP_FIX_RESTRAIN_KOKKOS_H
+#define LMP_FIX_RESTRAIN_KOKKOS_H
 
-#include "fix.h"
+#include "fix_restrain.h"
+#include "kokkos_type.h"
 
 namespace LAMMPS_NS {
 
-class FixLineForce : public Fix {
+template<class DeviceType>
+class FixRestrainKokkos : public FixRestrain {
  public:
-  FixLineForce(class LAMMPS *, int, char **);
-  int setmask() override;
-  void setup(int) override;
-  void min_setup(int) override;
+  typedef DeviceType device_type;
+
+  FixRestrainKokkos(class LAMMPS *, int, char **);
   void post_force(int) override;
-  void post_force_respa(int, int, int) override;
-  void min_post_force(int) override;
 
  private:
-  // empty
-
- protected:
-  double xdir, ydir, zdir;
+  class AtomKokkos *atomKK;
+  ExecutionSpace execution_space;
 };
 
 }    // namespace LAMMPS_NS

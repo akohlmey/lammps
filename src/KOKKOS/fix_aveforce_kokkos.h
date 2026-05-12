@@ -13,32 +13,33 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(lineforce,FixLineForce);
+FixStyle(aveforce/kk,FixAveForceKokkos<LMPDeviceType>);
+FixStyle(aveforce/kk/device,FixAveForceKokkos<LMPDeviceType>);
+FixStyle(aveforce/kk/host,FixAveForceKokkos<LMPHostType>);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_LINEFORCE_H
-#define LMP_FIX_LINEFORCE_H
+// clang-format off
+#ifndef LMP_FIX_AVEFORCE_KOKKOS_H
+#define LMP_FIX_AVEFORCE_KOKKOS_H
 
-#include "fix.h"
+#include "fix_aveforce.h"
+#include "kokkos_type.h"
 
 namespace LAMMPS_NS {
 
-class FixLineForce : public Fix {
+template<class DeviceType>
+class FixAveForceKokkos : public FixAveForce {
  public:
-  FixLineForce(class LAMMPS *, int, char **);
-  int setmask() override;
-  void setup(int) override;
-  void min_setup(int) override;
+  typedef DeviceType device_type;
+
+  FixAveForceKokkos(class LAMMPS *, int, char **);
   void post_force(int) override;
   void post_force_respa(int, int, int) override;
-  void min_post_force(int) override;
 
  private:
-  // empty
-
- protected:
-  double xdir, ydir, zdir;
+  class AtomKokkos *atomKK;
+  ExecutionSpace execution_space;
 };
 
 }    // namespace LAMMPS_NS

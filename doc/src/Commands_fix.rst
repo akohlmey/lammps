@@ -33,7 +33,7 @@ OPT.
    * :doc:`ave/histo/weight <fix_ave_histo>`
    * :doc:`ave/moments <fix_ave_moments>`
    * :doc:`ave/time <fix_ave_time>`
-   * :doc:`aveforce <fix_aveforce>`
+   * :doc:`aveforce (k) <fix_aveforce>`
    * :doc:`balance <fix_balance>`
    * :doc:`bocs <fix_bocs>`
    * :doc:`bond/break <fix_bond_break>`
@@ -100,7 +100,7 @@ OPT.
    * :doc:`hyper/global <fix_hyper_global>`
    * :doc:`hyper/local <fix_hyper_local>`
    * :doc:`imd <fix_imd>`
-   * :doc:`indent <fix_indent>`
+   * :doc:`indent (k) <fix_indent>`
    * :doc:`ipi <fix_ipi>`
    * :doc:`lambda/apip <fix_lambda_apip>`
    * :doc:`lambda/la/csp/apip <fix_lambda_la_csp_apip>`
@@ -112,7 +112,7 @@ OPT.
    * :doc:`lb/fluid <fix_lb_fluid>`
    * :doc:`lb/momentum <fix_lb_momentum>`
    * :doc:`lb/viscous <fix_lb_viscous>`
-   * :doc:`lineforce <fix_lineforce>`
+   * :doc:`lineforce (k) <fix_lineforce>`
    * :doc:`manifoldforce <fix_manifoldforce>`
    * :doc:`mdi/qm <fix_mdi_qm>`
    * :doc:`mdi/qmmm <fix_mdi_qmmm>`
@@ -180,7 +180,7 @@ OPT.
    * :doc:`pimd/nvt <fix_pimd>`
    * :doc:`pimd/langevin/bosonic <fix_pimd>`
    * :doc:`pimd/nvt/bosonic <fix_pimd>`
-   * :doc:`planeforce <fix_planeforce>`
+   * :doc:`planeforce (k) <fix_planeforce>`
    * :doc:`plumed <fix_plumed>`
    * :doc:`polarize/bem/gmres <fix_polarize>`
    * :doc:`polarize/bem/icc <fix_polarize>`
@@ -211,7 +211,7 @@ OPT.
    * :doc:`reaxff/bonds (k) <fix_reaxff_bonds>`
    * :doc:`reaxff/species (k) <fix_reaxff_species>`
    * :doc:`recenter (k) <fix_recenter>`
-   * :doc:`restrain <fix_restrain>`
+   * :doc:`restrain (k) <fix_restrain>`
    * :doc:`rheo <fix_rheo>`
    * :doc:`rheo/oxidation <fix_rheo_oxidation>`
    * :doc:`rheo/pressure <fix_rheo_pressure>`
