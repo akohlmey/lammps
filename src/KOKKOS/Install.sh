@@ -168,6 +168,8 @@ action fix_langevin_kokkos.cpp
 action fix_langevin_kokkos.h
 action fix_minimize_kokkos.cpp
 action fix_minimize_kokkos.h
+action fix_move_kokkos.cpp
+action fix_move_kokkos.h
 action fix_momentum_kokkos.cpp
 action fix_momentum_kokkos.h
 action fix_neigh_history_kokkos.cpp
@@ -207,9 +209,15 @@ action fix_rx_kokkos.h fix_rx.h
 action fix_setforce_kokkos.cpp
 action fix_setforce_kokkos.h
 action fix_shake_kokkos.cpp fix_shake.cpp
+action fix_press_berendsen_kokkos.cpp
+action fix_press_berendsen_kokkos.h
 action fix_shake_kokkos.h fix_shake.h
 action fix_shardlow_kokkos.cpp fix_shardlow.cpp
 action fix_shardlow_kokkos.h fix_shardlow.h
+action fix_spring_kokkos.cpp
+action fix_spring_kokkos.h
+action fix_spring_chunk_kokkos.cpp
+action fix_spring_chunk_kokkos.h
 action fix_spring_self_kokkos.cpp
 action fix_spring_self_kokkos.h
 action fix_temp_berendsen_kokkos.cpp

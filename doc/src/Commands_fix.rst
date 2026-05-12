@@ -120,7 +120,7 @@ OPT.
    * :doc:`mol/swap <fix_mol_swap>`
    * :doc:`momentum (k) <fix_momentum>`
    * :doc:`momentum/chunk <fix_momentum>`
-   * :doc:`move <fix_move>`
+   * :doc:`move (k) <fix_move>`
    * :doc:`msst <fix_msst>`
    * :doc:`mvv/dpd <fix_mvv_dpd>`
    * :doc:`mvv/edpd <fix_mvv_dpd>`
@@ -187,7 +187,7 @@ OPT.
    * :doc:`polarize/functional <fix_polarize>`
    * :doc:`pour <fix_pour>`
    * :doc:`precession/spin <fix_precession_spin>`
-   * :doc:`press/berendsen <fix_press_berendsen>`
+   * :doc:`press/berendsen (k) <fix_press_berendsen>`
    * :doc:`press/langevin <fix_press_langevin>`
    * :doc:`print <fix_print>`
    * :doc:`propel/self <fix_propel_self>`
@@ -247,8 +247,8 @@ OPT.
    * :doc:`smd/wall_surface <fix_smd_wall_surface>`
    * :doc:`sph <fix_sph>`
    * :doc:`sph/stationary <fix_sph_stationary>`
-   * :doc:`spring <fix_spring>`
-   * :doc:`spring/chunk <fix_spring_chunk>`
+   * :doc:`spring (k) <fix_spring>`
+   * :doc:`spring/chunk (k) <fix_spring_chunk>`
    * :doc:`spring/rg <fix_spring_rg>`
    * :doc:`spring/self (k) <fix_spring_self>`
    * :doc:`srd <fix_srd>`

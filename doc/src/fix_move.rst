@@ -1,7 +1,10 @@
 .. index:: fix move
+.. index:: fix move/kk
 
 fix move command
 ================
+
+Accelerator Variant: *move/kk*
 
 Syntax
 """"""
@@ -260,6 +263,12 @@ the :doc:`run <run>` command.  This fix is not invoked during
 
 For :doc:`rRESPA time integration <run_style>`, this fix adjusts the
 position and velocity of atoms on the outermost rRESPA level.
+
+----------
+
+.. include:: accel_styles.rst
+
+----------
 
 Restrictions
 """"""""""""

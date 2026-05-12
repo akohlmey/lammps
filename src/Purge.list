@@ -1120,7 +1120,11 @@ fix_rx_kokkos.h
 fix_setforce_kokkos.h
 fix_shake_kokkos.h
 fix_shardlow_kokkos.h
+fix_spring_chunk_kokkos.h
+fix_spring_kokkos.h
 fix_spring_self_kokkos.h
+fix_press_berendsen_kokkos.h
+fix_move_kokkos.h
 fix_temp_berendsen_kokkos.h
 fix_temp_rescale_kokkos.h
 fix_viscous_kokkos.h
@@ -1336,7 +1340,11 @@ fix_rx_kokkos.cpp
 fix_setforce_kokkos.cpp
 fix_shake_kokkos.cpp
 fix_shardlow_kokkos.cpp
+fix_spring_chunk_kokkos.cpp
+fix_spring_kokkos.cpp
 fix_spring_self_kokkos.cpp
+fix_press_berendsen_kokkos.cpp
+fix_move_kokkos.cpp
 fix_temp_berendsen_kokkos.cpp
 fix_temp_rescale_kokkos.cpp
 fix_viscous_kokkos.cpp

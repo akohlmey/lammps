@@ -13,45 +13,34 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(spring/chunk,FixSpringChunk);
+FixStyle(move/kk,FixMoveKokkos<LMPDeviceType>);
+FixStyle(move/kk/device,FixMoveKokkos<LMPDeviceType>);
+FixStyle(move/kk/host,FixMoveKokkos<LMPHostType>);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_SPRING_CHUNK_H
-#define LMP_FIX_SPRING_CHUNK_H
+// clang-format off
+#ifndef LMP_FIX_MOVE_KOKKOS_H
+#define LMP_FIX_MOVE_KOKKOS_H
 
-#include "fix.h"
+#include "fix_move.h"
+#include "kokkos_type.h"
 
 namespace LAMMPS_NS {
 
-class FixSpringChunk : public Fix {
+template<class DeviceType>
+class FixMoveKokkos : public FixMove {
  public:
-  FixSpringChunk(class LAMMPS *, int, char **);
-  ~FixSpringChunk() override;
-  int setmask() override;
-  void init() override;
-  void setup(int) override;
-  void min_setup(int) override;
-  void post_force(int) override;
-  void post_force_respa(int, int, int) override;
-  void min_post_force(int) override;
-  void write_restart(FILE *) override;
-  void restart(char *) override;
-  double compute_scalar() override;
+  typedef DeviceType device_type;
+  typedef ArrayTypes<DeviceType> AT;
+
+  FixMoveKokkos(class LAMMPS *, int, char **);
+  ~FixMoveKokkos() override {}
+  void initial_integrate(int) override;
+  void final_integrate() override;
 
  private:
-  char *idchunk, *idcom;
-
- protected:
-  int ilevel_respa;
-  double k_spring;
-  double esprings;
-
-  int nchunk;
-  double **com0, **fcom;
-
-  class ComputeChunkAtom *cchunk;
-  class ComputeCOMChunk *ccom;
+  class AtomKokkos *atomKK;
 };
 
 }    // namespace LAMMPS_NS
