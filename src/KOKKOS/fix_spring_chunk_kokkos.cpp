@@ -117,10 +117,10 @@ void FixSpringChunkKokkos<DeviceType>::post_force(int /*vflag*/)
 
   // allocate device views if too small
   if ((int)d_ichunk.extent(0) < nlocal)
-    d_ichunk = Kokkos::View<int*, DeviceType>("spring_chunk:ichunk", nlocal);
+    d_ichunk = Kokkos::View<int*, DeviceType>("spring/chunk:ichunk", nlocal);
   if ((int)d_fcom.extent(0) < nchunk)
     d_fcom = Kokkos::View<double*[3], Kokkos::LayoutRight, DeviceType>(
-             "spring_chunk:fcom", nchunk);
+             "spring/chunk:fcom", nchunk);
 
   // copy via subviews to avoid extent mismatch
   auto h_ichunk_view =
@@ -164,8 +164,7 @@ KOKKOS_INLINE_FUNCTION
 void FixSpringChunkKokkos<DeviceType>::operator()(TagFixSpringChunk, const int &i) const
 {
   const int m = d_ichunk[i] - 1;
-  if (m < 0) return;
-  if (m >= l_nchunk) return;
+  if (m < 0 || m >= l_nchunk) return;
   const double massone = mass[type[i]];
   f(i,0) -= d_fcom(m,0) * massone;
   f(i,1) -= d_fcom(m,1) * massone;
@@ -180,8 +179,7 @@ KOKKOS_INLINE_FUNCTION
 void FixSpringChunkKokkos<DeviceType>::operator()(TagFixSpringChunkRmass, const int &i) const
 {
   const int m = d_ichunk[i] - 1;
-  if (m < 0) return;
-  if (m >= l_nchunk) return;
+  if (m < 0 || m >= l_nchunk) return;
   const double massone = rmass[i];
   f(i,0) -= d_fcom(m,0) * massone;
   f(i,1) -= d_fcom(m,1) * massone;
