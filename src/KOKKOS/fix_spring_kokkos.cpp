@@ -49,7 +49,7 @@ void FixSpringKokkos<DeviceType>::init()
   FixSpring::init();
 
   if (utils::strmatch(update->integrate_style,"^respa"))
-    error->all(FLERR, Error::NOLASTLINE, "Cannot (yet) use respa with Kokkos");
+    error->all(FLERR, Error::NOLASTLINE, "Cannot (yet) use respa with fix spring/kk");
 }
 
 /* ---------------------------------------------------------------------- */

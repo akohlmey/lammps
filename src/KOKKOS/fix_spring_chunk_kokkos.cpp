@@ -50,7 +50,7 @@ void FixSpringChunkKokkos<DeviceType>::init()
   FixSpringChunk::init();
 
   if (utils::strmatch(update->integrate_style,"^respa"))
-    error->all(FLERR, Error::NOLASTLINE, "Cannot (yet) use respa with Kokkos");
+    error->all(FLERR, Error::NOLASTLINE, "Cannot (yet) use respa with fix spring/chunk/kk");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -58,7 +58,6 @@ void FixSpringChunkKokkos<DeviceType>::init()
 template<class DeviceType>
 void FixSpringChunkKokkos<DeviceType>::post_force(int /*vflag*/)
 {
-  int i, m;
   double dx, dy, dz, r;
 
   // chunk/atom and com/chunk computes require CPU data
@@ -84,7 +83,7 @@ void FixSpringChunkKokkos<DeviceType>::post_force(int /*vflag*/)
     memory->create(com0, nchunk, 3, "spring/chunk:com0");
     memory->create(fcom, nchunk, 3, "spring/chunk:fcom");
 
-    for (m = 0; m < nchunk; m++) {
+    for (int m = 0; m < nchunk; m++) {
       com0[m][0] = com[m][0];
       com0[m][1] = com[m][1];
       com0[m][2] = com[m][2];
@@ -94,7 +93,7 @@ void FixSpringChunkKokkos<DeviceType>::post_force(int /*vflag*/)
   // compute fcom = force on each COM divided by masstotal
 
   esprings = 0.0;
-  for (m = 0; m < nchunk; m++) {
+  for (int m = 0; m < nchunk; m++) {
     dx = com[m][0] - com0[m][0];
     dy = com[m][1] - com0[m][1];
     dz = com[m][2] - com0[m][2];
