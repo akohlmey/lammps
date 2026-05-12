@@ -164,6 +164,10 @@ action fix_external_kokkos.cpp
 action fix_external_kokkos.h
 action fix_freeze_kokkos.cpp fix_freeze.cpp
 action fix_freeze_kokkos.h fix_freeze.h
+action fix_gld_kokkos.cpp
+action fix_gld_kokkos.h
+action fix_gle_kokkos.cpp
+action fix_gle_kokkos.h
 action fix_gravity_kokkos.cpp
 action fix_gravity_kokkos.h
 action fix_indent_kokkos.cpp
@@ -221,6 +225,8 @@ action fix_setforce_kokkos.h
 action fix_shake_kokkos.cpp fix_shake.cpp
 action fix_press_berendsen_kokkos.cpp
 action fix_press_berendsen_kokkos.h
+action fix_press_langevin_kokkos.cpp
+action fix_press_langevin_kokkos.h
 action fix_shake_kokkos.h fix_shake.h
 action fix_shardlow_kokkos.cpp fix_shardlow.cpp
 action fix_shardlow_kokkos.h fix_shardlow.h
@@ -232,6 +238,10 @@ action fix_spring_self_kokkos.cpp
 action fix_spring_self_kokkos.h
 action fix_temp_berendsen_kokkos.cpp
 action fix_temp_berendsen_kokkos.h
+action fix_temp_csld_kokkos.cpp
+action fix_temp_csld_kokkos.h
+action fix_temp_csvr_kokkos.cpp
+action fix_temp_csvr_kokkos.h
 action fix_temp_rescale_kokkos.cpp
 action fix_temp_rescale_kokkos.h
 action fix_viscous_kokkos.cpp

@@ -1,7 +1,10 @@
 .. index:: fix gld
+.. index:: fix gld/kk
 
 fix gld command
 ===============
+
+Accelerator Variant: *gld/kk*
 
 Syntax
 """"""
@@ -142,6 +145,12 @@ This fix can ramp its target temperature over multiple runs, using the
 :doc:`run <run>` command for details of how to do this.
 
 This fix is not invoked during :doc:`energy minimization <minimize>`.
+
+----------
+
+.. include:: accel_styles.rst
+
+----------
 
 Restrictions
 """"""""""""
