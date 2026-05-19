@@ -57,6 +57,11 @@ class FixIlves : public Fix {
   int *bond_flag;         // bond_flag[i] = 1 if bond type i is constrained
   double *bond_distance;  // equilibrium distance for each bond type
 
+  // settings from input command (angle types to constrain)
+  int *angle_flag;         // angle_flag[i] = 1 if angle type i is constrained
+  double *angle_distance;  // virtual end-to-end distance for each angle type
+  bool has_angle;          // true if any angle types are constrained
+
   // atom-based arrays (allocated per atom, survive exchange)
   int *ilves_flag;     // 1 if atom participates in any ILVES constraint
   double **xshake;     // unconstrained position (working array)
@@ -84,7 +89,7 @@ class FixIlves : public Fix {
   double *b_max, *b_max_all;
   double *b_min, *b_min_all;
 
-  void find_constraints();
+  void add_constraint(int, int, double);
   void stats();
 };
 

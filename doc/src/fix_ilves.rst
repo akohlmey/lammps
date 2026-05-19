@@ -8,18 +8,19 @@ Syntax
 
 .. code-block:: LAMMPS
 
-   fix ID group-ID ilves tol iter N b bond-type ...
+   fix ID group-ID ilves tol iter N keyword values ...
 
 * ID, group-ID are documented in :doc:`fix <fix>` command
 * ilves = style name of this fix command
 * tol = accuracy tolerance of ILVES solution
 * iter = max # of iterations in each Newton solve
 * N = print ILVES statistics every this many timesteps (0 = never)
-* one or more *b* bond-type pairs must be appended
+* one or more keyword/value pairs must follow
 
   .. parsed-literal::
 
-       *b* values = one or more bond types
+       *b* values = one or more bond type integers
+       *a* values = one or more angle type integers
 
 Examples
 """"""""
@@ -28,15 +29,16 @@ Examples
 
    fix 1 all ilves 0.0001 200 10 b 4
    fix 1 polymer ilves 1.0e-5 500 0 b 1 2 3
-   fix 1 all ilves 0.0001 200 100 b 2
+   fix 1 water ilves 1.0e-4 200 100 b 1 a 1
+   fix 1 all ilves 0.0001 200 0 b 1 2 a 1
 
 Description
 """""""""""
 
-Apply bond constraints to specified bond types in the simulation using
-the ILVES (Iterative Linear-Velocity-Equation Solver) algorithm
-:ref:`(Garcia-Risueno) <Garcia-Risueno>`.  This typically enables a longer
-timestep than unconstrained dynamics.
+Apply bond and/or angle constraints to specified bond and angle types in
+the simulation using the ILVES (Iterative Linear-Velocity-Equation Solver)
+algorithm :ref:`(Garcia-Risueno) <Garcia-Risueno>`.  This typically enables
+a longer timestep than unconstrained dynamics.
 
 The key advantage of ILVES over :doc:`fix shake <fix_shake>` is that it
 handles **arbitrarily large and connected constraint networks**.  In LAMMPS,
@@ -78,6 +80,45 @@ involves.
 3. Constraint forces are computed from the accumulated Lagrange multipliers
    and added to the force array.
 
+**Bond constraints (b keyword):**
+
+The *b* keyword followed by bond type integers specifies which bond types
+to constrain.  The constraint distance for each bond type is read from the
+bond potential (same mechanism as fix shake).  Constrained bonds are
+excluded from the regular bond force computation.
+
+**Angle constraints (a keyword):**
+
+The *a* keyword followed by angle type integers specifies which angles to
+constrain.  Angle constraints follow the same approach used by
+:doc:`fix shake <fix_shake>`: each angle A-B-C (B is the central atom) is
+enforced by three bond constraints:
+
+* The B-A bond, constrained to its equilibrium bond length.
+* The B-C bond, constrained to its equilibrium bond length.
+* A virtual bond A-C with target length
+  :math:`d_{AC} = \sqrt{b_1^2 + b_2^2 - 2 b_1 b_2 \cos\theta_0}`,
+  where :math:`b_1` and :math:`b_2` are the equilibrium lengths of the
+  B-A and B-C bonds and :math:`\theta_0` is the equilibrium angle.
+
+All three constraints enter the same flat constraint list as ordinary bond
+constraints and are treated identically by the Newton iteration.
+
+If the arm bond types of a constrained angle are *also* listed under the
+*b* keyword, the arm bonds are constrained by the *b* specification and
+only the virtual bond is added by the *a* specification.  If they are not
+listed under *b*, the *a* keyword adds all three constraints automatically.
+An angle style must be defined to use the *a* keyword (so the equilibrium
+angle can be read).  All instances of the same angle type must have arm
+bonds of the same types.
+
+.. note::
+
+   When constraining angles, the arm bond types are automatically excluded
+   from the regular bond and angle force computations.  There is no need to
+   specify them separately with *b* unless you also want to constrain those
+   bond types outside of angle clusters.
+
 **MPI parallelism note:**
 
 When a constraint network spans multiple MPI ranks, the corrections to
@@ -110,12 +151,7 @@ accordingly for large parallel constraint networks.
      - quadratic
    * - Angle constraints
      - yes
-     - no (bonds only)
-
-The *b* keyword followed by bond type integers specifies which bond types
-to constrain.  At least one *b* specification is required.  The constraint
-distance for each bond type is read from the bond potential (same mechanism
-as fix shake).
+     - yes
 
 Statistics output
 """""""""""""""""
@@ -132,10 +168,9 @@ This fix can only be used with molecular systems (not ``atom_style atomic``).
 A bond style must be defined before using this fix (to obtain equilibrium
 bond distances).
 
-Only bond constraints are supported.  Angle constraints are not implemented;
-use :doc:`fix shake <fix_shake>` for angle constraints.
-
-Only the *b* keyword is recognized for specifying constraints.
+When using the *a* keyword, an angle style must also be defined (to obtain
+the equilibrium angle).  All instances of a constrained angle type must use
+the same pair of arm bond types.
 
 This fix may not be used with minimization.
 

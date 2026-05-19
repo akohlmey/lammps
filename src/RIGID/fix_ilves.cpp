@@ -27,6 +27,15 @@
         convergence for tightly coupled constraint networks
      3. Parallel via MPI ghost communication between Newton iterations
 
+   Angle constraints are treated as three bond constraints following
+   the same approach used by fix shake: the angle A-B-C (B = central)
+   is enforced by constraining:
+     - Bond B-A to its equilibrium length
+     - Bond B-C to its equilibrium length
+     - A virtual bond A-C to sqrt(b1^2+b2^2-2*b1*b2*cos(theta0))
+   All three become regular entries in the flat constraint list and
+   are treated identically by the Newton iteration.
+
    Algorithm (each timestep):
      1. Compute unconstrained positions (same as SHAKE)
      2. Forward communicate ghost xshake positions
@@ -52,6 +61,7 @@
 
 #include "fix_ilves.h"
 
+#include "angle.h"
 #include "atom.h"
 #include "bond.h"
 #include "comm.h"
@@ -61,7 +71,6 @@
 #include "group.h"
 #include "memory.h"
 #include "modify.h"
-#include "neighbor.h"
 #include "update.h"
 
 #include <cmath>
@@ -78,6 +87,7 @@ static constexpr double SMALL_DENOM = 1.0e-10;
 FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg),
     bond_flag(nullptr), bond_distance(nullptr),
+    angle_flag(nullptr), angle_distance(nullptr), has_angle(false),
     ilves_flag(nullptr), xshake(nullptr),
     c_atom1(nullptr), c_atom2(nullptr), c_dist2(nullptr), c_lambda(nullptr),
     x(nullptr), v(nullptr), f(nullptr), mass(nullptr), rmass(nullptr), type(nullptr),
@@ -97,20 +107,34 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
   max_iter  = utils::inumeric(FLERR, arg[4], false, lmp);
   output_every = utils::inumeric(FLERR, arg[5], false, lmp);
 
-  // parse constraint specs: only bond types supported (b keyword)
+  // parse constraint specs: bond types (b keyword) and angle types (a keyword)
 
   bond_flag = new int[atom->nbondtypes + 1]();
+  if (atom->nangletypes > 0) {
+    angle_flag     = new int[atom->nangletypes + 1]();
+    angle_distance = new double[atom->nangletypes + 1]();
+  }
 
   int next = 6;
   char mode = '\0';
   while (next < narg) {
     if (strcmp(arg[next], "b") == 0) {
       mode = 'b';
+    } else if (strcmp(arg[next], "a") == 0) {
+      if (atom->nangletypes == 0)
+        error->all(FLERR,"Fix {} angle keyword used but no angles defined", style);
+      mode = 'a';
     } else if (mode == 'b') {
       int i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nbondtypes)
         error->all(FLERR,"Invalid bond type {} for fix {}", arg[next], style);
       bond_flag[i] = 1;
+    } else if (mode == 'a') {
+      int i = utils::inumeric(FLERR, arg[next], false, lmp);
+      if (i < 1 || i > atom->nangletypes)
+        error->all(FLERR,"Invalid angle type {} for fix {}", arg[next], style);
+      angle_flag[i] = 1;
+      has_angle = true;
     } else {
       error->all(FLERR,"Unknown fix {} option: {}", style, arg[next]);
     }
@@ -170,6 +194,8 @@ FixIlves::~FixIlves()
 
   delete[] bond_flag;
   delete[] bond_distance;
+  delete[] angle_flag;
+  delete[] angle_distance;
 
   // free statistics arrays
 
@@ -229,6 +255,74 @@ void FixIlves::init()
 
   for (int i = 1; i <= atom->nbondtypes; i++)
     bond_distance[i] = force->bond->equilibrium_distance(i);
+
+  // compute virtual bond distances for angle constraints
+  // uses the law of cosines: d12 = sqrt(b1^2+b2^2-2*b1*b2*cos(theta0))
+
+  if (has_angle) {
+    if (!force->angle)
+      error->all(FLERR,"Angle style must be defined for fix {} when using a keyword", style);
+
+    for (int i = 1; i <= atom->nangletypes; i++) {
+      if (!angle_flag[i]) continue;
+
+      // scan local atoms to find an example of this angle type
+      // and extract the arm bond types from the central atom's bond list
+
+      int b1type = 0, b2type = 0, flag = 0;
+
+      for (int j = 0; j < atom->nlocal && !flag; j++) {
+        for (int m = 0; m < atom->num_angle[j]; m++) {
+          if (std::abs(atom->angle_type[j][m]) != i) continue;
+
+          // find central atom (angle_atom2)
+          int i2 = atom->map(atom->angle_atom2[j][m]);
+          if (i2 == -1 || i2 >= atom->nlocal) continue;
+
+          tagint ta1 = atom->angle_atom1[j][m];
+          tagint ta3 = atom->angle_atom3[j][m];
+
+          // search central atom i2's bonds for connections to ta1 and ta3
+          int bt1 = 0, bt2 = 0;
+          for (int n = 0; n < atom->num_bond[i2]; n++) {
+            if (atom->bond_atom[i2][n] == ta1) bt1 = std::abs(atom->bond_type[i2][n]);
+            if (atom->bond_atom[i2][n] == ta3) bt2 = std::abs(atom->bond_type[i2][n]);
+          }
+          if (bt1 == 0 || bt2 == 0) continue;
+
+          int t1 = MIN(bt1, bt2);
+          int t2 = MAX(bt1, bt2);
+          if (b1type == 0) {
+            b1type = t1;
+            b2type = t2;
+          } else if (t1 != b1type || t2 != b2type) {
+            flag = 1;    // inconsistent bond types for this angle type
+          }
+          break;
+        }
+      }
+
+      // error if inconsistent bond types found on any proc
+      int flag_all = 0;
+      MPI_Allreduce(&flag, &flag_all, 1, MPI_INT, MPI_MAX, world);
+      if (flag_all)
+        error->all(FLERR,"Fix {} angle type {} has inconsistent arm bond types", style, i);
+
+      // ensure all procs have the bond types (from whichever proc found them)
+      MPI_Allreduce(MPI_IN_PLACE, &b1type, 1, MPI_INT, MPI_MAX, world);
+      MPI_Allreduce(MPI_IN_PLACE, &b2type, 1, MPI_INT, MPI_MAX, world);
+
+      if (b1type == 0) {
+        angle_distance[i] = 0.0;    // no angle of this type found locally
+        continue;
+      }
+
+      const double theta0 = force->angle->equilibrium_angle(i);
+      const double d1     = bond_distance[b1type];
+      const double d2     = bond_distance[b2type];
+      angle_distance[i]   = sqrt(d1 * d1 + d2 * d2 - 2.0 * d1 * d2 * cos(theta0));
+    }
+  }
 
   // set/update timestep info
 
@@ -300,14 +394,54 @@ void FixIlves::pre_neighbor()
   // mark constrained bond types negative in per-atom arrays
   // (they may have been reset to positive during atom exchange)
 
-  int *num_bond  = atom->num_bond;
-  int **bond_type = atom->bond_type;
+  int *num_bond   = atom->num_bond;
+  int **bond_type  = atom->bond_type;
+  tagint **bond_atom = atom->bond_atom;
 
   for (int i = 0; i < nlocal; i++) {
     for (int m = 0; m < num_bond[i]; m++) {
       int btype = std::abs(bond_type[i][m]);
       if (btype >= 1 && btype <= atom->nbondtypes && bond_flag[btype])
         bond_type[i][m] = -btype;
+    }
+  }
+
+  // mark constrained angle types negative and also mark their arm bonds negative
+  // so those bonds are excluded from the regular force computation
+
+  if (has_angle) {
+    int *num_angle     = atom->num_angle;
+    int **angle_type   = atom->angle_type;
+    tagint **angle_atom1 = atom->angle_atom1;
+    tagint **angle_atom2 = atom->angle_atom2;
+    tagint **angle_atom3 = atom->angle_atom3;
+    tagint *tag = atom->tag;
+
+    for (int i = 0; i < nlocal; i++) {
+      for (int m = 0; m < num_angle[i]; m++) {
+        int atype = std::abs(angle_type[i][m]);
+        if (atype < 1 || atype > atom->nangletypes || !angle_flag[atype]) continue;
+
+        // mark the angle type negative (exclude from angle force computation)
+        angle_type[i][m] = -atype;
+
+        // mark arm bonds negative: the bonds connecting atom i to the
+        // other two atoms in this angle via the arm-bond connections
+        tagint ti  = tag[i];
+        tagint ta1 = angle_atom1[i][m];    // end atom 1 global tag
+        tagint ta2 = angle_atom2[i][m];    // central atom global tag
+        tagint ta3 = angle_atom3[i][m];    // end atom 3 global tag
+
+        for (int n = 0; n < num_bond[i]; n++) {
+          tagint bt = bond_atom[i][n];
+          // atom i is connected to bt; mark negative if this is an arm bond
+          // arm bonds: central-end1 (ta2-ta1) and central-end3 (ta2-ta3)
+          bool is_arm = (ti == ta2 && (bt == ta1 || bt == ta3)) ||
+                        (ti == ta1 && bt == ta2) ||
+                        (ti == ta3 && bt == ta2);
+          if (is_arm) bond_type[i][n] = -std::abs(bond_type[i][n]);
+        }
+      }
     }
   }
 
@@ -318,7 +452,12 @@ void FixIlves::pre_neighbor()
 
 /* ----------------------------------------------------------------------
    Called after each neighbor list rebuild.
-   Rebuild the flat constraint list from the newly built bondlist.
+   Rebuilds the flat constraint list from per-atom bond and angle data.
+
+   Bonds marked negative (by pre_neighbor) are excluded from the neighbor
+   bondlist, so we scan per-atom bond data directly.  For angles, we scan
+   per-atom angle data using a minimum-global-tag ownership rule that
+   ensures each constraint is added exactly once across all MPI ranks.
 ------------------------------------------------------------------------- */
 
 void FixIlves::post_neighbor()
@@ -327,36 +466,158 @@ void FixIlves::post_neighbor()
 
   n_constr = 0;
 
-  const int nbondlist  = neighbor->nbondlist;
-  int **bondlist = neighbor->bondlist;
+  const int *num_bond    = atom->num_bond;
+  int **bond_type         = atom->bond_type;
+  tagint **bond_atom      = atom->bond_atom;
+  tagint *tag             = atom->tag;
 
-  for (int k = 0; k < nbondlist; k++) {
-    const int i     = bondlist[k][0];   // always local (< nlocal)
-    const int j     = bondlist[k][1];   // local or ghost
-    const int btype = std::abs(bondlist[k][2]);
+  // -----------------------------------------------------------------
+  // Phase 1: bond constraints (b keyword).
+  //
+  // Bonds flagged by bond_flag were marked negative in pre_neighbor.
+  // We scan per-atom bond data (not the neighbor bondlist, which
+  // excludes negative-type bonds) to find them.
+  //
+  // Ownership rule: add constraint (i,j) when i < nlocal and either
+  // j >= nlocal (j is a ghost) or i < j (i has smaller local index).
+  // This ensures each bond is counted exactly once.
+  // -----------------------------------------------------------------
 
-    if (btype < 1 || btype > atom->nbondtypes) continue;
-    if (!bond_flag[btype]) continue;
+  for (int i = 0; i < nlocal; i++) {
+    for (int m = 0; m < num_bond[i]; m++) {
+      const int btype = bond_type[i][m];
+      if (btype >= 0) continue;    // not constrained (positive = normal)
+      const int bt = -btype;
+      if (!bond_flag[bt]) continue;
 
-    // grow constraint arrays if needed
+      int j = atom->map(bond_atom[i][m]);
+      if (j == -1) continue;
+      j = domain->closest_image(i, j);
 
-    if (n_constr == max_constr) {
-      max_constr += DELTA_CONSTR;
-      memory->grow(c_atom1,  max_constr, "ilves:c_atom1");
-      memory->grow(c_atom2,  max_constr, "ilves:c_atom2");
-      memory->grow(c_dist2,  max_constr, "ilves:c_dist2");
-      memory->grow(c_lambda, max_constr, "ilves:c_lambda");
+      // skip if j is local with smaller index (j will own this bond)
+      if (j < nlocal && j < i) continue;
+
+      add_constraint(i, j, bond_distance[bt]);
     }
-
-    c_atom1[n_constr]  = i;
-    c_atom2[n_constr]  = j;
-    c_dist2[n_constr]  = bond_distance[btype] * bond_distance[btype];
-    c_lambda[n_constr] = 0.0;
-    n_constr++;
-
-    ilves_flag[i] = 1;
-    if (j < nlocal) ilves_flag[j] = 1;
   }
+
+  // -----------------------------------------------------------------
+  // Phase 2: angle constraints (a keyword).
+  //
+  // Each constrained angle A(i1)-B(i2)-C(i3) is enforced via three
+  // bond constraints:
+  //   (a) B-A: equilibrium bond length of that bond type
+  //   (b) B-C: equilibrium bond length of that bond type
+  //   (c) virtual A-C: sqrt(b1^2+b2^2-2*b1*b2*cos(theta0))
+  //
+  // Ownership of bond (a) and (b) uses min-global-tag of the two
+  // endpoint atoms, so each is added exactly once.  Bond (a) and (b)
+  // are skipped when their bond type is already in bond_flag (the b
+  // keyword constraint already covers it).
+  //
+  // Ownership of virtual (c) uses the end atom with the smaller global
+  // tag.  Because we iterate over all local atoms and apply the same
+  // minimum-tag rule, the virtual bond is added exactly once even when
+  // the central atom B has the smallest overall tag.
+  // -----------------------------------------------------------------
+
+  if (has_angle) {
+    const int *num_angle    = atom->num_angle;
+    int **angle_type         = atom->angle_type;
+    tagint **angle_atom1     = atom->angle_atom1;
+    tagint **angle_atom2     = atom->angle_atom2;
+    tagint **angle_atom3     = atom->angle_atom3;
+
+    for (int i = 0; i < nlocal; i++) {
+      for (int m = 0; m < num_angle[i]; m++) {
+        const int atype = std::abs(angle_type[i][m]);
+        if (atype < 1 || atype > atom->nangletypes) continue;
+        if (!angle_flag[atype]) continue;
+        if (angle_distance[atype] == 0.0) continue;
+
+        tagint ta1 = angle_atom1[i][m];    // global tag of end atom 1
+        tagint ta2 = angle_atom2[i][m];    // global tag of central atom
+        tagint ta3 = angle_atom3[i][m];    // global tag of end atom 3
+
+        // map to local indices (closest periodic images)
+        int ia1 = atom->map(ta1);
+        int ia2 = atom->map(ta2);
+        int ia3 = atom->map(ta3);
+        if (ia1 == -1 || ia2 == -1 || ia3 == -1) continue;
+        ia1 = domain->closest_image(i, ia1);
+        ia2 = domain->closest_image(i, ia2);
+        ia3 = domain->closest_image(i, ia3);
+
+        const tagint ti  = tag[i];
+        const tagint ti1 = tag[ia1];
+        const tagint ti2 = tag[ia2];
+        const tagint ti3 = tag[ia3];
+
+        // --- real arm bond ia2-ia1 ---
+        // owned by whichever of {ia2, ia1} has the smaller global tag
+        if (ti == MIN(ti2, ti1)) {
+          // search atom i's own bond list for the bond to the other atom
+          tagint other_tag = (ti == ti2) ? ta1 : ta2;
+          int btype_arm = 0;
+          for (int n = 0; n < num_bond[i]; n++) {
+            if (bond_atom[i][n] == other_tag) {
+              btype_arm = std::abs(bond_type[i][n]);
+              break;
+            }
+          }
+          if (btype_arm > 0 && !bond_flag[btype_arm]) {
+            int other = (ti == ti2) ? ia1 : ia2;
+            add_constraint(i, other, bond_distance[btype_arm]);
+          }
+        }
+
+        // --- real arm bond ia2-ia3 ---
+        if (ti == MIN(ti2, ti3)) {
+          tagint other_tag = (ti == ti2) ? ta3 : ta2;
+          int btype_arm = 0;
+          for (int n = 0; n < num_bond[i]; n++) {
+            if (bond_atom[i][n] == other_tag) {
+              btype_arm = std::abs(bond_type[i][n]);
+              break;
+            }
+          }
+          if (btype_arm > 0 && !bond_flag[btype_arm]) {
+            int other = (ti == ti2) ? ia3 : ia2;
+            add_constraint(i, other, bond_distance[btype_arm]);
+          }
+        }
+
+        // --- virtual bond ia1-ia3 ---
+        // owned by whichever of {ia1, ia3} has the smaller global tag
+        if (ti == MIN(ti1, ti3)) {
+          int c_other = (ti == ti1) ? ia3 : ia1;
+          add_constraint(i, c_other, angle_distance[atype]);
+        }
+      }
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixIlves::add_constraint(int i, int j, double dist)
+{
+  if (n_constr == max_constr) {
+    max_constr += DELTA_CONSTR;
+    memory->grow(c_atom1,  max_constr, "ilves:c_atom1");
+    memory->grow(c_atom2,  max_constr, "ilves:c_atom2");
+    memory->grow(c_dist2,  max_constr, "ilves:c_dist2");
+    memory->grow(c_lambda, max_constr, "ilves:c_lambda");
+  }
+
+  c_atom1[n_constr]  = i;
+  c_atom2[n_constr]  = j;
+  c_dist2[n_constr]  = dist * dist;
+  c_lambda[n_constr] = 0.0;
+  n_constr++;
+
+  ilves_flag[i] = 1;
+  if (j < nlocal) ilves_flag[j] = 1;
 }
 
 /* ----------------------------------------------------------------------
