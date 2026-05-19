@@ -434,8 +434,10 @@ void FixIlves::pre_neighbor()
 
         for (int n = 0; n < num_bond[i]; n++) {
           tagint bt = bond_atom[i][n];
-          // atom i is connected to bt; mark negative if this is an arm bond
-          // arm bonds: central-end1 (ta2-ta1) and central-end3 (ta2-ta3)
+          // atom i participates in this angle in one of three roles:
+          //   (a) i is the central atom (ti == ta2): its arms connect to ta1 and ta3
+          //   (b) i is end atom 1 (ti == ta1): its arm connects to central ta2
+          //   (c) i is end atom 3 (ti == ta3): its arm connects to central ta2
           bool is_arm = (ti == ta2 && (bt == ta1 || bt == ta3)) ||
                         (ti == ta1 && bt == ta2) ||
                         (ti == ta3 && bt == ta2);
