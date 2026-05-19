@@ -1110,6 +1110,8 @@
 /fix_rigid_small.h
 /fix_settorque_atom.cpp
 /fix_settorque_atom.h
+/fix_ilves.cpp
+/fix_ilves.h
 /fix_sgcmc.cpp
 /fix_sgcmc.h
 /fix_shake.cpp

@@ -101,6 +101,7 @@ OPT.
    * :doc:`hyper/local <fix_hyper_local>`
    * :doc:`imd <fix_imd>`
    * :doc:`indent <fix_indent>`
+   * :doc:`ilves <fix_ilves>`
    * :doc:`ipi <fix_ipi>`
    * :doc:`lambda/apip <fix_lambda_apip>`
    * :doc:`lambda/la/csp/apip <fix_lambda_la_csp_apip>`
