@@ -496,8 +496,10 @@ void FixIlves::post_neighbor()
       if (j == -1) continue;
       j = domain->closest_image(i, j);
 
-      // skip if j is local with smaller index (j will own this bond)
-      if (j < nlocal && j < i) continue;
+      // Skip double-counting only when newton_bond=0 (bond stored at both
+      // atoms): let the atom with the smaller local index own the constraint.
+      // When newton_bond=1 the bond is stored at atom i only, so always add.
+      if (!force->newton_bond && j < nlocal && j < i) continue;
 
       add_constraint(i, j, bond_distance[bt]);
     }
@@ -517,10 +519,11 @@ void FixIlves::post_neighbor()
   // are skipped when their bond type is already in bond_flag (the b
   // keyword constraint already covers it).
   //
-  // Ownership of virtual (c) uses the end atom with the smaller global
-  // tag.  Because we iterate over all local atoms and apply the same
-  // minimum-tag rule, the virtual bond is added exactly once even when
-  // the central atom B has the smallest overall tag.
+  // Ownership of virtual (c): with newton_bond=1 (default) only the
+  // central atom B stores this angle, so B always adds the virtual bond.
+  // With newton_bond=0 all three atoms store the angle; the one with the
+  // smallest global tag among all three adds it exactly once.  In both
+  // cases the virtual bond connects the two end atoms A and C, not B.
   // -----------------------------------------------------------------
 
   if (has_angle) {
@@ -590,10 +593,28 @@ void FixIlves::post_neighbor()
         }
 
         // --- virtual bond ia1-ia3 ---
-        // owned by whichever of {ia1, ia3} has the smaller global tag
-        if (ti == MIN(ti1, ti3)) {
-          int c_other = (ti == ti1) ? ia3 : ia1;
-          add_constraint(i, c_other, angle_distance[atype]);
+        // Ownership rule differs by newton_bond setting:
+        //   newton_bond=1: bond data stored at one atom only (central atom
+        //     atom2 is the sole holder of this angle entry), so the central
+        //     atom must always add the virtual bond (condition: ti == ti2).
+        //   newton_bond=0: angle stored at all three atoms; add from the atom
+        //     with the smallest global tag among all three (condition:
+        //     ti == MIN(ti1, ti2, ti3)).
+        // In both cases the virtual bond connects the two END atoms ia1 and
+        // ia3, NOT atom i (which may be the central atom).
+        const bool is_owner = force->newton_bond
+            ? (ti == ti2)
+            : (ti == MIN(MIN(ti1, ti2), ti3));
+        if (is_owner) {
+          // c_atom1 must be a local atom; prefer the end atom with the
+          // smaller global tag as c_atom1.
+          int c_va = (ti1 <= ti3) ? ia1 : ia3;
+          int c_vb = (ti1 <= ti3) ? ia3 : ia1;
+          if (c_va >= nlocal) {
+            if (c_vb >= nlocal) continue;   // both end atoms are ghosts; skip
+            std::swap(c_va, c_vb);
+          }
+          add_constraint(c_va, c_vb, angle_distance[atype]);
         }
       }
     }
