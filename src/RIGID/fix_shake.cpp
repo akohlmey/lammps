@@ -370,7 +370,6 @@ int FixShake::setmask()
   mask |= POST_FORCE_RESPA;
   mask |= MIN_PRE_REVERSE;
   mask |= MIN_POST_FORCE;
-  mask |= POST_RUN;
   return mask;
 }
 
