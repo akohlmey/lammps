@@ -98,8 +98,8 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
 
   // error checks
 
-  if (atom->molecular == Atom::ATOMIC)
-    error->all(FLERR, 2, "Cannot use fix ilves with non-molecular system");
+  if (atom->molecular != Atom::MOLECULAR)
+    error->all(FLERR, 2, "Cannot use fix ilves with non-molecular or molecular template system");
 
   // parse required args: tol iter N constraint_specs
 
