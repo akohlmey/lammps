@@ -528,6 +528,7 @@ void FixIlves::post_neighbor()
   int **bond_type = atom->bond_type;
   tagint **bond_atom = atom->bond_atom;
   tagint *tag = atom->tag;
+  int *mask = atom->mask;
 
   // -----------------------------------------------------------------
   // Phase 1: bond constraints (b keyword).
@@ -556,6 +557,9 @@ void FixIlves::post_neighbor()
       // atoms): let the atom with the smaller local index own the constraint.
       // When newton_bond=1 the bond is stored at atom i only, so always add.
       if (!force->newton_bond && j < nlocal && j < i) continue;
+
+      // skip bond unless both atoms are in group
+      if (!(mask[i] & groupbit) || !(mask[j] & groupbit)) continue;
 
       add_constraint(i, j, bond_distance[bt]);
     }
@@ -608,6 +612,9 @@ void FixIlves::post_neighbor()
         ia1 = domain->closest_image(i, ia1);
         ia2 = domain->closest_image(i, ia2);
         ia3 = domain->closest_image(i, ia3);
+
+        // skip angle unless all atoms are in group
+        if (!(mask[ia1] & groupbit) || !(mask[ia2] & groupbit) || !(mask[ia3] & groupbit)) continue;
 
         const tagint ti = tag[i];
         const tagint ti1 = tag[ia1];
