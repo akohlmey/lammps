@@ -112,8 +112,7 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
   bool allow_typelabels = (atom->labelmapflag != 0);
   if (allow_typelabels) {
     for (int i = Atom::ATOM; i < Atom::DIHEDRAL; ++i) {
-      if ((atom->lmap->find_type("b", i) >= 0) || (atom->lmap->find_type("a", i) >= 0) ||
-          (atom->lmap->find_type("t", i) >= 0) || (atom->lmap->find_type("m", i) >= 0))
+      if ((atom->lmap->find_type("b", i) >= 0) || (atom->lmap->find_type("a", i) >= 0))
         allow_typelabels = false;
     }
     if (!allow_typelabels && (comm->me == 0))
@@ -161,7 +160,7 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
         i = utils::expand_type_int(FLERR, arg[next], Atom::BOND, lmp);
       else
         i = utils::inumeric(FLERR, arg[next], false, lmp);
-      if (i < 1 || i > atom->nbondtypes)
+      if ((i < 1) || (i > atom->nbondtypes))
         error->all(FLERR, next, "Invalid bond type {} for fix ilves", arg[next]);
       bond_flag[i] = 1;
     } else if (mode == 'a') {
@@ -169,7 +168,7 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
         i = utils::expand_type_int(FLERR, arg[next], Atom::ANGLE, lmp);
       else
         i = utils::inumeric(FLERR, arg[next], false, lmp);
-      if (i < 1 || i > atom->nangletypes)
+      if ((i < 1) || (i > atom->nangletypes))
         error->all(FLERR, next, "Invalid angle type {} for fix ilves", arg[next]);
       angle_flag[i] = 1;
       has_angle = true;
@@ -179,11 +178,12 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     next++;
   }
 
+  // TODO parse optional args
+
   // allocate bond distance array (indexed 1..nbondtypes)
   // statistics arrays (per bond type, indices 1..nbondtypes)
 
   if (output_every) {
-    int nb = atom->nbondtypes + 1;
     b_count = new bigint[nb];
     b_count_all = new bigint[nb];
     b_ave = new double[nb];
@@ -193,7 +193,6 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     b_min = new double[nb];
     b_min_all = new double[nb];
 
-    int na = atom->nangletypes + 1;
     a_count = new bigint[na];
     a_count_all = new bigint[na];
     a_ave = new double[na];
@@ -410,6 +409,8 @@ void FixIlves::setup(int vflag)
 
   pre_neighbor();
 
+  if (output_every) stats();
+
   // build initial constraint list from the neighbor bondlist
 
   post_neighbor();
@@ -424,8 +425,6 @@ void FixIlves::setup(int vflag)
   } else {
     next_output = -1;
   }
-
-  if (output_every) stats();
 
   // apply constraints at the current (time 0) positions
 

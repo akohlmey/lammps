@@ -115,8 +115,8 @@ FixShake::FixShake(LAMMPS *lmp, int narg, char **arg) :
           (atom->lmap->find_type("m", i) >= 0)) allow_typelabels = false;
     }
     if (!allow_typelabels && (comm->me == 0))
-      error->warning(FLERR, "At least one typelabel conflicts with a fix shake option: "
-                     "support for typelabels is disabled.");
+      error->warning(FLERR, "At least one typelabel conflicts with a {} option: "
+                     "support for typelabels is disabled.", mystyle);
   }
 
   // parse SHAKE args for bond and angle types
