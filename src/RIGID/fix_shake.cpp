@@ -3000,13 +3000,13 @@ void FixShake::stats()
     for (int i = 1; i < nb; i++) {
       const auto bcnt = b_count_all[i];
       if (bcnt)
-        mesg += fmt::format("Bond:  {:>{}d}   {:<9.6} {:<11.6} {:>8d}\n",i,width,
+        mesg += fmt::format("  Bond:  {:>{}d}   {:<9.6} {:<11.6} {:>8d}\n",i,width,
                             b_ave_all[i]/bcnt,b_max_all[i]-b_min_all[i],bcnt);
     }
     for (int i = 1; i < na; i++) {
       const auto acnt = a_count_all[i];
       if (acnt)
-        mesg += fmt::format("Angle: {:>{}d}   {:<9.6} {:<11.6} {:>8d}\n",i,width,
+        mesg += fmt::format("  Angle: {:>{}d}   {:<9.6} {:<11.6} {:>8d}\n",i,width,
                             a_ave_all[i]/acnt,a_max_all[i]-a_min_all[i],acnt/3);
     }
     utils::logmesg(lmp,mesg);

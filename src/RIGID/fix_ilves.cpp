@@ -947,12 +947,12 @@ void FixIlves::stats()
   // print output
 
   if (comm->me == 0) {
-    utils::logmesg(lmp, "ILVES stats at step {}\n", update->ntimestep);
+    utils::logmesg(lmp, "ILVES stats (type/ave/delta/count) at step {}\n", update->ntimestep);
+    const int width = (int) log10(double(MAX(1, nb))) + 2;
     for (int i = 1; i < nb; i++) {
       if (b_count_all[i] == 0) continue;
-      const double bavg = b_ave_all[i] / b_count_all[i];
-      utils::logmesg(lmp, "  bond type {}: n={}, avg={:.5f}, min={:.5f}, max={:.5f}\n", i,
-                     b_count_all[i], bavg, b_min_all[i], b_max_all[i]);
+      utils::logmesg(lmp, "  Bond:  {:>{}d}   {:<9.6} {:<11.6} {:>8d}\n", i, width,
+                     b_ave_all[i] / b_count_all[i], b_max_all[i] - b_min_all[i], b_count_all[i]);
     }
   }
 
