@@ -1,4 +1,3 @@
-// clang-format off
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
    https://www.lammps.org/, Sandia National Laboratories
@@ -85,33 +84,31 @@ static constexpr double SMALL_DENOM = 1.0e-10;
 /* ---------------------------------------------------------------------- */
 
 FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
-    Fix(lmp, narg, arg),
-    bond_flag(nullptr), bond_distance(nullptr),
-    angle_flag(nullptr), angle_distance(nullptr), has_angle(false),
-    ilves_flag(nullptr), xshake(nullptr),
-    c_atom1(nullptr), c_atom2(nullptr), c_dist2(nullptr), c_lambda(nullptr),
-    x(nullptr), v(nullptr), f(nullptr), mass(nullptr), rmass(nullptr), type(nullptr),
-    b_count(nullptr), b_count_all(nullptr), b_ave(nullptr), b_ave_all(nullptr),
-    b_max(nullptr), b_max_all(nullptr), b_min(nullptr), b_min_all(nullptr)
+    Fix(lmp, narg, arg), bond_flag(nullptr), bond_distance(nullptr), angle_flag(nullptr),
+    angle_distance(nullptr), has_angle(false), ilves_flag(nullptr), xshake(nullptr),
+    c_atom1(nullptr), c_atom2(nullptr), c_dist2(nullptr), c_lambda(nullptr), x(nullptr), v(nullptr),
+    f(nullptr), mass(nullptr), rmass(nullptr), type(nullptr), b_count(nullptr),
+    b_count_all(nullptr), b_ave(nullptr), b_ave_all(nullptr), b_max(nullptr), b_max_all(nullptr),
+    b_min(nullptr), b_min_all(nullptr)
 {
   if (narg < 8) utils::missing_cmd_args(FLERR, fmt::format("fix {}", style), error);
 
   // error checks
 
   if (atom->molecular == Atom::ATOMIC)
-    error->all(FLERR,"Cannot use fix {} with non-molecular system", style);
+    error->all(FLERR, "Cannot use fix {} with non-molecular system", style);
 
   // parse required args: tol iter N constraint_specs
 
   tolerance = utils::numeric(FLERR, arg[3], false, lmp);
-  max_iter  = utils::inumeric(FLERR, arg[4], false, lmp);
+  max_iter = utils::inumeric(FLERR, arg[4], false, lmp);
   output_every = utils::inumeric(FLERR, arg[5], false, lmp);
 
   // parse constraint specs: bond types (b keyword) and angle types (a keyword)
 
   bond_flag = new int[atom->nbondtypes + 1]();
   if (atom->nangletypes > 0) {
-    angle_flag     = new int[atom->nangletypes + 1]();
+    angle_flag = new int[atom->nangletypes + 1]();
     angle_distance = new double[atom->nangletypes + 1]();
   }
 
@@ -122,21 +119,21 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
       mode = 'b';
     } else if (strcmp(arg[next], "a") == 0) {
       if (atom->nangletypes == 0)
-        error->all(FLERR,"Fix {} angle keyword used but no angles defined", style);
+        error->all(FLERR, "Fix {} angle keyword used but no angles defined", style);
       mode = 'a';
     } else if (mode == 'b') {
       int i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nbondtypes)
-        error->all(FLERR,"Invalid bond type {} for fix {}", arg[next], style);
+        error->all(FLERR, "Invalid bond type {} for fix {}", arg[next], style);
       bond_flag[i] = 1;
     } else if (mode == 'a') {
       int i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nangletypes)
-        error->all(FLERR,"Invalid angle type {} for fix {}", arg[next], style);
+        error->all(FLERR, "Invalid angle type {} for fix {}", arg[next], style);
       angle_flag[i] = 1;
       has_angle = true;
     } else {
-      error->all(FLERR,"Unknown fix {} option: {}", style, arg[next]);
+      error->all(FLERR, "Unknown fix {} option: {}", style, arg[next]);
     }
     next++;
   }
@@ -149,14 +146,14 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
 
   if (output_every) {
     int nb = atom->nbondtypes + 1;
-    b_count     = new bigint[nb]();
+    b_count = new bigint[nb]();
     b_count_all = new bigint[nb]();
-    b_ave       = new double[nb]();
-    b_ave_all   = new double[nb]();
-    b_max       = new double[nb]();
-    b_max_all   = new double[nb]();
-    b_min       = new double[nb]();
-    b_min_all   = new double[nb]();
+    b_ave = new double[nb]();
+    b_ave_all = new double[nb]();
+    b_max = new double[nb]();
+    b_max_all = new double[nb]();
+    b_min = new double[nb]();
+    b_min_all = new double[nb]();
   }
 
   // per-atom arrays, registered with Atom class for dynamic resizing
@@ -231,25 +228,24 @@ void FixIlves::init()
 {
   // error if more than one ilves fix
 
-  if (modify->get_fix_by_style(fmt::format("^{}",style)).size() > 1)
-    error->all(FLERR,"More than one fix {} instance", style);
+  if (modify->get_fix_by_style(fmt::format("^{}", style)).size() > 1)
+    error->all(FLERR, "More than one fix {} instance", style);
 
   // cannot use during minimization (turns off bond forces)
 
   if (update->whichflag == 2)
-    error->warning(FLERR,"fix {} cannot be used with minimization", style);
+    error->warning(FLERR, "fix {} cannot be used with minimization", style);
 
   // error if box changes come before ilves fix
 
   bool boxflag = false;
   for (const auto &ifix : modify->get_fix_list()) {
-    if (boxflag && utils::strmatch(ifix->style, fmt::format("^{}",style)))
-      error->all(FLERR,"Fix {} must come before any box-changing fix", style);
+    if (boxflag && utils::strmatch(ifix->style, fmt::format("^{}", style)))
+      error->all(FLERR, "Fix {} must come before any box-changing fix", style);
     if (ifix->box_change) boxflag = true;
   }
 
-  if (!force->bond)
-    error->all(FLERR,"Bond style must be defined for fix {}", style);
+  if (!force->bond) error->all(FLERR, "Bond style must be defined for fix {}", style);
 
   // get equilibrium bond distances from the bond force style
 
@@ -261,7 +257,7 @@ void FixIlves::init()
 
   if (has_angle) {
     if (!force->angle)
-      error->all(FLERR,"Angle style must be defined for fix {} when using a keyword", style);
+      error->all(FLERR, "Angle style must be defined for fix {} when using a keyword", style);
 
     for (int i = 1; i <= atom->nangletypes; i++) {
       if (!angle_flag[i]) continue;
@@ -306,7 +302,7 @@ void FixIlves::init()
       int flag_all = 0;
       MPI_Allreduce(&flag, &flag_all, 1, MPI_INT, MPI_MAX, world);
       if (flag_all)
-        error->all(FLERR,"Fix {} angle type {} has inconsistent arm bond types", style, i);
+        error->all(FLERR, "Fix {} angle type {} has inconsistent arm bond types", style, i);
 
       // ensure all procs have the bond types (from whichever proc found them)
       MPI_Allreduce(MPI_IN_PLACE, &b1type, 1, MPI_INT, MPI_MAX, world);
@@ -318,15 +314,15 @@ void FixIlves::init()
       }
 
       const double theta0 = force->angle->equilibrium_angle(i);
-      const double d1     = bond_distance[b1type];
-      const double d2     = bond_distance[b2type];
-      angle_distance[i]   = sqrt(d1 * d1 + d2 * d2 - 2.0 * d1 * d2 * cos(theta0));
+      const double d1 = bond_distance[b1type];
+      const double d2 = bond_distance[b2type];
+      angle_distance[i] = sqrt(d1 * d1 + d2 * d2 - 2.0 * d1 * d2 * cos(theta0));
     }
   }
 
   // set/update timestep info
 
-  dtv   = update->dt;
+  dtv = update->dt;
   dtfsq = update->dt * update->dt * force->ftm2v;
 }
 
@@ -339,12 +335,12 @@ void FixIlves::setup(int vflag)
 {
   // update local pointers
 
-  x     = atom->x;
-  v     = atom->v;
-  f     = atom->f;
-  mass  = atom->mass;
+  x = atom->x;
+  v = atom->v;
+  f = atom->f;
+  mass = atom->mass;
   rmass = atom->rmass;
-  type  = atom->type;
+  type = atom->type;
   nlocal = atom->nlocal;
 
   // perform initial marking of constrained bonds as negative
@@ -383,26 +379,25 @@ void FixIlves::pre_neighbor()
 {
   // update local copies of atom pointers (atom exchange may have occurred)
 
-  x      = atom->x;
-  v      = atom->v;
-  f      = atom->f;
-  mass   = atom->mass;
-  rmass  = atom->rmass;
-  type   = atom->type;
+  x = atom->x;
+  v = atom->v;
+  f = atom->f;
+  mass = atom->mass;
+  rmass = atom->rmass;
+  type = atom->type;
   nlocal = atom->nlocal;
 
   // mark constrained bond types negative in per-atom arrays
   // (they may have been reset to positive during atom exchange)
 
-  int *num_bond   = atom->num_bond;
-  int **bond_type  = atom->bond_type;
+  int *num_bond = atom->num_bond;
+  int **bond_type = atom->bond_type;
   tagint **bond_atom = atom->bond_atom;
 
   for (int i = 0; i < nlocal; i++) {
     for (int m = 0; m < num_bond[i]; m++) {
       int btype = std::abs(bond_type[i][m]);
-      if (btype >= 1 && btype <= atom->nbondtypes && bond_flag[btype])
-        bond_type[i][m] = -btype;
+      if (btype >= 1 && btype <= atom->nbondtypes && bond_flag[btype]) bond_type[i][m] = -btype;
     }
   }
 
@@ -410,8 +405,8 @@ void FixIlves::pre_neighbor()
   // so those bonds are excluded from the regular force computation
 
   if (has_angle) {
-    int *num_angle     = atom->num_angle;
-    int **angle_type   = atom->angle_type;
+    int *num_angle = atom->num_angle;
+    int **angle_type = atom->angle_type;
     tagint **angle_atom1 = atom->angle_atom1;
     tagint **angle_atom2 = atom->angle_atom2;
     tagint **angle_atom3 = atom->angle_atom3;
@@ -427,7 +422,7 @@ void FixIlves::pre_neighbor()
 
         // mark arm bonds negative: the bonds connecting atom i to the
         // other two atoms in this angle via the arm-bond connections
-        tagint ti  = tag[i];
+        tagint ti = tag[i];
         tagint ta1 = angle_atom1[i][m];    // end atom 1 global tag
         tagint ta2 = angle_atom2[i][m];    // central atom global tag
         tagint ta3 = angle_atom3[i][m];    // end atom 3 global tag
@@ -438,9 +433,8 @@ void FixIlves::pre_neighbor()
           //   (a) i is the central atom (ti == ta2): its arms connect to ta1 and ta3
           //   (b) i is end atom 1 (ti == ta1): its arm connects to central ta2
           //   (c) i is end atom 3 (ti == ta3): its arm connects to central ta2
-          bool is_arm = (ti == ta2 && (bt == ta1 || bt == ta3)) ||
-                        (ti == ta1 && bt == ta2) ||
-                        (ti == ta3 && bt == ta2);
+          bool is_arm = (ti == ta2 && (bt == ta1 || bt == ta3)) || (ti == ta1 && bt == ta2) ||
+              (ti == ta3 && bt == ta2);
           if (is_arm) bond_type[i][n] = -std::abs(bond_type[i][n]);
         }
       }
@@ -468,10 +462,10 @@ void FixIlves::post_neighbor()
 
   n_constr = 0;
 
-  const int *num_bond    = atom->num_bond;
-  int **bond_type         = atom->bond_type;
-  tagint **bond_atom      = atom->bond_atom;
-  tagint *tag             = atom->tag;
+  const int *num_bond = atom->num_bond;
+  int **bond_type = atom->bond_type;
+  tagint **bond_atom = atom->bond_atom;
+  tagint *tag = atom->tag;
 
   // -----------------------------------------------------------------
   // Phase 1: bond constraints (b keyword).
@@ -527,11 +521,11 @@ void FixIlves::post_neighbor()
   // -----------------------------------------------------------------
 
   if (has_angle) {
-    const int *num_angle    = atom->num_angle;
-    int **angle_type         = atom->angle_type;
-    tagint **angle_atom1     = atom->angle_atom1;
-    tagint **angle_atom2     = atom->angle_atom2;
-    tagint **angle_atom3     = atom->angle_atom3;
+    const int *num_angle = atom->num_angle;
+    int **angle_type = atom->angle_type;
+    tagint **angle_atom1 = atom->angle_atom1;
+    tagint **angle_atom2 = atom->angle_atom2;
+    tagint **angle_atom3 = atom->angle_atom3;
 
     for (int i = 0; i < nlocal; i++) {
       for (int m = 0; m < num_angle[i]; m++) {
@@ -553,7 +547,7 @@ void FixIlves::post_neighbor()
         ia2 = domain->closest_image(i, ia2);
         ia3 = domain->closest_image(i, ia3);
 
-        const tagint ti  = tag[i];
+        const tagint ti = tag[i];
         const tagint ti1 = tag[ia1];
         const tagint ti2 = tag[ia2];
         const tagint ti3 = tag[ia3];
@@ -602,16 +596,14 @@ void FixIlves::post_neighbor()
         //     ti == MIN(ti1, ti2, ti3)).
         // In both cases the virtual bond connects the two END atoms ia1 and
         // ia3, NOT atom i (which may be the central atom).
-        const bool is_owner = force->newton_bond
-            ? (ti == ti2)
-            : (ti == MIN(MIN(ti1, ti2), ti3));
+        const bool is_owner = force->newton_bond ? (ti == ti2) : (ti == MIN(MIN(ti1, ti2), ti3));
         if (is_owner) {
           // c_atom1 must be a local atom; prefer the end atom with the
           // smaller global tag as c_atom1.
           int c_va = (ti1 <= ti3) ? ia1 : ia3;
           int c_vb = (ti1 <= ti3) ? ia3 : ia1;
           if (c_va >= nlocal) {
-            if (c_vb >= nlocal) continue;   // both end atoms are ghosts; skip
+            if (c_vb >= nlocal) continue;    // both end atoms are ghosts; skip
             std::swap(c_va, c_vb);
           }
           add_constraint(c_va, c_vb, angle_distance[atype]);
@@ -627,15 +619,15 @@ void FixIlves::add_constraint(int i, int j, double dist)
 {
   if (n_constr == max_constr) {
     max_constr += DELTA_CONSTR;
-    memory->grow(c_atom1,  max_constr, "ilves:c_atom1");
-    memory->grow(c_atom2,  max_constr, "ilves:c_atom2");
-    memory->grow(c_dist2,  max_constr, "ilves:c_dist2");
+    memory->grow(c_atom1, max_constr, "ilves:c_atom1");
+    memory->grow(c_atom2, max_constr, "ilves:c_atom2");
+    memory->grow(c_dist2, max_constr, "ilves:c_dist2");
     memory->grow(c_lambda, max_constr, "ilves:c_lambda");
   }
 
-  c_atom1[n_constr]  = i;
-  c_atom2[n_constr]  = j;
-  c_dist2[n_constr]  = dist * dist;
+  c_atom1[n_constr] = i;
+  c_atom2[n_constr] = j;
+  c_dist2[n_constr] = dist * dist;
   c_lambda[n_constr] = 0.0;
   n_constr++;
 
@@ -659,12 +651,12 @@ void FixIlves::post_force(int vflag)
 
   // update local pointers in case they changed
 
-  x      = atom->x;
-  v      = atom->v;
-  f      = atom->f;
-  mass   = atom->mass;
-  rmass  = atom->rmass;
-  type   = atom->type;
+  x = atom->x;
+  v = atom->v;
+  f = atom->f;
+  mass = atom->mass;
+  rmass = atom->rmass;
+  type = atom->type;
   nlocal = atom->nlocal;
 
   // reset accumulated Lagrange multipliers for this timestep
@@ -780,8 +772,8 @@ void FixIlves::post_force(int vflag)
       const double invmb = rmass ? 1.0 / rmass[b] : 1.0 / mass[type[b]];
 
       // diagonal Jacobian entry: A_kk = (1/m_a + 1/m_b) * (r_k . s_k)
-      const double rs    = rx * sx + ry * sy + rz * sz;
-      const double A_kk  = (invma + invmb) * rs;
+      const double rs = rx * sx + ry * sy + rz * sz;
+      const double A_kk = (invma + invmb) * rs;
 
       // Newton step: dl = -g / A_kk  (negative sign is essential:
       // positive residual g means bond stretched, so dl < 0, which then
@@ -909,9 +901,9 @@ void FixIlves::stats()
   int nb = atom->nbondtypes + 1;
   for (int i = 1; i < nb; i++) {
     b_count[i] = 0;
-    b_ave[i]   = 0.0;
-    b_max[i]   = -1.0e100;
-    b_min[i]   =  1.0e100;
+    b_ave[i] = 0.0;
+    b_max[i] = -1.0e100;
+    b_min[i] = 1.0e100;
   }
 
   // collect per-bond-type bond length statistics
@@ -925,7 +917,7 @@ void FixIlves::stats()
     // determine bond type from per-atom array
 
     tagint btag = atom->tag[b];
-    int btype   = 0;
+    int btype = 0;
     for (int m = 0; m < atom->num_bond[a]; m++) {
       if (atom->bond_atom[a][m] == btag) {
         btype = std::abs(atom->bond_type[a][m]);
@@ -937,20 +929,20 @@ void FixIlves::stats()
     const double dx = atom->x[a][0] - atom->x[b][0];
     const double dy = atom->x[a][1] - atom->x[b][1];
     const double dz = atom->x[a][2] - atom->x[b][2];
-    const double r  = std::sqrt(dx * dx + dy * dy + dz * dz);
+    const double r = std::sqrt(dx * dx + dy * dy + dz * dz);
 
     b_count[btype]++;
     b_ave[btype] += r;
-    b_max[btype]  = MAX(b_max[btype], r);
-    b_min[btype]  = MIN(b_min[btype], r);
+    b_max[btype] = MAX(b_max[btype], r);
+    b_min[btype] = MIN(b_min[btype], r);
   }
 
   // MPI reduction
 
-  MPI_Allreduce(b_count,     b_count_all, nb, MPI_LMP_BIGINT, MPI_SUM,  world);
-  MPI_Allreduce(b_ave,       b_ave_all,   nb, MPI_DOUBLE,     MPI_SUM,  world);
-  MPI_Allreduce(b_max,       b_max_all,   nb, MPI_DOUBLE,     MPI_MAX,  world);
-  MPI_Allreduce(b_min,       b_min_all,   nb, MPI_DOUBLE,     MPI_MIN,  world);
+  MPI_Allreduce(b_count, b_count_all, nb, MPI_LMP_BIGINT, MPI_SUM, world);
+  MPI_Allreduce(b_ave, b_ave_all, nb, MPI_DOUBLE, MPI_SUM, world);
+  MPI_Allreduce(b_max, b_max_all, nb, MPI_DOUBLE, MPI_MAX, world);
+  MPI_Allreduce(b_min, b_min_all, nb, MPI_DOUBLE, MPI_MIN, world);
 
   // print output
 
@@ -959,8 +951,8 @@ void FixIlves::stats()
     for (int i = 1; i < nb; i++) {
       if (b_count_all[i] == 0) continue;
       const double bavg = b_ave_all[i] / b_count_all[i];
-      utils::logmesg(lmp, "  bond type {}: n={}, avg={:.5f}, min={:.5f}, max={:.5f}\n",
-                     i, b_count_all[i], bavg, b_min_all[i], b_max_all[i]);
+      utils::logmesg(lmp, "  bond type {}: n={}, avg={:.5f}, min={:.5f}, max={:.5f}\n", i,
+                     b_count_all[i], bavg, b_min_all[i], b_max_all[i]);
     }
   }
 
@@ -1021,8 +1013,8 @@ void FixIlves::unpack_forward_comm(int n, int first, double *buf)
 
 void FixIlves::grow_arrays(int nmax)
 {
-  memory->grow(ilves_flag, nmax,    "ilves:ilves_flag");
-  memory->grow(xshake,     nmax, 3, "ilves:xshake");
+  memory->grow(ilves_flag, nmax, "ilves:ilves_flag");
+  memory->grow(xshake, nmax, 3, "ilves:xshake");
 }
 
 /* ----------------------------------------------------------------------
@@ -1031,10 +1023,10 @@ void FixIlves::grow_arrays(int nmax)
 
 void FixIlves::copy_arrays(int i, int j, int /*delflag*/)
 {
-  ilves_flag[j]   = ilves_flag[i];
-  xshake[j][0]    = xshake[i][0];
-  xshake[j][1]    = xshake[i][1];
-  xshake[j][2]    = xshake[i][2];
+  ilves_flag[j] = ilves_flag[i];
+  xshake[j][0] = xshake[i][0];
+  xshake[j][1] = xshake[i][1];
+  xshake[j][2] = xshake[i][2];
 }
 
 /* ----------------------------------------------------------------------
@@ -1043,17 +1035,17 @@ void FixIlves::copy_arrays(int i, int j, int /*delflag*/)
 
 void FixIlves::set_arrays(int i)
 {
-  ilves_flag[i]   = 0;
-  xshake[i][0]    = 0.0;
-  xshake[i][1]    = 0.0;
-  xshake[i][2]    = 0.0;
+  ilves_flag[i] = 0;
+  xshake[i][0] = 0.0;
+  xshake[i][1] = 0.0;
+  xshake[i][2] = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixIlves::reset_dt()
 {
-  dtv   = update->dt;
+  dtv = update->dt;
   dtfsq = update->dt * update->dt * force->ftm2v;
 }
 
@@ -1066,7 +1058,7 @@ void FixIlves::reset_dt()
 bigint FixIlves::dof(int igroup)
 {
   const int groupbit = group->bitmask[igroup];
-  const int *mask    = atom->mask;
+  const int *mask = atom->mask;
 
   bigint n = 0;
   for (int k = 0; k < n_constr; k++) {
@@ -1085,9 +1077,9 @@ double FixIlves::memory_usage()
 {
   double bytes = 0.0;
   // per-atom arrays (ilves_flag + xshake)
-  bytes += (double)atom->nmax * sizeof(int);
-  bytes += (double)atom->nmax * 3 * sizeof(double);
+  bytes += (double) atom->nmax * sizeof(int);
+  bytes += (double) atom->nmax * 3 * sizeof(double);
   // constraint arrays
-  bytes += (double)max_constr * (2 * sizeof(int) + 3 * sizeof(double));
+  bytes += (double) max_constr * (2 * sizeof(int) + 3 * sizeof(double));
   return bytes;
 }

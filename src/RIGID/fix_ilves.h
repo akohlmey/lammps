@@ -54,25 +54,25 @@ class FixIlves : public Fix {
   bigint next_output;    // timestep of next output
 
   // settings from input command (bond types to constrain)
-  int *bond_flag;         // bond_flag[i] = 1 if bond type i is constrained
-  double *bond_distance;  // equilibrium distance for each bond type
+  int *bond_flag;           // bond_flag[i] = 1 if bond type i is constrained
+  double *bond_distance;    // equilibrium distance for each bond type
 
   // settings from input command (angle types to constrain)
-  int *angle_flag;         // angle_flag[i] = 1 if angle type i is constrained
-  double *angle_distance;  // virtual end-to-end distance for each angle type
-  bool has_angle;          // true if any angle types are constrained
+  int *angle_flag;           // angle_flag[i] = 1 if angle type i is constrained
+  double *angle_distance;    // virtual end-to-end distance for each angle type
+  bool has_angle;            // true if any angle types are constrained
 
   // atom-based arrays (allocated per atom, survive exchange)
-  int *ilves_flag;     // 1 if atom participates in any ILVES constraint
-  double **xshake;     // unconstrained position (working array)
+  int *ilves_flag;    // 1 if atom participates in any ILVES constraint
+  double **xshake;    // unconstrained position (working array)
 
   // constraint list (flat, rebuilt each neighbor list update)
-  int n_constr;          // number of constraints owned by this proc
-  int max_constr;        // allocated size
-  int *c_atom1;          // local index of first atom (always local, < nlocal)
-  int *c_atom2;          // local index of second atom (local or ghost)
-  double *c_dist2;       // squared constraint distance
-  double *c_lambda;      // accumulated Lagrange multiplier (reset each step)
+  int n_constr;        // number of constraints owned by this proc
+  int max_constr;      // allocated size
+  int *c_atom1;        // local index of first atom (always local, < nlocal)
+  int *c_atom2;        // local index of second atom (local or ghost)
+  double *c_dist2;     // squared constraint distance
+  double *c_lambda;    // accumulated Lagrange multiplier (reset each step)
 
   // timestep info (set in setup/reset_dt)
   double dtv, dtfsq;
