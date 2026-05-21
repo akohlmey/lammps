@@ -77,7 +77,7 @@ FixShake::FixShake(LAMMPS *lmp, int narg, char **arg) :
 
   molecular = atom->molecular;
   if (molecular == Atom::ATOMIC)
-    error->all(FLERR, "Cannot use fix {} with non-molecular system", style);
+    error->all(FLERR, 2, "Cannot use fix {} with non-molecular system", style);
 
   // do not store constraint forces by default
 
@@ -157,16 +157,16 @@ FixShake::FixShake(LAMMPS *lmp, int narg, char **arg) :
       if (allow_typelabels) i = utils::expand_type_int(FLERR, arg[next], Atom::BOND, lmp);
       else i = utils::inumeric(FLERR, arg[next], false, lmp);
 
-      if (i < 1 || i > atom->nbondtypes)
-        error->all(FLERR,"Invalid bond type {} index for {}", arg[next], mystyle);
+      if ((i < 1) || (i > atom->nbondtypes))
+        error->all(FLERR, next, "Invalid bond type {} index for {}", arg[next], mystyle);
       bond_flag[i] = 1;
 
     } else if (mode == 'a') {
       if (allow_typelabels) i = utils::expand_type_int(FLERR, arg[next], Atom::ANGLE, lmp);
       else i = utils::inumeric(FLERR, arg[next], false, lmp);
 
-      if (i < 1 || i > atom->nangletypes)
-        error->all(FLERR,"Invalid angle type {} for {}", arg[next], mystyle);
+      if ((i < 1) || (i > atom->nangletypes))
+        error->all(FLERR, next, "Invalid angle type {} for {}", arg[next], mystyle);
       angle_flag[i] = 1;
 
     } else if (mode == 't') {

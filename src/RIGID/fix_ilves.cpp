@@ -91,12 +91,12 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     b_count_all(nullptr), b_ave(nullptr), b_ave_all(nullptr), b_max(nullptr), b_max_all(nullptr),
     b_min(nullptr), b_min_all(nullptr)
 {
-  if (narg < 8) utils::missing_cmd_args(FLERR, fmt::format("fix {}", style), error);
+  if (narg < 8) utils::missing_cmd_args(FLERR, "fix ilves", error);
 
   // error checks
 
   if (atom->molecular == Atom::ATOMIC)
-    error->all(FLERR, "Cannot use fix {} with non-molecular system", style);
+    error->all(FLERR, 2, "Cannot use fix ilves with non-molecular system");
 
   // parse required args: tol iter N constraint_specs
 
@@ -124,12 +124,12 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     } else if (mode == 'b') {
       int i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nbondtypes)
-        error->all(FLERR, "Invalid bond type {} for fix {}", arg[next], style);
+        error->all(FLERR, next, "Invalid bond type {} for fix ilves", arg[next]);
       bond_flag[i] = 1;
     } else if (mode == 'a') {
       int i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nangletypes)
-        error->all(FLERR, "Invalid angle type {} for fix {}", arg[next], style);
+        error->all(FLERR, next, "Invalid angle type {} for fix ilves", arg[next]);
       angle_flag[i] = 1;
       has_angle = true;
     } else {
@@ -229,23 +229,27 @@ void FixIlves::init()
   // error if more than one ilves fix
 
   if (modify->get_fix_by_style(fmt::format("^{}", style)).size() > 1)
-    error->all(FLERR, "More than one fix {} instance", style);
+    error->all(FLERR, Error::NOLASTLINE, "More than one fix ilves instance");
 
   // cannot use during minimization (turns off bond forces)
 
   if (update->whichflag == 2)
-    error->warning(FLERR, "fix {} cannot be used with minimization", style);
+    error->all(FLERR, Error::NOLASTLINE, "Fix ilves cannot be used with minimization");
 
   // error if box changes come before ilves fix
 
   bool boxflag = false;
   for (const auto &ifix : modify->get_fix_list()) {
     if (boxflag && utils::strmatch(ifix->style, fmt::format("^{}", style)))
-      error->all(FLERR, "Fix {} must come before any box-changing fix", style);
+      error->all(FLERR, Error::NOLASTLINE, "Fix ilves must come before any box-changing fix");
     if (ifix->box_change) boxflag = true;
   }
 
-  if (!force->bond) error->all(FLERR, "Bond style must be defined for fix {}", style);
+  if (utils::strmatch(update->integrate_style, "^respa"))
+    error->all(FLERR, Error::NOLASTLINE, "Fix ilves is not compatible with run style respa");
+
+  if (!force->bond)
+    error->all(FLERR, Error::NOLASTLINE, "Bond style must be defined for fix ilves");
 
   // get equilibrium bond distances from the bond force style
 
@@ -302,7 +306,8 @@ void FixIlves::init()
       int flag_all = 0;
       MPI_Allreduce(&flag, &flag_all, 1, MPI_INT, MPI_MAX, world);
       if (flag_all)
-        error->all(FLERR, "Fix {} angle type {} has inconsistent arm bond types", style, i);
+        error->all(FLERR, Error::NOLASTLINE,
+                   "Fix ilves angle type {} has inconsistent arm bond types", i);
 
       // ensure all procs have the bond types (from whichever proc found them)
       MPI_Allreduce(MPI_IN_PLACE, &b1type, 1, MPI_INT, MPI_MAX, world);
