@@ -68,6 +68,7 @@
 #include "error.h"
 #include "force.h"
 #include "group.h"
+#include "label_map.h"
 #include "memory.h"
 #include "modify.h"
 #include "update.h"
@@ -80,6 +81,7 @@ using namespace FixConst;
 
 static constexpr int DELTA_CONSTR = 256;
 static constexpr double SMALL_DENOM = 1.0e-10;
+static constexpr double BIG = 1.0e20;
 
 /* ---------------------------------------------------------------------- */
 
@@ -89,7 +91,8 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     c_atom1(nullptr), c_atom2(nullptr), c_dist2(nullptr), c_lambda(nullptr), x(nullptr), v(nullptr),
     f(nullptr), mass(nullptr), rmass(nullptr), type(nullptr), b_count(nullptr),
     b_count_all(nullptr), b_ave(nullptr), b_ave_all(nullptr), b_max(nullptr), b_max_all(nullptr),
-    b_min(nullptr), b_min_all(nullptr)
+    b_min(nullptr), b_min_all(nullptr), a_count(nullptr), a_count_all(nullptr), a_ave(nullptr),
+    a_max(nullptr), a_min(nullptr), a_ave_all(nullptr), a_max_all(nullptr), a_min_all(nullptr)
 {
   if (narg < 8) utils::missing_cmd_args(FLERR, "fix ilves", error);
 
@@ -104,30 +107,68 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
   max_iter = utils::inumeric(FLERR, arg[4], false, lmp);
   output_every = utils::inumeric(FLERR, arg[5], false, lmp);
 
+  // check if any typelabels conflict with fix ilves arguments.
+
+  bool allow_typelabels = (atom->labelmapflag != 0);
+  if (allow_typelabels) {
+    for (int i = Atom::ATOM; i < Atom::DIHEDRAL; ++i) {
+      if ((atom->lmap->find_type("b", i) >= 0) || (atom->lmap->find_type("a", i) >= 0) ||
+          (atom->lmap->find_type("t", i) >= 0) || (atom->lmap->find_type("m", i) >= 0))
+        allow_typelabels = false;
+    }
+    if (!allow_typelabels && (comm->me == 0))
+      error->warning(FLERR,
+                     "At least one typelabel conflicts with a fix ilves option: support for "
+                     "typelabels is disabled.");
+  }
+
   // parse constraint specs: bond types (b keyword) and angle types (a keyword)
 
-  bond_flag = new int[atom->nbondtypes + 1]();
-  if (atom->nangletypes > 0) {
-    angle_flag = new int[atom->nangletypes + 1]();
-    angle_distance = new double[atom->nangletypes + 1]();
+  int nb = atom->nbondtypes + 1;
+  int na = atom->nangletypes + 1;
+  bond_flag = new int[nb];
+  bond_distance = new double[nb];
+  angle_flag = new int[na];
+  angle_distance = new double[na];
+
+  for (int i = 0; i < nb; ++i) {
+    bond_flag[i] = 0;
+    bond_distance[i] = 0.0;
+  }
+  for (int i = 0; i < na; ++i) {
+    angle_flag[i] = 0;
+    angle_distance[i] = 0.0;
   }
 
   int next = 6;
   char mode = '\0';
   while (next < narg) {
+    int i = -1;
     if (strcmp(arg[next], "b") == 0) {
       mode = 'b';
     } else if (strcmp(arg[next], "a") == 0) {
-      if (atom->nangletypes == 0)
-        error->all(FLERR, "Fix {} angle keyword used but no angles defined", style);
       mode = 'a';
+
+      // break if known optional keyword
+
+    } else if ((strcmp(arg[next], "kbond") == 0) || (strcmp(arg[next], "store") == 0)) {
+      break;
+
+      // get numeric types for b or a keywords.
+
     } else if (mode == 'b') {
-      int i = utils::inumeric(FLERR, arg[next], false, lmp);
+      if (allow_typelabels)
+        i = utils::expand_type_int(FLERR, arg[next], Atom::BOND, lmp);
+      else
+        i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nbondtypes)
         error->all(FLERR, next, "Invalid bond type {} for fix ilves", arg[next]);
       bond_flag[i] = 1;
     } else if (mode == 'a') {
-      int i = utils::inumeric(FLERR, arg[next], false, lmp);
+      if (allow_typelabels)
+        i = utils::expand_type_int(FLERR, arg[next], Atom::ANGLE, lmp);
+      else
+        i = utils::inumeric(FLERR, arg[next], false, lmp);
       if (i < 1 || i > atom->nangletypes)
         error->all(FLERR, next, "Invalid angle type {} for fix ilves", arg[next]);
       angle_flag[i] = 1;
@@ -139,21 +180,28 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
   }
 
   // allocate bond distance array (indexed 1..nbondtypes)
-
-  bond_distance = new double[atom->nbondtypes + 1]();
-
   // statistics arrays (per bond type, indices 1..nbondtypes)
 
   if (output_every) {
     int nb = atom->nbondtypes + 1;
-    b_count = new bigint[nb]();
-    b_count_all = new bigint[nb]();
-    b_ave = new double[nb]();
-    b_ave_all = new double[nb]();
-    b_max = new double[nb]();
-    b_max_all = new double[nb]();
-    b_min = new double[nb]();
-    b_min_all = new double[nb]();
+    b_count = new bigint[nb];
+    b_count_all = new bigint[nb];
+    b_ave = new double[nb];
+    b_ave_all = new double[nb];
+    b_max = new double[nb];
+    b_max_all = new double[nb];
+    b_min = new double[nb];
+    b_min_all = new double[nb];
+
+    int na = atom->nangletypes + 1;
+    a_count = new bigint[na];
+    a_count_all = new bigint[na];
+    a_ave = new double[na];
+    a_ave_all = new double[na];
+    a_max = new double[na];
+    a_max_all = new double[na];
+    a_min = new double[na];
+    a_min_all = new double[na];
   }
 
   // per-atom arrays, registered with Atom class for dynamic resizing
@@ -205,6 +253,15 @@ FixIlves::~FixIlves()
     delete[] b_max_all;
     delete[] b_min;
     delete[] b_min_all;
+
+    delete[] a_count;
+    delete[] a_count_all;
+    delete[] a_ave;
+    delete[] a_ave_all;
+    delete[] a_max;
+    delete[] a_max_all;
+    delete[] a_min;
+    delete[] a_min_all;
   }
 }
 
@@ -261,7 +318,8 @@ void FixIlves::init()
 
   if (has_angle) {
     if (!force->angle)
-      error->all(FLERR, "Angle style must be defined for fix {} when using a keyword", style);
+      error->all(FLERR, Error::NOLASTLINE,
+                 "Angle style must be defined for fix ilves when using 'a' keyword");
 
     for (int i = 1; i <= atom->nangletypes; i++) {
       if (!angle_flag[i]) continue;
@@ -904,11 +962,16 @@ void FixIlves::stats()
   // reset statistics arrays
 
   int nb = atom->nbondtypes + 1;
+  int na = atom->nangletypes + 1;
   for (int i = 1; i < nb; i++) {
     b_count[i] = 0;
-    b_ave[i] = 0.0;
-    b_max[i] = -1.0e100;
-    b_min[i] = 1.0e100;
+    b_ave[i] = b_max[i] = 0.0;
+    b_min[i] = BIG;
+  }
+  for (int i = 0; i < na; i++) {
+    a_count[i] = 0;
+    a_ave[i] = a_max[i] = 0.0;
+    a_min[i] = BIG;
   }
 
   // collect per-bond-type bond length statistics
@@ -929,7 +992,11 @@ void FixIlves::stats()
         break;
       }
     }
-    if (btype == 0) continue;
+    if (btype == 0) {    // angle constraint
+
+      utils::print(stderr, "Constraint {} has bond type {}\n", k, btype);
+      continue;
+    }
 
     const double dx = atom->x[a][0] - atom->x[b][0];
     const double dy = atom->x[a][1] - atom->x[b][1];

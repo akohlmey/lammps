@@ -88,6 +88,10 @@ class FixIlves : public Fix {
   double *b_ave, *b_ave_all;
   double *b_max, *b_max_all;
   double *b_min, *b_min_all;
+  // ditto for angle types
+  bigint *a_count, *a_count_all;
+  double *a_ave, *a_max, *a_min;
+  double *a_ave_all, *a_max_all, *a_min_all;
 
   void add_constraint(int, int, double);
   void stats();
