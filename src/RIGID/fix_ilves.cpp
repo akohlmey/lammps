@@ -94,6 +94,11 @@ FixIlves::FixIlves(LAMMPS *lmp, int narg, char **arg) :
     b_min(nullptr), b_min_all(nullptr), a_count(nullptr), a_count_all(nullptr), a_ave(nullptr),
     a_max(nullptr), a_min(nullptr), a_ave_all(nullptr), a_max_all(nullptr), a_min_all(nullptr)
 {
+  energy_global_flag = energy_peratom_flag = 1;
+  virial_global_flag = virial_peratom_flag = 1;
+  thermo_energy = thermo_virial = 1;
+  dof_flag = 1;
+
   if (narg < 8) utils::missing_cmd_args(FLERR, "fix ilves", error);
 
   // error checks
@@ -733,31 +738,23 @@ void FixIlves::post_force(int vflag)
   for (int k = 0; k < n_constr; k++) c_lambda[k] = 0.0;
 
   // -----------------------------------------------------------------
-  // Step 1: Compute unconstrained positions (same as SHAKE).
+  // Step 1: Compute unconstrained position updates for *all* atoms
   //         xshake[i] = x[i] + dt*v[i] + 0.5*dt^2*f[i]/m[i]
   // -----------------------------------------------------------------
 
   if (rmass) {
     for (int i = 0; i < nlocal; i++) {
-      if (ilves_flag[i]) {
-        const double dtfmsq = dtfsq / rmass[i];
-        xshake[i][0] = x[i][0] + dtv * v[i][0] + dtfmsq * f[i][0];
-        xshake[i][1] = x[i][1] + dtv * v[i][1] + dtfmsq * f[i][1];
-        xshake[i][2] = x[i][2] + dtv * v[i][2] + dtfmsq * f[i][2];
-      } else {
-        xshake[i][0] = xshake[i][1] = xshake[i][2] = 0.0;
-      }
+      const double dtfmsq = dtfsq / rmass[i];
+      xshake[i][0] = x[i][0] + dtv * v[i][0] + dtfmsq * f[i][0];
+      xshake[i][1] = x[i][1] + dtv * v[i][1] + dtfmsq * f[i][1];
+      xshake[i][2] = x[i][2] + dtv * v[i][2] + dtfmsq * f[i][2];
     }
   } else {
     for (int i = 0; i < nlocal; i++) {
-      if (ilves_flag[i]) {
-        const double dtfmsq = dtfsq / mass[type[i]];
-        xshake[i][0] = x[i][0] + dtv * v[i][0] + dtfmsq * f[i][0];
-        xshake[i][1] = x[i][1] + dtv * v[i][1] + dtfmsq * f[i][1];
-        xshake[i][2] = x[i][2] + dtv * v[i][2] + dtfmsq * f[i][2];
-      } else {
-        xshake[i][0] = xshake[i][1] = xshake[i][2] = 0.0;
-      }
+      const double dtfmsq = dtfsq / mass[type[i]];
+      xshake[i][0] = x[i][0] + dtv * v[i][0] + dtfmsq * f[i][0];
+      xshake[i][1] = x[i][1] + dtv * v[i][1] + dtfmsq * f[i][1];
+      xshake[i][2] = x[i][2] + dtv * v[i][2] + dtfmsq * f[i][2];
     }
   }
 
@@ -1000,7 +997,6 @@ void FixIlves::stats()
     }
     if (btype == 0) {    // angle constraint
 
-      utils::print(stderr, "Constraint {} has bond type {}\n", k, btype);
       continue;
     }
 
@@ -1133,15 +1129,15 @@ void FixIlves::reset_dt()
    Count each bond once (using the c_atom1 ownership invariant).
 ------------------------------------------------------------------------- */
 
-bigint FixIlves::dof(int igroup)
+bigint FixIlves::dof(int tgroup)
 {
-  const int groupbit = group->bitmask[igroup];
+  const int tgroupbit = group->bitmask[tgroup];
   const int *mask = atom->mask;
 
   bigint n = 0;
   for (int k = 0; k < n_constr; k++) {
     const int a = c_atom1[k];    // always a local atom
-    if (mask[a] & groupbit) n++;
+    if (mask[a] & tgroupbit) n++;
   }
 
   bigint nall;
