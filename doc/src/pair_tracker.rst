@@ -156,6 +156,24 @@ are not relevant for this pair style.
 The accumulated data is not written to restart files and should be
 output before a restart file is written to avoid missing data.
 
+This pair style can be used with the :doc:`rerun <rerun>` command to
+extract interaction data from a previously generated trajectory.  The
+contact history is reconstructed snapshot by snapshot from the atom
+coordinates, so the recorded interactions are resolved at the cadence
+of the dump file: interactions that are created and broken between two
+dumped snapshots are not detected, and accumulated quantities such as
+*time/total*, *r/min*, and *r/ave* reflect only the sampled snapshots.
+For results that match a direct run, dump every timestep (using
+sufficient coordinate precision) and use the :doc:`read_dump <read_dump>`
+*replace yes* default so the snapshot coordinates overwrite the current
+positions.
+
+.. versionchanged:: TBD
+
+Using *pair_style tracker* with the :doc:`rerun <rerun>` command or the
+*omp* accelerator suffix now produces the same interactions as a plain
+run.
+
 The internal fix calculates a local vector or local array depending on the
 number of input values.  The length of the vector or number of rows in
 the array is the number of recorded, lost interactions.  If a single
