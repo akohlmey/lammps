@@ -340,6 +340,17 @@ void PairTracker::init_style()
 {
   // error and warning checks
 
+  // the output settings (parsed by settings()) are required before the pair
+  // style can record any data.  settings() is not called when a pair style is
+  // restored from a restart file, so guard against an uninitialized state here
+  // (otherwise process_data() would dereference a null fix_store_local and
+  // crash).  Re-specify pair_style/pair_coeff after read_restart.  See #4990.
+
+  if (!id_fix_store_local || !fix_store_local)
+    error->all(FLERR, "Pair style tracker settings are not stored in or restored from "
+                      "restart files; the pair_style and pair_coeff commands must be "
+                      "re-specified after reading a restart file");
+
   if (!atom->radius_flag && finitecutflag)
     error->all(FLERR, "Pair tracker requires atom attribute radius for finite cutoffs");
 
