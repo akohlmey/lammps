@@ -17,6 +17,7 @@
 #include "domain.h"
 #include "error.h"
 #include "finish.h"
+#include "fix.h"
 #include "input.h"
 #include "integrate.h"
 #include "modify.h"
@@ -163,8 +164,24 @@ void Rerun::command(int narg, char **arg)
   if (ntimestep < 0)
     error->all(FLERR, Error::NOLASTLINE, "Rerun dump file does not contain requested snapshot");
 
+  // collect neighbor-history fixes (e.g. for pair tracker or granular contact
+  // models); their per-neighbor history must be saved into the per-atom partner
+  // arrays between snapshots so it migrates with the atoms and is restored after
+  // the next neighbor list rebuild.  setup_minimal() (called per snapshot below)
+  // does not invoke pre_exchange(), so without this the history would be reset on
+  // every snapshot and accumulated quantities would be lost (issue #4990).
+
+  auto history_fixes = modify->get_fix_by_style("^NEIGH_HISTORY");
+
   while (true) {
     ndump++;
+
+    // save accumulated neighbor history before reading/migrating the next
+    // snapshot (skipped on the first snapshot, when no history exists yet)
+
+    if (!firstflag)
+      for (auto *ifix : history_fixes) ifix->pre_exchange();
+
     rd->header(firstflag);
     update->reset_timestep(ntimestep, false);
     rd->atoms();

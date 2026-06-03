@@ -68,6 +68,26 @@ int FixStoreLocal::setmask()
   return mask;
 }
 
+/* ----------------------------------------------------------------------
+   publish the buffered data at setup time as well as during the run.
+   the setup hook (also reached once per snapshot via setup_minimal() during a
+   "rerun") is what exposes the data accumulated by the preceding force
+   computation; without it a "rerun" never makes the stored values visible to
+   downstream dumps/computes (issue #4990).
+------------------------------------------------------------------------- */
+
+void FixStoreLocal::setup(int vflag)
+{
+  post_force(vflag);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixStoreLocal::min_setup(int vflag)
+{
+  post_force(vflag);
+}
+
 /* ---------------------------------------------------------------------- */
 
 void FixStoreLocal::add_data(double *input_data, int i, int j)

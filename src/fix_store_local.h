@@ -29,6 +29,8 @@ class FixStoreLocal : public Fix {
   FixStoreLocal(class LAMMPS *, int, char **);
   ~FixStoreLocal() override;
   int setmask() override;
+  void setup(int) override;
+  void min_setup(int) override;
   void post_force(int) override;
   double memory_usage() override;
   void add_data(double *, int, int);
