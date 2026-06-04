@@ -107,6 +107,18 @@ class FixGCMC : public Fix {
   // per-segment wall-time accumulators, reported in post_run()
   double time_full, time_molenergy, time_kspace, time_borders;
 
+  // private cell list that accelerates the fast-path energy() lookups from
+  // O(nlocal+nghost) brute force to O(local).  rebuilt whenever the ghosts
+  // are rebuilt; only used when the fast path is active.
+  int *cell_head;          // first atom index in each cell (-1 if empty)
+  int *cell_next;          // next atom index in the same cell (linked list)
+  int cell_nbins;          // allocated length of cell_head
+  int cell_nmax;           // allocated length of cell_next
+  int cell_nx, cell_ny, cell_nz;
+  int cell_built;          // 1 if the cell list is valid for the current atoms
+  double cell_origin[3];   // low corner of the binned region
+  double cell_delinv[3];   // inverse cell size per dimension
+
   double *sublo, *subhi;
   int *local_gas_list;
   double **cutsq;
@@ -165,6 +177,7 @@ class FixGCMC : public Fix {
   double long_range_delta();      // (kspace + tail) energy change vs the cache
   void sync_long_cache();         // refresh kspace_stored/etail_stored on accept
   void refresh_ghosts();          // rebuild ghosts without migration (no exchange)
+  void build_cell_list();         // bin nlocal+nghost atoms for fast energy() lookups
   double validate_fast(double energy_before, double energy_after_fast);
 
   int pick_random_gas_atom();

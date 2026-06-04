@@ -282,6 +282,11 @@ void FixGCMC::options(int narg, char **arg)
   fast_maxerr = 0.0;
   fast_nvalid = 0;
   time_full = time_molenergy = time_kspace = time_borders = 0.0;
+  cell_head = nullptr;
+  cell_next = nullptr;
+  cell_nbins = 0;
+  cell_nmax = 0;
+  cell_built = 0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -418,6 +423,8 @@ FixGCMC::~FixGCMC()
   memory->destroy(molcoords);
   memory->destroy(molq);
   memory->destroy(molimage);
+  memory->destroy(cell_head);
+  memory->destroy(cell_next);
 
   delete[] idrigid;
   delete[] idshake;
@@ -2343,6 +2350,7 @@ void FixGCMC::attempt_molecule_insertion_full()
   if (triclinic) domain->lamda2x(atom->nlocal+atom->nghost);
   if (force->kspace) force->kspace->qsum_qsq();
   if (force->pair->tail_flag) force->pair->reinit();
+  build_cell_list();
 
   double energy_after;
   if (!fast_supported) {
@@ -2425,6 +2433,51 @@ double FixGCMC::energy(int i, int itype, tagint imolecule, double *coord)
 
   double total_energy = 0.0;
 
+  if (cell_built) {
+
+    // cell-list path: only inspect atoms in the 27 cells around coord.
+    // the cell size is >= the maximum pair cutoff, so this 3x3x3 stencil
+    // contains every atom within cutsq[itype][jtype] of coord -- giving the
+    // same result as the brute-force loop below (to summation roundoff).
+
+    int ix = (int) ((coord[0] - cell_origin[0]) * cell_delinv[0]);
+    int iy = (int) ((coord[1] - cell_origin[1]) * cell_delinv[1]);
+    int iz = (int) ((coord[2] - cell_origin[2]) * cell_delinv[2]);
+    if (ix < 0) ix = 0; else if (ix >= cell_nx) ix = cell_nx - 1;
+    if (iy < 0) iy = 0; else if (iy >= cell_ny) iy = cell_ny - 1;
+    if (iz < 0) iz = 0; else if (iz >= cell_nz) iz = cell_nz - 1;
+
+    for (int dz = -1; dz <= 1; dz++) {
+      int cz = iz + dz;
+      if (cz < 0 || cz >= cell_nz) continue;
+      for (int dy = -1; dy <= 1; dy++) {
+        int cy = iy + dy;
+        if (cy < 0 || cy >= cell_ny) continue;
+        for (int dx = -1; dx <= 1; dx++) {
+          int cx = ix + dx;
+          if (cx < 0 || cx >= cell_nx) continue;
+          int c = (cz * cell_ny + cy) * cell_nx + cx;
+          for (int j = cell_head[c]; j >= 0; j = cell_next[j]) {
+            if (i == j) continue;
+            if (exchmode == EXCHMOL || movemode == MOVEMOL)
+              if (imolecule == molecule[j]) continue;
+            delx = coord[0] - x[j][0];
+            dely = coord[1] - x[j][1];
+            delz = coord[2] - x[j][2];
+            rsq = delx*delx + dely*dely + delz*delz;
+            int jtype = type[j];
+            if (overlap_flag && rsq < overlap_cutoffsq) return MAXENERGYSIGNAL;
+            if (rsq < cutsq[itype][jtype])
+              total_energy +=
+                pair->single(i,j,itype,jtype,rsq,factor_coul,factor_lj,fpair);
+          }
+        }
+      }
+    }
+
+    return total_energy;
+  }
+
   for (int j = 0; j < nall; j++) {
 
     if (i == j) continue;
@@ -2477,6 +2530,11 @@ double FixGCMC::molecule_energy(tagint gas_molecule_id)
 double FixGCMC::energy_full()
 {
   int imolecule;
+
+  // comm->exchange() below migrates atoms and rebuilds ghosts, so any private
+  // cell list referring to the old atom indexing is no longer valid
+
+  cell_built = 0;
 
   if (triclinic) domain->x2lamda(atom->nlocal);
   domain->pbc();
@@ -2623,6 +2681,87 @@ void FixGCMC::refresh_ghosts()
   comm->borders();
   if (triclinic) domain->lamda2x(atom->nlocal + atom->nghost);
   time_borders += platform::walltime() - t0;
+  build_cell_list();
+}
+
+/* ----------------------------------------------------------------------
+   bin all local+ghost atoms into a private cell list so the fast-path
+   energy() can find an atom's neighbors in O(local) instead of looping over
+   all nlocal+nghost atoms.  the cell size is the maximum pair cutoff, so a
+   3x3x3 stencil around any query point contains every atom within cutoff.
+   only used when the fast path is active; falls back to brute force (leaves
+   cell_built = 0) for degenerate cases.
+------------------------------------------------------------------------- */
+
+void FixGCMC::build_cell_list()
+{
+  cell_built = 0;
+  if (!fast_supported) return;
+
+  int nall = atom->nlocal + atom->nghost;
+  if (nall < 1) return;
+
+  double cut = force->pair->cutforce;
+  if (cut <= 0.0) return;
+
+  // bounding box of all local + ghost atoms
+
+  double **x = atom->x;
+  double lo[3], hi[3];
+  lo[0] = hi[0] = x[0][0];
+  lo[1] = hi[1] = x[0][1];
+  lo[2] = hi[2] = x[0][2];
+  for (int i = 1; i < nall; i++) {
+    for (int d = 0; d < 3; d++) {
+      if (x[i][d] < lo[d]) lo[d] = x[i][d];
+      else if (x[i][d] > hi[d]) hi[d] = x[i][d];
+    }
+  }
+  for (int d = 0; d < 3; d++) {
+    lo[d] -= 0.001;
+    hi[d] += 0.001;
+    cell_origin[d] = lo[d];
+  }
+
+  cell_nx = (int) ((hi[0] - lo[0]) / cut); if (cell_nx < 1) cell_nx = 1;
+  cell_ny = (int) ((hi[1] - lo[1]) / cut); if (cell_ny < 1) cell_ny = 1;
+  cell_nz = (int) ((hi[2] - lo[2]) / cut); if (cell_nz < 1) cell_nz = 1;
+
+  // cap total bins to bound memory; otherwise fall back to brute force
+
+  bigint nbig = (bigint) cell_nx * cell_ny * cell_nz;
+  if (nbig > 50000000) return;
+  int nbins = (int) nbig;
+
+  cell_delinv[0] = cell_nx / (hi[0] - lo[0]);
+  cell_delinv[1] = cell_ny / (hi[1] - lo[1]);
+  cell_delinv[2] = cell_nz / (hi[2] - lo[2]);
+
+  if (nbins > cell_nbins) {
+    memory->destroy(cell_head);
+    memory->create(cell_head, nbins, "gcmc:cell_head");
+    cell_nbins = nbins;
+  }
+  if (nall > cell_nmax) {
+    memory->destroy(cell_next);
+    memory->create(cell_next, nall, "gcmc:cell_next");
+    cell_nmax = nall;
+  }
+
+  for (int c = 0; c < nbins; c++) cell_head[c] = -1;
+  for (int i = 0; i < nall; i++) {
+    int ix = (int) ((x[i][0] - cell_origin[0]) * cell_delinv[0]);
+    int iy = (int) ((x[i][1] - cell_origin[1]) * cell_delinv[1]);
+    int iz = (int) ((x[i][2] - cell_origin[2]) * cell_delinv[2]);
+    if (ix < 0) ix = 0; else if (ix >= cell_nx) ix = cell_nx - 1;
+    if (iy < 0) iy = 0; else if (iy >= cell_ny) iy = cell_ny - 1;
+    if (iz < 0) iz = 0; else if (iz >= cell_nz) iz = cell_nz - 1;
+    int c = (iz * cell_ny + iy) * cell_nx + ix;
+    cell_next[i] = cell_head[c];
+    cell_head[c] = i;
+  }
+
+  cell_built = 1;
 }
 
 /* ----------------------------------------------------------------------
