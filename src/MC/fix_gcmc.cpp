@@ -39,6 +39,7 @@
 #include "molecule.h"
 #include "neighbor.h"
 #include "pair.h"
+#include "platform.h"
 #include "random_park.h"
 #include "region.h"
 #include "suffix.h"
@@ -272,6 +273,15 @@ void FixGCMC::options(int narg, char **arg)
   overlap_flag = 0;
   min_ngas = -1;
   max_ngas = INT_MAX;
+  fast_mode = 0;
+  fast_supported = 0;
+  kspace_stored = 0.0;
+  etail_stored = 0.0;
+  mol_const = 0.0;
+  mol_const_set = 0;
+  fast_maxerr = 0.0;
+  fast_nvalid = 0;
+  time_full = time_molenergy = time_kspace = time_borders = 0.0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -369,6 +379,13 @@ void FixGCMC::options(int narg, char **arg)
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix gcmc tfac_insert", error);
       tfac_insert = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       iarg += 2;
+    } else if (strcmp(arg[iarg], "fast") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix gcmc fast", error);
+      if (strcmp(arg[iarg + 1], "off") == 0) fast_mode = 0;
+      else if (strcmp(arg[iarg + 1], "yes") == 0) fast_mode = 1;
+      else if (strcmp(arg[iarg + 1], "validate") == 0) fast_mode = 2;
+      else error->all(FLERR, iarg + 1, "Unknown fix gcmc fast option {}", arg[iarg + 1]);
+      iarg += 2;
     } else if (strcmp(arg[iarg], "overlap_cutoff") == 0) {
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix gcmc overlap_cutoff", error);
       double rtmp = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
@@ -457,7 +474,34 @@ int FixGCMC::setmask()
 {
   int mask = 0;
   mask |= PRE_EXCHANGE;
+  mask |= POST_RUN;
   return mask;
+}
+
+/* ----------------------------------------------------------------------
+   report the fast-energy validation result and a per-segment timing
+   breakdown of the fast path at the end of a run
+------------------------------------------------------------------------- */
+
+void FixGCMC::post_run()
+{
+  if (!fast_mode || comm->me != 0) return;
+
+  if (fast_mode == 2 && fast_nvalid > 0)
+    utils::logmesg(lmp, "fix gcmc {}: fast-energy validation over {} trials, "
+                   "max relative |E_fast - E_full| = {:.6e}\n", id, fast_nvalid, fast_maxerr);
+
+  double tmax = time_full + time_molenergy + time_kspace + time_borders;
+  if (tmax < 1.0e-100) tmax = 1.0e-100;
+  utils::logmesg(lmp, "fix gcmc {} fast-energy timing breakdown:\n", id);
+  utils::logmesg(lmp, "  full energy_full()   = {:.3f} s ({:.1f}%)\n",
+                 time_full, 100.0 * time_full / tmax);
+  utils::logmesg(lmp, "  molecule pair energy = {:.3f} s ({:.1f}%)\n",
+                 time_molenergy, 100.0 * time_molenergy / tmax);
+  utils::logmesg(lmp, "  kspace (energy-only) = {:.3f} s ({:.1f}%)\n",
+                 time_kspace, 100.0 * time_kspace / tmax);
+  utils::logmesg(lmp, "  ghost rebuild        = {:.3f} s ({:.1f}%)\n",
+                 time_borders, 100.0 * time_borders / tmax);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -547,6 +591,49 @@ void FixGCMC::init()
   }
 
   if (full_flag) c_pe = modify->compute[modify->find_compute("thermo_pe")];
+
+  // the fast local-energy path is a variant of the full_energy path: it
+  // evaluates each trial's energy change locally instead of rebuilding the
+  // neighbor list and recomputing the whole-system energy.  It is only
+  // relevant when full_flag is set (otherwise the per-trial energy is
+  // already evaluated locally).  It needs a pairwise-decomposable pair style
+  // (single() support, not hybrid or manybody/eam).  When the fast path is
+  // requested but unusable, fall back to energy_full() and explain why.
+
+  fast_supported = 0;
+  if (fast_mode && full_flag) {
+    const char *why = nullptr;
+    if (force->pair == nullptr) why = "no pair style is defined";
+    else if (force->pair->single_enable == 0)
+      why = "the pair style does not provide a single() energy decomposition";
+    else if (force->pair_match("^hybrid", 0)) why = "hybrid pair styles are not supported";
+    else if (force->pair_match("^eam", 0))
+      why = "EAM (manybody) pair styles are not pairwise-decomposable";
+    if (why == nullptr) fast_supported = 1;
+    else if (comm->me == 0)
+      error->warning(FLERR, "fix gcmc fast energy path disabled: {}; using full energy", why);
+  }
+
+  // the fast path evaluates a molecule's interaction energy with a brute-force
+  // loop that excludes same-molecule atoms.  if the pair cutoff exceeds half
+  // the smallest box length the minimum-image convention is violated and a
+  // molecule interacts with its own periodic image -- an external interaction
+  // that the brute-force loop incorrectly skips.  fall back to full energy.
+
+  if (fast_supported) {
+    double minprd = domain->xprd;
+    if (domain->yprd < minprd) minprd = domain->yprd;
+    if (domain->zprd < minprd) minprd = domain->zprd;
+    if (force->pair->cutforce > 0.5 * minprd) {
+      fast_supported = 0;
+      if (comm->me == 0)
+        error->warning(FLERR, "fix gcmc fast energy path disabled: pair cutoff {:.4g} "
+                       "exceeds half the smallest box length {:.4g}; using full energy",
+                       force->pair->cutforce, 0.5 * minprd);
+    }
+  }
+  if (fast_mode && !full_flag && comm->me == 0)
+    error->warning(FLERR, "fix gcmc fast energy path has no effect without the full_energy option");
 
   int *type = atom->type;
 
@@ -789,7 +876,11 @@ void FixGCMC::pre_exchange()
   update_gas_atoms_list();
 
   if (full_flag) {
+    double t0full = platform::walltime();
     energy_stored = energy_full();
+    time_full += platform::walltime() - t0full;
+    // seed the fast-path baseline from this full evaluation
+    sync_long_cache();
     if (overlap_flag && (energy_stored > MAXENERGYTEST) && (comm->me == 0))
       error->warning(FLERR,"Energy of old configuration in fix gcmc is > MAXENERGYTEST.");
 
@@ -1590,6 +1681,7 @@ void FixGCMC::attempt_atomic_translation_full()
       random_equal->uniform() <
       exp(beta*(energy_before - energy_after))) {
     energy_stored = energy_after;
+    sync_long_cache();
     ntranslation_successes += 1.0;
   } else {
 
@@ -1650,6 +1742,7 @@ void FixGCMC::attempt_atomic_deletion_full()
     if (atom->map_style != Atom::MAP_NONE) atom->map_init();
     ndeletion_successes += 1.0;
     energy_stored = energy_after;
+    sync_long_cache();
   } else {
     if (i >= 0) {
       atom->mask[i] = tmpmask;
@@ -1762,6 +1855,7 @@ void FixGCMC::attempt_atomic_insertion_full()
 
     ninsertion_successes += 1.0;
     energy_stored = energy_after;
+    sync_long_cache();
   } else {
     atom->natoms--;
     if (proc_flag) atom->nlocal--;
@@ -1854,6 +1948,7 @@ void FixGCMC::attempt_molecule_translation_full()
       exp(beta*(energy_before - energy_after))) {
     ntranslation_successes += 1.0;
     energy_stored = energy_after;
+    sync_long_cache();
   } else {
     energy_stored = energy_before;
     for (int i = 0; i < atom->nlocal; i++) {
@@ -1950,6 +2045,7 @@ void FixGCMC::attempt_molecule_rotation_full()
       exp(beta*(energy_before - energy_after))) {
     nrotation_successes += 1.0;
     energy_stored = energy_after;
+    sync_long_cache();
   } else {
     energy_stored = energy_before;
     int n = 0;
@@ -1994,6 +2090,18 @@ void FixGCMC::attempt_molecule_deletion_full()
   if (nmolq > nmaxmolatoms)
     grow_molecule_arrays(nmolq);
 
+  // fast path: the removed molecule's external real-space pair energy, with
+  // its ORIGINAL charges, evaluated before they are zeroed below.  refresh
+  // ghosts first since a previous fast trial may have changed local atoms.
+
+  double du_real = 0.0;
+  if (fast_supported) {
+    refresh_ghosts();
+    double t0 = platform::walltime();
+    du_real = -molecule_energy(deletion_molecule);
+    time_molenergy += platform::walltime() - t0;
+  }
+
   int m = 0;
   int *tmpmask = new int[atom->nlocal];
   for (int i = 0; i < atom->nlocal; i++) {
@@ -2010,7 +2118,25 @@ void FixGCMC::attempt_molecule_deletion_full()
   }
   if (force->kspace) force->kspace->qsum_qsq();
   if (force->pair->tail_flag) force->pair->reinit();
-  double energy_after = energy_full();
+
+  double energy_after;
+  if (!fast_supported) {
+    energy_after = energy_full();
+  } else {
+    // the charges are now zeroed, so the ENERGY_ONLY kspace recompute + tail
+    // delta below captures the loss of the molecule's reciprocal + tail
+    // contribution; -mol_const removes its internal bonded constant.
+    double du_long = long_range_delta();
+    if (!mol_const_set) {
+      double efull = energy_full();
+      mol_const = energy_before + du_real + du_long - efull;
+      mol_const_set = 1;
+      energy_after = efull;
+    } else {
+      energy_after = energy_before + du_real + du_long - mol_const;
+      if (fast_mode == 2) energy_after = validate_fast(energy_before, energy_after);
+    }
+  }
 
   // energy_before corrected by energy_intra
 
@@ -2028,6 +2154,7 @@ void FixGCMC::attempt_molecule_deletion_full()
     if (atom->map_style != Atom::MAP_NONE) atom->map_init();
     ndeletion_successes += 1.0;
     energy_stored = energy_after;
+    sync_long_cache();
   } else {
     energy_stored = energy_before;
     int m = 0;
@@ -2216,7 +2343,31 @@ void FixGCMC::attempt_molecule_insertion_full()
   if (triclinic) domain->lamda2x(atom->nlocal+atom->nghost);
   if (force->kspace) force->kspace->qsum_qsq();
   if (force->pair->tail_flag) force->pair->reinit();
-  double energy_after = energy_full();
+
+  double energy_after;
+  if (!fast_supported) {
+    energy_after = energy_full();
+  } else {
+    // fast path: the inserted molecule's external real-space pair energy
+    // (no neighbor-list rebuild; reuse the ghosts just built by borders()),
+    // plus the reciprocal + tail change, plus a position-independent constant
+    // (molecule internal bonded energy + intramolecular reciprocal
+    // correction) calibrated once against a full energy_full() evaluation
+    // (exact for a rigid insertant whose internal geometry/charges are fixed).
+    double t0 = platform::walltime();
+    double du_real = molecule_energy(insertion_molecule);
+    time_molenergy += platform::walltime() - t0;
+    double du_long = long_range_delta();
+    if (!mol_const_set) {
+      double efull = energy_full();
+      mol_const = efull - energy_before - du_real - du_long;
+      mol_const_set = 1;
+      energy_after = efull;
+    } else {
+      energy_after = energy_before + du_real + du_long + mol_const;
+      if (fast_mode == 2) energy_after = validate_fast(energy_before, energy_after);
+    }
+  }
 
   // energy_after corrected by energy_intra
 
@@ -2228,6 +2379,7 @@ void FixGCMC::attempt_molecule_insertion_full()
 
     ninsertion_successes += 1.0;
     energy_stored = energy_after;
+    sync_long_cache();
 
   } else {
 
@@ -2402,6 +2554,97 @@ double FixGCMC::energy_full()
   double total_energy = c_pe->compute_scalar();
 
   return total_energy;
+}
+
+/* ----------------------------------------------------------------------
+   fast local-energy path helpers
+------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   recompute only the reciprocal-space energy of the current configuration
+   using the ENERGY_ONLY fast path (no inverse FFTs / E-field / forces)
+------------------------------------------------------------------------- */
+
+double FixGCMC::kspace_energy_only()
+{
+  if (!force->kspace) return 0.0;
+  double t0 = platform::walltime();
+  force->kspace->compute(ENERGY_GLOBAL | ENERGY_ONLY, VIRIAL_NONE);
+  time_kspace += platform::walltime() - t0;
+  return force->kspace->energy;
+}
+
+/* ----------------------------------------------------------------------
+   reciprocal-space + tail energy change of the trial configuration relative
+   to the cached current configuration.  the caller must already have updated
+   force->kspace->qsum_qsq() and force->pair->reinit() exactly as the trial's
+   full-energy counterpart does, so etail and the self-energy are current.
+------------------------------------------------------------------------- */
+
+double FixGCMC::long_range_delta()
+{
+  double du = 0.0;
+  if (force->kspace) du += kspace_energy_only() - kspace_stored;
+  if (force->pair->tail_flag) {
+    // compute_pe adds the tail correction as pair->etail/volume
+    double boxvol = domain->xprd * domain->yprd * domain->zprd;
+    du += (force->pair->etail - etail_stored) / boxvol;
+  }
+  return du;
+}
+
+/* ----------------------------------------------------------------------
+   refresh the cached reciprocal/tail energies after an accepted move so the
+   next trial's delta is taken against the up-to-date baseline.  every accept
+   branch has just evaluated energy_full() or an ENERGY_ONLY kspace recompute,
+   so force->kspace->energy and force->pair->etail hold the current values.
+------------------------------------------------------------------------- */
+
+void FixGCMC::sync_long_cache()
+{
+  if (!fast_supported) return;
+  if (force->kspace) kspace_stored = force->kspace->energy;
+  if (force->pair->tail_flag) etail_stored = force->pair->etail;
+}
+
+/* ----------------------------------------------------------------------
+   rebuild ghost atoms from the current local atoms WITHOUT migrating atoms
+   (no comm->exchange).  the fast path relies on energy()/molecule_energy()
+   seeing an up-to-date ghost snapshot; a previous trial may have inserted or
+   deleted atoms, so refresh before reading ghosts.  mirrors the borders()
+   sequence used in the insertion path.
+------------------------------------------------------------------------- */
+
+void FixGCMC::refresh_ghosts()
+{
+  double t0 = platform::walltime();
+  atom->nghost = 0;
+  if (triclinic) domain->x2lamda(atom->nlocal);
+  comm->borders();
+  if (triclinic) domain->lamda2x(atom->nlocal + atom->nghost);
+  time_borders += platform::walltime() - t0;
+}
+
+/* ----------------------------------------------------------------------
+   validate mode: also evaluate the full energy and record the disagreement
+   with the fast estimate.  only decidable (non-overlap) trials are tallied --
+   an overlap gives a huge energy that both paths reject identically.  returns
+   the full energy so the accept/reject decision is taken on the exact value.
+------------------------------------------------------------------------- */
+
+double FixGCMC::validate_fast(double energy_before, double energy_after_fast)
+{
+  double efull = energy_full();
+  // use a relative error: near-overlap trials produce huge energies whose
+  // absolute roundoff is large but which both paths reject identically, so a
+  // raw absolute error is not a meaningful agreement metric there.
+  double scale = fabs(efull);
+  if (fabs(energy_after_fast) > scale) scale = fabs(energy_after_fast);
+  if (scale < 1.0) scale = 1.0;
+  double relerr = fabs(efull - energy_after_fast) / scale;
+  if (relerr > fast_maxerr) fast_maxerr = relerr;
+  fast_nvalid++;
+  return efull;
 }
 
 /* ----------------------------------------------------------------------

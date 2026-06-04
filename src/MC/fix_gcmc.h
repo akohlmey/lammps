@@ -31,6 +31,7 @@ class FixGCMC : public Fix {
   int setmask() override;
   void init() override;
   void pre_exchange() override;
+  void post_run() override;
   double compute_vector(int) override;
   double memory_usage() override;
   void write_restart(FILE *) override;
@@ -90,6 +91,22 @@ class FixGCMC : public Fix {
   double region_xlo, region_xhi, region_ylo, region_yhi, region_zlo, region_zhi;
   double region_volume;
   double energy_stored;    // full energy of old/current configuration
+
+  // fast local-energy path: evaluate a trial's energy change locally
+  // (no per-trial neighbor-list rebuild / domain re-decomposition) instead
+  // of recomputing the whole-system energy via energy_full().
+  int fast_mode;           // 0=off, 1=fast, 2=validate (run both, compare)
+  int fast_supported;      // 1 if the fast path is usable for this config
+  double kspace_stored;    // cached reciprocal-space energy of current config
+  double etail_stored;     // cached pair->etail of current config
+  double mol_const;        // calibrated position-independent insertion constant
+                           // (molecule internal bonded + intramol reciprocal)
+  int mol_const_set;       // 1 once mol_const has been calibrated
+  double fast_maxerr;      // max |E_fast - E_full| observed in validate mode
+  bigint fast_nvalid;      // number of validate-mode comparisons
+  // per-segment wall-time accumulators, reported in post_run()
+  double time_full, time_molenergy, time_kspace, time_borders;
+
   double *sublo, *subhi;
   int *local_gas_list;
   double **cutsq;
@@ -142,6 +159,13 @@ class FixGCMC : public Fix {
   double energy(int, int, tagint, double *);
   double energy_full();
   double molecule_energy(tagint);
+
+  // fast local-energy path helpers
+  double kspace_energy_only();    // ENERGY_ONLY reciprocal recompute -> energy
+  double long_range_delta();      // (kspace + tail) energy change vs the cache
+  void sync_long_cache();         // refresh kspace_stored/etail_stored on accept
+  void refresh_ghosts();          // rebuild ghosts without migration (no exchange)
+  double validate_fast(double energy_before, double energy_after_fast);
 
   int pick_random_gas_atom();
   tagint pick_random_gas_molecule();
