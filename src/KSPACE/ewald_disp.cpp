@@ -750,7 +750,12 @@ void EwaldDisp::compute(int eflag, int vflag)
   reallocate_atoms();
   init_self_peratom();
   compute_ek();
-  compute_force();
+
+  // skip the force evaluation for energy-only invocations (e.g. MC fixes
+  // passing the ENERGY_ONLY flag): the global energy and virial below come
+  // from the structure factors in cek_global, not from the forces.
+
+  if (!eflag_only || evflag_atom) compute_force();
   //compute_surface(); // assume conducting metal (tinfoil) boundary conditions
 
   // update qsum and qsqsum, if atom count has changed and energy needed

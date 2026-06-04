@@ -922,14 +922,19 @@ void PPPMDisp::compute(int eflag, int vflag)
                  virial_1,vg,vg2,
                  u_brick,v0_brick,v1_brick,v2_brick,v3_brick,v4_brick,v5_brick);
 
-      gc->forward_comm(Grid3d::KSPACE,this,FORWARD_AD,1,sizeof(FFT_SCALAR),
-                       gc_buf1,gc_buf2,MPI_FFT_SCALAR);
+      // poisson_ad tallied the energy/virial and skipped the inverse FFTs
+      // for energy-only invocations; skip the force interpolation too.
 
-      fieldforce_c_ad();
-
-      if (vflag_atom)
-        gc->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_PERATOM,6,sizeof(FFT_SCALAR),
+      if (!eflag_only || evflag_atom) {
+        gc->forward_comm(Grid3d::KSPACE,this,FORWARD_AD,1,sizeof(FFT_SCALAR),
                          gc_buf1,gc_buf2,MPI_FFT_SCALAR);
+
+        fieldforce_c_ad();
+
+        if (vflag_atom)
+          gc->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_PERATOM,6,sizeof(FFT_SCALAR),
+                           gc_buf1,gc_buf2,MPI_FFT_SCALAR);
+      }
 
     } else {
       poisson_ik(work1,work2,density_fft,fft1,fft2,
@@ -941,14 +946,16 @@ void PPPMDisp::compute(int eflag, int vflag)
                  vdx_brick,vdy_brick,vdz_brick,virial_1,vg,vg2,
                  u_brick,v0_brick,v1_brick,v2_brick,v3_brick,v4_brick,v5_brick);
 
-      gc->forward_comm(Grid3d::KSPACE,this,FORWARD_IK,3,sizeof(FFT_SCALAR),
-                       gc_buf1,gc_buf2,MPI_FFT_SCALAR);
-
-      fieldforce_c_ik();
-
-      if (evflag_atom)
-        gc->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_PERATOM,7,sizeof(FFT_SCALAR),
+      if (!eflag_only || evflag_atom) {
+        gc->forward_comm(Grid3d::KSPACE,this,FORWARD_IK,3,sizeof(FFT_SCALAR),
                          gc_buf1,gc_buf2,MPI_FFT_SCALAR);
+
+        fieldforce_c_ik();
+
+        if (evflag_atom)
+          gc->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_PERATOM,7,sizeof(FFT_SCALAR),
+                           gc_buf1,gc_buf2,MPI_FFT_SCALAR);
+      }
     }
 
     if (evflag_atom) fieldforce_c_peratom();
@@ -981,14 +988,19 @@ void PPPMDisp::compute(int eflag, int vflag)
                  u_brick_g,v0_brick_g,v1_brick_g,v2_brick_g,
                  v3_brick_g,v4_brick_g,v5_brick_g);
 
-      gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_GEOM,1,sizeof(FFT_SCALAR),
-                        gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+      // skip the force interpolation for energy-only invocations
+      // (poisson_ad already tallied the energy/virial)
 
-      fieldforce_g_ad();
-
-      if (vflag_atom)
-        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_PERATOM_GEOM,6,sizeof(FFT_SCALAR),
+      if (!eflag_only || evflag_atom) {
+        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_GEOM,1,sizeof(FFT_SCALAR),
                           gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+
+        fieldforce_g_ad();
+
+        if (vflag_atom)
+          gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_PERATOM_GEOM,6,sizeof(FFT_SCALAR),
+                            gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+      }
 
     } else {
       poisson_ik(work1_6,work2_6,density_fft_g,fft1_6,fft2_6,
@@ -1001,14 +1013,16 @@ void PPPMDisp::compute(int eflag, int vflag)
                  u_brick_g,v0_brick_g,v1_brick_g,v2_brick_g,
                  v3_brick_g,v4_brick_g,v5_brick_g);
 
-      gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_GEOM,3,sizeof(FFT_SCALAR),
-                        gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
-
-      fieldforce_g_ik();
-
-      if (evflag_atom)
-        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_PERATOM_GEOM,7,sizeof(FFT_SCALAR),
+      if (!eflag_only || evflag_atom) {
+        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_GEOM,3,sizeof(FFT_SCALAR),
                           gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+
+        fieldforce_g_ik();
+
+        if (evflag_atom)
+          gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_PERATOM_GEOM,7,sizeof(FFT_SCALAR),
+                            gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+      }
     }
 
     if (evflag_atom) fieldforce_g_peratom();
@@ -1055,14 +1069,19 @@ void PPPMDisp::compute(int eflag, int vflag)
                     u_brick_a4,v0_brick_a4,v1_brick_a4,v2_brick_a4,
                     v3_brick_a4,v4_brick_a4,v5_brick_a4);
 
-      gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_ARITH,7,sizeof(FFT_SCALAR),
-                        gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+      // the poisson_2s_ad calls above tallied their energy/virial; skip the
+      // force interpolation for energy-only invocations
 
-      fieldforce_a_ad();
-
-      if (evflag_atom)
-        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_PERATOM_ARITH,42,sizeof(FFT_SCALAR),
+      if (!eflag_only || evflag_atom) {
+        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_ARITH,7,sizeof(FFT_SCALAR),
                           gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+
+        fieldforce_a_ad();
+
+        if (evflag_atom)
+          gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_AD_PERATOM_ARITH,42,sizeof(FFT_SCALAR),
+                            gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+      }
 
     }  else {
       poisson_ik(work1_6,work2_6,density_fft_a3,fft1_6,fft2_6,
@@ -1096,14 +1115,16 @@ void PPPMDisp::compute(int eflag, int vflag)
                     u_brick_a4,v0_brick_a4,v1_brick_a4,v2_brick_a4,
                     v3_brick_a4,v4_brick_a4,v5_brick_a4);
 
-      gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_ARITH,21,sizeof(FFT_SCALAR),
-                        gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
-
-      fieldforce_a_ik();
-
-      if (evflag_atom)
-        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_PERATOM_ARITH,49,sizeof(FFT_SCALAR),
+      if (!eflag_only || evflag_atom) {
+        gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_ARITH,21,sizeof(FFT_SCALAR),
                           gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+
+        fieldforce_a_ik();
+
+        if (evflag_atom)
+          gc6->forward_comm(Grid3d::KSPACE,this,FORWARD_IK_PERATOM_ARITH,49,sizeof(FFT_SCALAR),
+                            gc6_buf1,gc6_buf2,MPI_FFT_SCALAR);
+      }
     }
 
     if (evflag_atom) fieldforce_a_peratom();
@@ -4556,6 +4577,13 @@ void PPPMDisp::poisson_ik(FFT_SCALAR* wk1, FFT_SCALAR* wk2,
     }
   }
 
+  // energy-only invocations (e.g. MC fixes via the ENERGY_ONLY flag) need
+  // neither the E-field nor forces nor per-atom data, so the remaining
+  // inverse FFTs below can be skipped now that the global energy and virial
+  // have been tallied above
+
+  if (eflag_only && !evflag_atom) return;
+
   // scale by 1/total-grid-pts to get rho(k)
   // multiply by Green's function to get V(k)
 
@@ -4696,6 +4724,13 @@ void PPPMDisp::poisson_ad(FFT_SCALAR* wk1, FFT_SCALAR* wk2,
       }
     }
   }
+
+  // energy-only invocations (e.g. MC fixes via the ENERGY_ONLY flag) need
+  // neither the potential nor forces nor per-atom data, so the remaining
+  // inverse FFT below can be skipped now that the global energy and virial
+  // have been tallied above
+
+  if (eflag_only && !evflag_atom) return;
 
   // scale by 1/total-grid-pts to get rho(k)
   // multiply by Green's function to get V(k)

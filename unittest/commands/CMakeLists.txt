@@ -34,6 +34,10 @@ target_compile_definitions(test_kspace_auto_slab PRIVATE -DTEST_INPUT_FOLDER=${C
 target_link_libraries(test_kspace_auto_slab PRIVATE lammps GTest::GMock)
 add_test(NAME KSpaceAutoSlab COMMAND test_kspace_auto_slab)
 
+add_executable(test_kspace_energy_only test_kspace_energy_only.cpp)
+target_link_libraries(test_kspace_energy_only PRIVATE lammps GTest::GMock)
+add_test(NAME KSpaceEnergyOnly COMMAND test_kspace_energy_only)
+
 add_executable(test_groups test_groups.cpp)
 target_link_libraries(test_groups PRIVATE lammps GTest::GMock)
 add_test(NAME Groups COMMAND test_groups)

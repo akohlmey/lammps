@@ -425,45 +425,55 @@ void Ewald::compute(int eflag, int vflag)
   int kx,ky,kz;
   double cypz,sypz,exprl,expim,partial,partial_peratom;
 
-  for (i = 0; i < nlocal; i++) {
-    ek[i][0] = 0.0;
-    ek[i][1] = 0.0;
-    ek[i][2] = 0.0;
-  }
-
-  for (k = 0; k < kcount; k++) {
-    kx = kxvecs[k];
-    ky = kyvecs[k];
-    kz = kzvecs[k];
-
-    for (i = 0; i < nlocal; i++) {
-      cypz = cs[ky][1][i]*cs[kz][2][i] - sn[ky][1][i]*sn[kz][2][i];
-      sypz = sn[ky][1][i]*cs[kz][2][i] + cs[ky][1][i]*sn[kz][2][i];
-      exprl = cs[kx][0][i]*cypz - sn[kx][0][i]*sypz;
-      expim = sn[kx][0][i]*cypz + cs[kx][0][i]*sypz;
-      partial = expim*sfacrl_all[k] - exprl*sfacim_all[k];
-      ek[i][0] += partial*eg[k][0];
-      ek[i][1] += partial*eg[k][1];
-      ek[i][2] += partial*eg[k][2];
-
-      if (evflag_atom) {
-        partial_peratom = exprl*sfacrl_all[k] + expim*sfacim_all[k];
-        if (eflag_atom) eatom[i] += q[i]*ug[k]*partial_peratom;
-        if (vflag_atom)
-          for (j = 0; j < 6; j++)
-            vatom[i][j] += ug[k]*vg[k][j]*partial_peratom;
-      }
-    }
-  }
-
-  // convert E-field to force
-
   const double qscale = qqrd2e * scale;
 
-  for (i = 0; i < nlocal; i++) {
-    f[i][0] += qscale * q[i]*ek[i][0];
-    f[i][1] += qscale * q[i]*ek[i][1];
-    if (slabflag != 2) f[i][2] += qscale * q[i]*ek[i][2];
+  // skip the entire O(N*kcount) E-field/force evaluation for energy-only
+  // invocations (e.g. MC fixes passing the ENERGY_ONLY flag): the global
+  // energy and virial below are obtained directly from the structure factors
+  // and need neither the E-field nor the forces.  per-atom energy/virial
+  // requests still take the full path.
+
+  if (!eflag_only || evflag_atom) {
+    for (i = 0; i < nlocal; i++) {
+      ek[i][0] = 0.0;
+      ek[i][1] = 0.0;
+      ek[i][2] = 0.0;
+    }
+
+    for (k = 0; k < kcount; k++) {
+      kx = kxvecs[k];
+      ky = kyvecs[k];
+      kz = kzvecs[k];
+
+      for (i = 0; i < nlocal; i++) {
+        cypz = cs[ky][1][i]*cs[kz][2][i] - sn[ky][1][i]*sn[kz][2][i];
+        sypz = sn[ky][1][i]*cs[kz][2][i] + cs[ky][1][i]*sn[kz][2][i];
+        exprl = cs[kx][0][i]*cypz - sn[kx][0][i]*sypz;
+        expim = sn[kx][0][i]*cypz + cs[kx][0][i]*sypz;
+        partial = expim*sfacrl_all[k] - exprl*sfacim_all[k];
+        ek[i][0] += partial*eg[k][0];
+        ek[i][1] += partial*eg[k][1];
+        ek[i][2] += partial*eg[k][2];
+
+        if (evflag_atom) {
+          partial_peratom = exprl*sfacrl_all[k] + expim*sfacim_all[k];
+          if (eflag_atom) eatom[i] += q[i]*ug[k]*partial_peratom;
+          if (vflag_atom)
+            for (j = 0; j < 6; j++)
+              vatom[i][j] += ug[k]*vg[k][j]*partial_peratom;
+        }
+      }
+    }
+
+    // convert E-field to force
+
+    if (!eflag_only) {
+      for (i = 0; i < nlocal; i++) {
+        f[i][0] += qscale * q[i]*ek[i][0];
+        f[i][1] += qscale * q[i]*ek[i][1];
+        if (slabflag != 2) f[i][2] += qscale * q[i]*ek[i][2];
+      }
+    }
   }
 
   // sum global energy across Kspace vevs and add in volume-dependent term
