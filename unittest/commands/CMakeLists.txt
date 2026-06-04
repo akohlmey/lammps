@@ -38,6 +38,13 @@ add_executable(test_kspace_energy_only test_kspace_energy_only.cpp)
 target_link_libraries(test_kspace_energy_only PRIVATE lammps GTest::GMock)
 add_test(NAME KSpaceEnergyOnly COMMAND test_kspace_energy_only)
 
+if(PKG_MOLECULE AND PKG_KSPACE AND PKG_MC)
+  add_executable(test_gcmc_fast test_gcmc_fast.cpp)
+  target_compile_definitions(test_gcmc_fast PRIVATE -DTEST_INPUT_FOLDER=${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(test_gcmc_fast PRIVATE lammps GTest::GMock)
+  add_test(NAME GCMCFast COMMAND test_gcmc_fast)
+endif()
+
 add_executable(test_groups test_groups.cpp)
 target_link_libraries(test_groups PRIVATE lammps GTest::GMock)
 add_test(NAME Groups COMMAND test_groups)

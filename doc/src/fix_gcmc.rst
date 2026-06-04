@@ -25,7 +25,7 @@ Syntax
 
   .. parsed-literal::
 
-     keyword = *mol* or *mcmoves* or *rigid* or *shake* or *region* or *maxangle* or *pressure* or *fugacity_coeff* or *full_energy* or *charge* or *group* or *grouptype* or *intra_energy* or *tfac_insert* or *overlap_cutoff* or *max* or *min*
+     keyword = *mol* or *mcmoves* or *rigid* or *shake* or *region* or *maxangle* or *pressure* or *fugacity_coeff* or *full_energy* or *fast* or *charge* or *group* or *grouptype* or *intra_energy* or *tfac_insert* or *overlap_cutoff* or *max* or *min*
        *mol* value = template-ID
          template-ID = ID of molecule template specified in a separate :doc:`molecule <molecule>` command
        *mcmoves* values = Patomtrans Pmoltrans Pmolrotate
@@ -42,6 +42,10 @@ Syntax
        *pressure* value = pressure of the gas reservoir (pressure units)
        *fugacity_coeff* value = fugacity coefficient of the gas reservoir (unitless)
        *full_energy* = compute the entire system energy when performing GCMC exchanges and MC moves
+       *fast* value = *off* or *yes* or *validate*
+         *off* = always recompute the full system energy for each trial (default)
+         *yes* = evaluate each trial's energy change locally, where supported
+         *validate* = evaluate both the fast and full energies and report their agreement
        *charge* value = charge of inserted atoms (charge units)
        *group* value = group-ID
          group-ID = group-ID for inserted atoms (string)
@@ -322,6 +326,32 @@ deleted.  For molecules that have a non-zero intramolecular energy, this
 will ensure roughly the same behavior whether or not the *full_energy*
 option is used.
 
+.. versionadded:: TBD
+
+The *fast* keyword accelerates the *full_energy* path.  In *full_energy*
+mode the default (*fast off*) recomputes the energy of the *entire* system
+for every trial move, which requires re-decomposing the domain, rebuilding
+the ghost atoms, and rebuilding the neighbor list each time --- for the
+insertion or deletion of a single small molecule this is dominated by the
+neighbor-list rebuild.  With *fast yes* the energy *change* of a trial is
+instead evaluated locally from the affected molecule's pairwise interactions
+(using the pair style's :doc:`single() <pair_write>` energy decomposition), an
+energy-only reciprocal-space recompute, and the analytic tail-correction
+change.  The accepted/rejected decisions, and hence the sampled distribution,
+are identical to the *full_energy* path.
+
+The *fast* path currently accelerates molecule and atom insertion and
+deletion.  It requires a pair style that provides a pairwise ``single()``
+energy decomposition (so it is not available with hybrid, manybody, or EAM
+pair styles), and it requires the pair cutoff to be no larger than half the
+shortest box length.  When *fast yes* is requested but cannot be applied,
+LAMMPS prints a warning explaining why and silently uses the full energy for
+that run.  With *fast validate* both the fast and the full energy are
+evaluated for every trial and the maximum relative disagreement is reported at
+the end of the run; this is intended for testing and is as slow as the full
+path.  At the end of a run the *fast* path also prints a breakdown of the wall
+time spent in its different segments, which is useful for tuning settings.
+
 Inserted atoms and molecules are assigned random velocities based on the
 specified temperature *T*.  Because the relative velocity of all atoms
 in the molecule is zero, this may result in inserted molecules that are
@@ -495,7 +525,7 @@ Defaults
 """"""""
 
 The option defaults are mol = no, maxangle = 10, overlap_cutoff = 0.0,
-fugacity_coeff = 1.0, intra_energy = 0.0, tfac_insert = 1.0.
+fugacity_coeff = 1.0, intra_energy = 0.0, tfac_insert = 1.0, fast = off.
 (Patomtrans, Pmoltrans, Pmolrotate) = (1, 0, 0) for mol = no and
 (0, 1, 1) for mol = yes. full_energy = no,
 except for the situations where full_energy is required, as
