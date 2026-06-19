@@ -68,7 +68,6 @@ class PairEAMGPU : public PairEAM {
   EAMGPUBytesFn gpu_bytes_fn;
 
   int gpu_mode;
-  double cpu_time;
   void *fp_pinned;
   bool fp_single;
 };
