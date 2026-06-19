@@ -17,6 +17,8 @@
 
 #include "pair_eam_fs_gpu.h"
 
+#include "lammps_gpu.h"
+
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
 

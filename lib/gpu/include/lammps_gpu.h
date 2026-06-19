@@ -45,6 +45,7 @@ namespace LAMMPS_GPU {
 extern bool lmp_has_compatible_gpu_device();
 extern bool lmp_gpu_requires_host_neighbor();
 extern std::string lmp_gpu_device_info();
+extern void lmp_gpu_defer_device_clear(int flag);
 extern int lmp_init_device(MPI_Comm world, MPI_Comm replica, const int ngpu, const int first_gpu_id,
                            const int gpu_mode, const int t_per_atom, const double user_cell_size,
                            char *opencl_config, const int ocl_platform, char *device_type_flags,
@@ -523,9 +524,10 @@ extern int eam_alloy_gpu_init(const int ntypes, double host_cutforcesq, int **ho
                               int **host_type2z2r, int *host_type2frho, double ***host_rhor_spline,
                               double ***host_z2r_spline, double ***host_frho_spline,
                               double **host_cutsq, double rdr, double rdrho, double rhomax,
-                              int nrhor, int nrho, int nz2r, int nfrho, int nr, const int nlocal,
-                              const int nall, const int max_nbors, const int maxspecial,
-                              const double cell_size, int &gpu_mode, FILE *screen, int &fp_size);
+                              double rhomin, const int he_flag, int nrhor, int nrho, int nz2r,
+                              int nfrho, int nr, const int nlocal, const int nall,
+                              const int max_nbors, const int maxspecial, const double cell_size,
+                              int &gpu_mode, FILE *screen, int &fp_size);
 extern void eam_alloy_gpu_clear();
 extern int **eam_alloy_gpu_compute_n(const int ago, const int inum_full, const int nall,
                                      double **host_x, int *host_type, double *sublo, double *subhi,
@@ -545,10 +547,11 @@ extern double eam_alloy_gpu_bytes();
 extern int eam_fs_gpu_init(const int ntypes, double host_cutforcesq, int **host_type2rhor,
                            int **host_type2z2r, int *host_type2frho, double ***host_rhor_spline,
                            double ***host_z2r_spline, double ***host_frho_spline,
-                           double **host_cutsq, double rdr, double rdrho, double rhomax, int nrhor,
-                           int nrho, int nz2r, int nfrho, int nr, const int nlocal, const int nall,
-                           const int max_nbors, const int maxspecial, const double cell_size,
-                           int &gpu_mode, FILE *screen, int &fp_size);
+                           double **host_cutsq, double rdr, double rdrho, double rhomax,
+                           double rhomin, const int he_flag, int nrhor, int nrho, int nz2r,
+                           int nfrho, int nr, const int nlocal, const int nall, const int max_nbors,
+                           const int maxspecial, const double cell_size, int &gpu_mode, FILE *screen,
+                           int &fp_size);
 extern void eam_fs_gpu_clear();
 extern int **eam_fs_gpu_compute_n(const int ago, const int inum_full, const int nall,
                                   double **host_x, int *host_type, double *sublo, double *subhi,
@@ -568,10 +571,10 @@ extern double eam_fs_gpu_bytes();
 extern int eam_gpu_init(const int ntypes, double host_cutforcesq, int **host_type2rhor,
                         int **host_type2z2r, int *host_type2frho, double ***host_rhor_spline,
                         double ***host_z2r_spline, double ***host_frho_spline, double **host_cutsq,
-                        double rdr, double rdrho, double rhomax, int nrhor, int nrho, int nz2r,
-                        int nfrho, int nr, const int nlocal, const int nall, const int max_nbors,
-                        const int maxspecial, const double cell_size, int &gpu_mode, FILE *screen,
-                        int &fp_size);
+                        double rdr, double rdrho, double rhomax, double rhomin, const int he_flag,
+                        int nrhor, int nrho, int nz2r, int nfrho, int nr, const int nlocal,
+                        const int nall, const int max_nbors, const int maxspecial,
+                        const double cell_size, int &gpu_mode, FILE *screen, int &fp_size);
 extern void eam_gpu_clear();
 extern int **eam_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
                                int *host_type, double *sublo, double *subhi, tagint *tag,
@@ -586,6 +589,30 @@ extern void eam_gpu_compute(const int ago, const int inum_full, const int nlocal
 extern void eam_gpu_compute_force(int *ilist, const bool eflag, const bool vflag, const bool eatom,
                                   const bool vatom);
 extern double eam_gpu_bytes();
+
+// pair eam/he
+extern int eam_he_gpu_init(const int ntypes, double host_cutforcesq, int **host_type2rhor,
+                           int **host_type2z2r, int *host_type2frho, double ***host_rhor_spline,
+                           double ***host_z2r_spline, double ***host_frho_spline,
+                           double **host_cutsq, double rdr, double rdrho, double rhomax,
+                           double rhomin, const int he_flag, int nrhor, int nrho, int nz2r,
+                           int nfrho, int nr, const int nlocal, const int nall, const int max_nbors,
+                           const int maxspecial, const double cell_size, int &gpu_mode, FILE *screen,
+                           int &fp_size);
+extern void eam_he_gpu_clear();
+extern int **eam_he_gpu_compute_n(const int ago, const int inum_full, const int nall,
+                                  double **host_x, int *host_type, double *sublo, double *subhi,
+                                  tagint *tag, int **nspecial, tagint **special, const bool eflag,
+                                  const bool vflag, const bool eatom, const bool vatom, int **ilist,
+                                  int **jnum, bool &success, int &inum, void **fp_ptr, double *prd,
+                                  int *periodicity);
+extern void eam_he_gpu_compute(const int ago, const int inum_full, const int nlocal, const int nall,
+                               double **host_x, int *host_type, int *ilist, int *numj,
+                               int **firstneigh, const bool eflag, const bool vflag,
+                               const bool eatom, const bool vatom, bool &success, void **fp_ptr);
+extern void eam_he_gpu_compute_force(int *ilist, const bool eflag, const bool vflag,
+                                     const bool eatom, const bool vatom);
+extern double eam_he_gpu_bytes();
 
 // pair edpd
 extern int edpd_gpu_init(const int ntypes, double **cutsq, double **host_a0, double **host_gamma,
