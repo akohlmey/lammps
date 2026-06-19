@@ -381,6 +381,14 @@ void Neighbor::init()
   }
   cutneighmaxsq = cutneighmax * cutneighmax;
 
+  // cutneighmin_pair = smallest per-type-pair cutoff of the default master list
+  //   (built from force->pair cutoffs only, before custom request cutoffs are
+  //   folded in below). A custom-cutoff list can only safely copy/trim from the
+  //   default master if its cutoff does not exceed this value, otherwise the
+  //   master is missing the longer-range pairs for the short-cutoff type pairs.
+
+  cutneighmin_pair = cutneighmin;
+
   // update cutneighmin based on individual neighbor list requests
 
   for (i = 0; i < nrequest; ++i) {
@@ -1208,7 +1216,7 @@ void Neighbor::morph_unique()
       if (!irq->occasional)
         irq->cutoff += skin;
 
-      if ((irq->cutoff > cutneighmin) && !irq->skip) {
+      if ((irq->cutoff != cutneighmax || irq->occasional) && !irq->skip) {
         irq->unique = 1;
       } else {
         irq->cut = 0;
@@ -1531,7 +1539,7 @@ void Neighbor::morph_copy_trim()
 
       // cannot copy or trim if some pair-wise cutoffs are too small
 
-      if (irq->cut && !jrq->cut && (irq->cutoff > cutneighmin)) continue;
+      if (irq->cut && !jrq->cut && (irq->cutoff > cutneighmin_pair)) continue;
 
       // trim a list with longer cutoff
 
