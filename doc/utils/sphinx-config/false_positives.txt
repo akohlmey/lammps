@@ -181,6 +181,7 @@ Astop
 asub
 asubrama
 Asumming
+asym
 atan
 atc
 AtC
@@ -418,6 +419,7 @@ br
 Braems
 Branduardi
 Branicio
+Bravais
 brennan
 Bretonnet
 Briels
@@ -3968,7 +3970,10 @@ Sx
 sy
 Sy
 symplectic
+symd
+symmetrization
 symmetrize
+symmetrized
 Synechococcus
 sys
 sysdim
@@ -4480,6 +4485,7 @@ wx
 Wx
 wy
 Wy
+Wyckoff
 Wysocki
 wz
 Wz
