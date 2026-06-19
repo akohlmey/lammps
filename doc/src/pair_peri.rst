@@ -149,6 +149,20 @@ cutoff distance and s00 and :math:`\alpha` are used as a bond breaking
 criteria.  m_yield_stress is the yield stress of the material. For
 details please see the description in "(Mitchell2011a)".
 
+.. versionchanged:: TBD
+
+Two corrections were made to the *peri/eps* plasticity.  The deviatoric
+force-state norm used in the yield check now matches the deviatoric force
+state the model actually applies (the previous norm carried a spurious extra
+dilatation factor, so the material yielded much later than intended).  The
+update of the per-bond plastic deviatoric extension now uses the consistent
+radial-return form ``edp += (e_dev - edp)*(1 - sqrt(2*psi)/||t_d||)`` instead
+of the previous ``edp += rkNew*deltalambda``, which was dimensionally
+inconsistent and could diverge under sustained plastic flow.  As a result the
+elastic-plastic response now yields at the intended stress and remains stable;
+results for *peri/eps* runs that reached the plastic regime will differ from
+earlier versions.
+
 ----------
 
 Bond breaking criterion

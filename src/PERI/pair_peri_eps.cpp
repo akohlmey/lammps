@@ -310,8 +310,16 @@ void PairPeriEPS::compute(int eflag, int vflag)
       if (elastic) {
         rkNew = tdtrialValue;
       } else {
-        rkNew = (sqrt(2.0*pointwiseYieldvalue) * tdtrialValue) / tdnorm;
-        deviatorPlasticExtTemp[i][jj] = edpNp1 + rkNew * deltalambda;
+        // radial return of the deviatoric force state onto the yield surface,
+        // and the consistent update of the plastic deviatoric extension: the
+        // elastic part (deviatoric_extension - edpNp1) is scaled by the same
+        // radial factor.  The previous update edpNp1 + rkNew*deltalambda is
+        // dimensionally inconsistent (a ~2/r0 gain) and overshoots/diverges
+        // under sustained plastic flow.
+        double radial = sqrt(2.0*pointwiseYieldvalue) / tdnorm;
+        rkNew = radial * tdtrialValue;
+        deviatorPlasticExtTemp[i][jj] =
+          edpNp1 + (deviatoric_extension - edpNp1) * (1.0 - radial);
       }
 
       if (r > 0.0) fbondElastoPlastic = -((rkNew/r) * vfrac[j] * vfrac_scale);
@@ -561,9 +569,12 @@ double PairPeriEPS::compute_DeviatoricForceStateNorm(int i)
       double omega_plus  = influence_function(-1.0*delx0,-1.0*dely0,-1.0*delz0);
       double omega_minus = influence_function(delx0,dely0,delz0);
 
+      // the yield-norm trial force state must match the deviatoric force state
+      // the force loop actually applies (line ~306, with no dilatation factor);
+      // the previous (omega*theta/wvolume) form carried a spurious extra theta
       tdtrial = ( 15 * shearmodulus[itype][itype]) *
-           ((omega_plus * theta[i] / wvolume[i]) +
-             ( omega_minus * theta[j] / wvolume[j] ) ) * (ed - edPNP1);
+           ((omega_plus / wvolume[i]) +
+             ( omega_minus / wvolume[j] ) ) * (ed - edPNP1);
 
       norm += tdtrial * tdtrial * vfrac[j] * vfrac_scale;
     }
