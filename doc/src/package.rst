@@ -123,10 +123,15 @@ Syntax
           Nteamsize = # of threads per block used for the pair compute kernel
         *nbin/atoms/per/bin = Natomsperbin
           Natomsperbin = # of atoms per bin used for neighbor list builds
-        *nbor/block/size = blocksize
-          blocksize = # of GPU threads per block for the flat neighbor build method
-        *bond/block/size = blocksize
-          blocksize = # of GPU threads per block for the bond force computation
+        *nbor/chunk/size = chunksize
+          chunksize = # of iterations each thread will perform for the flat neighbor build method
+        *bond/chunk/size = blocksize
+          chunksize = # of iterations each thread will perform for the bond force computation
+        *auto/tuning = nevery nsamples mode reltol
+          nevery = # timesteps between autotuning adjustments (default = 0, no autotuning)
+          nsamples = # samples the tuner(s) collects for each parameter combination
+          mode = how to pick a performance value from the samples collected, i.e. maximum, average or median value
+          reltol = relative tolerance for performance degradation that triggers re-tuning of parameter values
     *omp* args = Nthreads keyword value ...
       Nthreads = # of OpenMP threads to associate with each MPI process
       zero or more keyword/value pairs may be appended
@@ -611,14 +616,63 @@ The *nbin/atoms/per/bin* keyword sets the number of atoms per bin
 used for the neighbor list builds on the GPU, which then determines
 the number of GPU threads per bin.  The default value of this parameter is 16.
 
-The *nbor/block/size* keyword sets the number of GPU threads per block
-used for the neighbor list builds on the GPU using the flat method (i.e.,
-each thread finds the neighbor list of an atom).  If not specified, then
-the GPU threads are assigned to the bins.
-
-The *bond/block/size* keyword sets the number of GPU threads per block
-used for launching the bond force kernel on the GPU.  The default value
+The *nbor/chunk/size* keyword sets the number of iterations that a work item
+is scheduled for the neighbor list builds on the GPU using the flat method (i.e.,
+each thread finds the neighbor list of an atom).  If not specified, the default value
 of this parameter is determined based on the GPU architecture at runtime.
+
+The *bond/chunk/size* keyword sets the number of iterations that a work item
+is scheduled for the bond force kernel on the GPU.  The default value
+of this parameter is determined based on the GPU architecture at runtime.
+
+.. versionadded:: TBD
+
+The *auto/tuning* keyword enables the auto-tuning feature of
+the KOKKOS package when using GPUs.  When enabled, the tuner of the KOKKOS styles
+in use will scan through the possible values of kernel launch parameters,
+such as *pair/team/size* and *threads/per/atom* for pair styles,
+*bond/chunk/size* for bond styles, and *nbin/atoms/per/bin* for neighbor builds.
+When the scanning completes, the tuner stores the best overall performance
+(in terms of the number of timesteps per second) with the corresponding
+kernel launch parameter combination.  
+
+The tuner then uses the optimal parameter combination to launch the kernels
+on the GPU and monitors the simulation performance periodically.
+If the performance drops below a certain relative tolerance from
+the last stored optimal value, the tuner may attempt to find the new optimal
+parameter combination by rerunning the scanning process.
+
+The following parameters are needed for the auto-tuning process.
+
+   *nevery* controls the interval used to estimate the overall performance
+   for a combination of these two parameters.  *nevery* needs to be large
+   enough to have a stable estimate of the performance, to achieve 
+   a sufficiently large number of kernel calls, while small enough to reduce
+   the time required for scanning over all the combinations.
+   *nevery* = 100 is usually a reasonable value.
+
+   *nsamples* indicates the number of samples the tuners will collect
+   for each parameter combination.  *nsamples* = 5 is usually a reasonable value.
+
+   *mode* determines how the performance of a collection of samples is determined:
+   *max* means the maximum value, *ave* means the arithmetic average value,
+   and *median* means the median value.
+
+   *reltol* sets the relative tolerance for performance degradation
+   compared to the last optimal performance, which may trigger a re-scan
+   of the parameter space.  Setting *reltol* to be equal or greater than 1.0
+   will disable the re-scanning.
+
+For example, suppose that the last stored best performance is
+1000 timesteps per second, and that *nevery* = 100 and *nsamples* = 5,
+*reltol* = 0.2. The tuners monitor the performance every 100 timesteps,
+and if the performance drops below 800 timesteps per second by 5 times
+the tuners will trigger a re-scanning over the parameter combinations
+to find a new optimal parameter combination.
+
+If *nevery* is 0, autotuning is disabled and the 3 parameters *nsamples*,
+*mode* and *reltol* need to be specified but have no effect to the run.
+
 
 OPENMP package settings
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -754,7 +808,7 @@ For the KOKKOS package when using GPUs, the option defaults are:
 
 .. parsed-literal::
 
-   neigh = full, neigh/qeq = full, newton = off, binsize = 2x LAMMPS default value, comm = device, sort = device, atom/map = device, neigh/transpose = off, gpu/aware = on
+   neigh = full, neigh/qeq = full, newton = off, binsize = 2x LAMMPS default value, comm = device, sort = device, atom/map = device, neigh/transpose = off, gpu/aware = on, auto/tuning = disabled
 
 For GPUs, option neigh/thread = on when there are 16k atoms or less on
 an MPI rank, otherwise it is "off". When LAMMPS can safely detect that
