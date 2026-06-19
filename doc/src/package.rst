@@ -634,7 +634,7 @@ such as *pair/team/size* and *threads/per/atom* for pair styles,
 *bond/chunk/size* for bond styles, and *nbin/atoms/per/bin* for neighbor builds.
 When the scanning completes, the tuner stores the best overall performance
 (in terms of the number of timesteps per second) with the corresponding
-kernel launch parameter combination.  
+kernel launch parameter combination.
 
 The tuner then uses the optimal parameter combination to launch the kernels
 on the GPU and monitors the simulation performance periodically.
@@ -646,7 +646,7 @@ The following parameters are needed for the auto-tuning process.
 
    *nevery* controls the interval used to estimate the overall performance
    for a combination of these two parameters.  *nevery* needs to be large
-   enough to have a stable estimate of the performance, to achieve 
+   enough to have a stable estimate of the performance, to achieve
    a sufficiently large number of kernel calls, while small enough to reduce
    the time required for scanning over all the combinations.
    *nevery* = 100 is usually a reasonable value.
