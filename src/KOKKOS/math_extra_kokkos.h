@@ -80,6 +80,9 @@ namespace MathExtraKokkos {
 
   KOKKOS_INLINE_FUNCTION void mq_to_omega(KK_FLOAT *m, double *q, KK_FLOAT *moments, KK_FLOAT *w);
   KOKKOS_INLINE_FUNCTION void quat_to_mat(const double *quat, KK_FLOAT mat[3][3]);
+  KOKKOS_INLINE_FUNCTION void angmom_to_omega(KK_FLOAT *m, KK_FLOAT *ex, KK_FLOAT *ey, KK_FLOAT *ez,
+                                              KK_FLOAT *idiag, KK_FLOAT *w);
+  KOKKOS_INLINE_FUNCTION void q_to_exyz(double *q, KK_FLOAT *ex, KK_FLOAT *ey, KK_FLOAT *ez);
 }
 
 /* ----------------------------------------------------------------------
@@ -607,6 +610,50 @@ void MathExtraKokkos::quat_to_mat(const double *quat, KK_FLOAT mat[3][3])
   mat[2][0] = twoik-twojw;
   mat[2][1] = twojk+twoiw;
   mat[2][2] = w2-i2-j2+k2;
+}
+
+/* ----------------------------------------------------------------------
+   compute omega from angular momentum, both in space frame
+   ex,ey,ez are column vectors of rotation matrix P; set wbody component to
+   0.0 if the corresponding inertia component is 0.0
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void MathExtraKokkos::angmom_to_omega(KK_FLOAT *m, KK_FLOAT *ex, KK_FLOAT *ey, KK_FLOAT *ez,
+                                      KK_FLOAT *idiag, KK_FLOAT *w)
+{
+  KK_FLOAT wbody[3];
+
+  if (idiag[0] == 0.0) wbody[0] = 0.0;
+  else wbody[0] = (m[0]*ex[0] + m[1]*ex[1] + m[2]*ex[2]) / idiag[0];
+  if (idiag[1] == 0.0) wbody[1] = 0.0;
+  else wbody[1] = (m[0]*ey[0] + m[1]*ey[1] + m[2]*ey[2]) / idiag[1];
+  if (idiag[2] == 0.0) wbody[2] = 0.0;
+  else wbody[2] = (m[0]*ez[0] + m[1]*ez[1] + m[2]*ez[2]) / idiag[2];
+
+  w[0] = wbody[0]*ex[0] + wbody[1]*ey[0] + wbody[2]*ez[0];
+  w[1] = wbody[0]*ex[1] + wbody[1]*ey[1] + wbody[2]*ez[1];
+  w[2] = wbody[0]*ex[2] + wbody[1]*ey[2] + wbody[2]*ez[2];
+}
+
+/* ----------------------------------------------------------------------
+   compute space-frame ex,ey,ez from current quaternion q
+------------------------------------------------------------------------- */
+
+KOKKOS_INLINE_FUNCTION
+void MathExtraKokkos::q_to_exyz(double *q, KK_FLOAT *ex, KK_FLOAT *ey, KK_FLOAT *ez)
+{
+  ex[0] = q[0]*q[0] + q[1]*q[1] - q[2]*q[2] - q[3]*q[3];
+  ex[1] = 2.0 * (q[1]*q[2] + q[0]*q[3]);
+  ex[2] = 2.0 * (q[1]*q[3] - q[0]*q[2]);
+
+  ey[0] = 2.0 * (q[1]*q[2] - q[0]*q[3]);
+  ey[1] = q[0]*q[0] - q[1]*q[1] + q[2]*q[2] - q[3]*q[3];
+  ey[2] = 2.0 * (q[2]*q[3] + q[0]*q[1]);
+
+  ez[0] = 2.0 * (q[1]*q[3] + q[0]*q[2]);
+  ez[1] = 2.0 * (q[2]*q[3] - q[0]*q[1]);
+  ez[2] = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
 }
 
 #endif
