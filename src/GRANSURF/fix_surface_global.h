@@ -52,7 +52,6 @@ class FixSurfaceGlobal : public FixSurface {
   void post_force(int) override;
 
   int modify_param(int, char **x) override;
-  void reset_dt() override;
   double memory_usage() override;
 
   void *extract(const char *, int &) override;

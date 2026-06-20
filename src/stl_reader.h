@@ -22,7 +22,7 @@ namespace LAMMPS_NS {
 class STLReader : protected Pointers {
  public:
   STLReader(class LAMMPS *);
-  ~STLReader();
+  ~STLReader() override;
   int read_file(const char *, double **&);
 
  private:

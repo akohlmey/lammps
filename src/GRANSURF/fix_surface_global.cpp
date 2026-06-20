@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing authors: Joel Clemmer (SNL)
+   Contributing authors: Joel Clemmer (SNL), Dan Bolintineanu (SNL)
 ----------------------------------------------------------------------- */
 
 #include "fix_surface_global.h"
@@ -1285,10 +1285,8 @@ void FixSurfaceGlobal::post_force(int vflag)
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
 
-      // Do we need special bonds?
-      // factor_lj = special_lj[sbmask(j)];
-      // j &= NEIGHMASK;
-      // if (factor_lj == 0) continue;
+      // Ignore special bonds
+      j &= NEIGHMASK;
 
       delx = xtmp - xsurf[j][0];
       dely = ytmp - xsurf[j][1];
@@ -2044,17 +2042,6 @@ int FixSurfaceGlobal::modify_param_move(Motion *motion, int narg, char **arg)
   error->all(FLERR,"Fix_modify move style {} not recognized", arg[0]);
 
   return 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void FixSurfaceGlobal::reset_dt()
-{
-  /*
-  if (mstyle != NONE)
-    error->all(FLERR,"Resetting timestep size is not allowed with "
-               "fix surface/global motion");
-  */
 }
 
 /* ----------------------------------------------------------------------
@@ -4058,7 +4045,7 @@ void FixSurfaceGlobal::walk_connections3d(std::vector<int> *composite_surfs, std
 }
 
 /* ----------------------------------------------------------------------
-   Calculate forces
+   Calculate key variables needed for forces (overlap and direction)
 ------------------------------------------------------------------------- */
 
 double FixSurfaceGlobal::calculate_2d_forces(std::vector<int> *composite_surfs)
@@ -4108,7 +4095,6 @@ double FixSurfaceGlobal::calculate_2d_forces(std::vector<int> *composite_surfs)
     overlap = contact_surfs[n].overlap;
     MathExtra::copy3(contact_surfs[n].surf_norm, jnorm);
     MathExtra::copy3(contact_surfs[n].dr, dr);
-
 
     // To focus smooth contributions towards edge when about to move off
     if (external) {
@@ -4170,7 +4156,12 @@ double FixSurfaceGlobal::calculate_2d_forces(std::vector<int> *composite_surfs)
 }
 
 /* ----------------------------------------------------------------------
-   Calculate forces
+   Calculate key variables needed for forces (overlap and direction)
+    Note: these rules can be quite complicated (particularly for unconnected
+          edges). Better formulations surely exist and may be a topic for
+          revisiting in the future.
+          Currently it relies on a lot of smoothing/interpolation factors
+          to ensure the direction of forces vary continuously.
 ------------------------------------------------------------------------- */
 
 double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> *composite_surfs)

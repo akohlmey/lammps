@@ -32,10 +32,10 @@ figure using the :doc:`dump image <dump_image>` command.
             :align: right
             :target: _images/gransurf_screwfeeder.png
 
-Furthermore, as another illustration of possible applications, another
-image is included of a complex geometry based on the actual geometry of
-the Itokawa asteroid. This wall is used to create a container for a
-polydisperse granular packing.
+Furthermore, as another illustration of possible applications, an image
+is included of a complex geometry based on the actual shape of the
+Itokawa asteroid. Here, a surface is used to create a container which is
+filled by a polydisperse granular packing.
 
 .. figure:: img/gransurf_asteroid.png
             :figwidth: 50%
@@ -72,7 +72,8 @@ neighbor list cutoff and communication cutoff will be set
 correspondingly larger, which can slow down the simulation.  Note that
 a large triangle or line can instead be defined as multiple connected
 smaller triangles or lines without changing the topology of the
-collective surface.
+collective surface. The *multi* :doc:`neighbor <neighbor>` option may
+be useful, however, in such scenarios.
 
 One of these two commands must be specified to use *global* or *local*
 surfaces in your granular simulation:
@@ -119,13 +120,12 @@ or *molecule ID* of any triangle or line.
 For both global and local surfaces, types are used to define the style
 of granular interactions for individual triangles/lines.  Different
 types, and thus styles, can be used within a single object consisting
-of connected triangles/lines.  See the Surface Connectivity section
-below.
+of connected triangles/lines.
 
 Molecule IDs can be used to limit which triangles/lines are considered
-to be "connected", as described below.  They are therefore intended to
-be assigned uniquely to each inter-connected set of triangles/lines,
-as if each object were a "molecule".
+to be "connected".  They are therefore intended to be assigned uniquely
+to each inter-connected set of triangles/lines, as if each object were
+a "molecule". See the Surface Connectivity section below.
 
 For local surfaces, the molecule ID can be used to define groups which
 enables assignment of different motions to different surface objects.
@@ -360,8 +360,8 @@ After generating the surface connectivity, LAMMPS classifies each
 connection as being flat or non-flat based on the angular difference
 between normal vectors.  The two sides are then classified as being
 concave or convex based on their normal vectors.  In scenarios where
-flat surfaces are perfectly flat (parallel normal vectors) this
-designation is arbitrary.
+flat surfaces are perfectly flat (parallel normal vectors) the
+concave vs convex designation is arbitrary.
 
 Each point or edge of a line or triangle is then classified as being
 internal, external, or unconnected based on the connectivity.  For
@@ -421,9 +421,9 @@ unchecked surface with the largest overlap and repeats the process.
             :align: right
             :target: _images/consistent_side.png
 
-Next, LAMMPS clusters all contacted lines/triangles into distinct
-composite sets each consisting of mutually flat line/triangle surfaces
-that act as one physical object, denoted :math:`{S}_{n}` where *n*
+Next, LAMMPS clusters all contacted and connected lines/triangles into
+distinct composite sets each consisting of mutually flat line/triangle
+surfaces that act as one physical object, denoted :math:`{S}_{n}` where *n*
 labels a particular composite.  For instance, if a particle is touching
 two flat-connected surfaces and a third concave-connected surface, it
 will group them into two composite surfaces of size two and one.  Each
@@ -471,13 +471,13 @@ In 2D, a surface *i*'s weight :math:`W_i` is either
 :math:`W_\mathrm{ext}` or :math:`W_\mathrm{int}` based on its status.
 By default, :math:`\hat{n}_{f,i}` is simply the direction from the local
 contact point on that surface to the particle, :math:`\hat{n}_{r,i}`.
-Note that if the contact point is inside of the line, then
+For example, if the contact point is inside of the line, then
 :math:`\hat{n}_{r,i}` is equivalent to the surface normal
 :math:`\hat{n}_{s,i}`.  However, there are two exceptions: (a) if the
 contact is at a concave-connected point then :math:`\hat{n}_{f,i} =
 \hat{n}_{s,i}`, and (b) if the contact is at a convex-connected point
 and :math:`\hat{n}_{r,i}` has a component pointing into the neighboring
-line vector of *j* then :math:`\hat{n}_{f_i} = \hat{n}_{s,j}`.  These
+line vector indexed *j* then :math:`\hat{n}_{f_i} = \hat{n}_{s,j}`.  These
 rules place limits on how how much a resulting force can point into the
 connected line *j* to ensure :math:`\hat{n}_{f_i}` smoothly varies as
 the particle turns the bend.  A few details are worth noting.  First, as
@@ -491,18 +491,18 @@ then LAMMPS finds which connecting line has a normal vector closest to
 :math:`\hat{n}_{s,i}` to determining whether it's a concave or convex
 connection.
 
-To illustrate, these scenarios are visualized in the figure below.  In
+To illustrate, two scenarios are visualized in the figure below.  In
 the left panel, a particle at various positions (red, green, blue, and
 purple) contacts a concave bend made up of two lines (coral brown).
 Here the leftmost line is labeled *i* and the rightmost line is labeled
 *j*.  The direction of the force :math:`\hat{n}_{f,i}` from line *i* is
 indicated by arrows.  Along the entire contact, :math:`\hat{n}_{f,i} =
-\hat{n}_{s,i}` where the normal vectors for each line are indicated by
-gray arrows for clarity.  In the right panel, the contact point is at a
-convex corner such that :math:`\hat{n}_{f,i} = \hat{n}_{r,i}` (red,
-green) unless :math:`\hat{n}_{r,i}` has a component pointing into the
-adjacent line :math:`j`, in which case :math:`\hat{n}_{f,i} = \hat{n}_{s,j}`
-(blue, purple).
+\hat{n}_{s,i}`.  In the right panel, the contact point is at a convex
+corner such that :math:`\hat{n}_{f,i} = \hat{n}_{r,i}` (red, green) unless
+:math:`\hat{n}_{r,i}` has a component pointing into the adjacent line
+:math:`j`, in which case :math:`\hat{n}_{f,i} = \hat{n}_{s,j}` (blue,
+purple). These rules therefore simply enforce sensible continuity of
+forces as atoms move across line segements.
 
 .. figure:: img/gransurf_nonflat_turn.png
             :figwidth: 50%
@@ -523,11 +523,12 @@ the three dot products between :math:`\hat{n}_{s,i}`,
 :math:`\hat{n}_{s,j}`, and :math:`\hat{n}_{r,i}`.
 
 If a particle contacts a corner, then the corner first calculates what
-the :math:`\hat{n}_{f,i}` would be had the particle contacted either of
-the two edges, labeled *a* and *b*, :math:`\hat{n}_{f,a}` and
-:math:`\hat{n}_{f,b}` (where the *i* is implied from context).  Each of
-these edges have normalized line vectors :math:`\hat{l}_a` and
-:math:`\hat{l}_b` pointing towards the corner in consideration.
+the directio of :math:`\hat{n}_{f,i}` would be had the particle contacted
+either of the two edges, labeled *a* and *b*, :math:`\hat{n}_{f,a}` and
+:math:`\hat{n}_{f,b}` (where the *i* is implied from context).  Let us
+dnote the normalized line vectors of these edges as :math:`\hat{l}_a` and
+:math:`\hat{l}_b`, where the orientation is chosen to point towards the
+corner in consideration.
 
 If :math:`\hat{n}_{f,a} \cdot \hat{l}_b < 0` (or if the force from that
 edge has a component pointing into the other edge), then
@@ -538,7 +539,7 @@ weighted average of these two edge contributions such that the result
 interpolates between the two limits as a particle moves from contacting
 one edge to the corner to the other edge.
 
-The calculation of the two edge weights is more complicated, but a brief
+The calculation of these two edge weights is complicated, but a brief
 description is provided below to contextualize the code.  Each weight is
 primarily a function of several dot products including :math:`C_a =
 \hat{n}_{r,i} \cdot \hat{l}_{a}` and :math:`D_a = \hat{n}^p_{r,i} \cdot
@@ -561,22 +562,24 @@ additional weight is required for that edge to ensure
 across that convex turn to surface :math:`j`.  This is calculated in
 terms of the dot product :math:`E_a = \hat{n}^a_{r,i} \cdot
 (\delta_{s,i} + \delta_{s,j})/2` where :math:`\hat{n}^a_{r,i}` is
-:math:`\hat{n}_{r,i}` after removing any component along
-:math:`\hat{l}_a`. :math:`W_b` is then multiplied by :math:`(1-E_a)`
+the vector :math:`\hat{n}_{r,i}` minus any component along
+:math:`\hat{l}_a`. :math:`W_b` is then multiplied by :math:`(1-E_a)`,
 which goes to zero as the particle approaches the threshold before
 switching to contacting surface :math:`j` which shares edge :math:`a`.
 
 Lastly, there are forces on particles from unconnected (free) edges or
-corners of triangles.  Currently, LAMMPS does not calculate or store the
-quasi-2D connectivity information between unconnected edges along a
-border and therefore forces are not guaranteed to vary in a physically
-realistic manner as a particle moves along it (e.g. forces are not
-censored from the far edge as a particle moves along a convex bend in
-the border).  However, the below calculation is designed to prioritize
+corners of triangles.  For example, if one defines a circular plate
+made up of triangles, such unconnected edges make up the perimeter of the
+plate.  Currently, LAMMPS does not calculate or store connectivity
+information between unconnected edges along such a border and therefore
+forces are not guaranteed to vary in a physically realistic manner as a
+particle moves along it (e.g. if there is a convex bend in the border,
+forces are not censored from the far edge as particles mov around it).
+With this constraint, the below calculation is designed to prioritize
 continuity in the direction of force and ensure forces always point away
-from the surface's border as expected.  It is generally recommended that
-if a surface has an exposed border, it should be designed to be
-relatively simple and smooth.
+from the surface's border as expected.  However, tt is generally
+recommended that if a surface has an exposed border, it should be designed
+to be relatively simple and smooth.
 
 First assume there is only one contacted triangle in a composite set.
 Forces from edges are calculated identically to a convex-connected edge.
@@ -620,7 +623,7 @@ physically hidden sections of a wall, if a particle is not in contact
 with the entirety of a convex turn, then forces cannot be properly
 censored.  For example, consider a 2d system with a U shaped wall
 defined by 3 line segments (see figure).  If the width of the U is wider
-than the typical particle-wall overlap (right), no issues are
+than the typical particle-wall overlap (left), no issues are
 anticipated.  However, if the width of the U is very thin relative to
 the typical particle-wall overlap (middle, right), then a particle could
 potentially be in contact with both vertical legs of the U.  If the
@@ -644,12 +647,10 @@ experience no discontinuities as the particle moves around the endpoint.
 However, in 3D, contacts with unconnected edges only produce reasonably
 directed forces oriented away from the edge.  However, the exact
 direction of a force can wobble as the contact moves across a series of
-disconnected edges and convex turns may not be appropriately censored as
-LAMMPS does not currently construct the proper quasi-2d connectivity of
-2D features.  Therefore, it is recommended to avoid complex geometries
-along unconnected boundaries such as rapid oscillations in- or
-out-of-plane such as pleats or sawteeth, relative to the length of an
-edge.
+disconnected edges and convex turns may not be appropriately censored.
+Therefore, it is recommended to avoid complex geometries along unconnected
+boundaries such as rapid oscillations in- or out-of-plane such as pleats
+or sawteeth, relative to the length of an edge.
 
 To build a neighbor list between particles and lines/triangles, LAMMPS
 assigns a radius to each line/triangle that corresponds to the radius

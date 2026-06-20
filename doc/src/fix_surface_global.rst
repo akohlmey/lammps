@@ -44,7 +44,7 @@ Syntax
              *granular* args = same syntax for args as *pair_coeff* command of :doc:`pair_style granular <pair_granular>`
 
 * zero or more keyword/value pairs may be appended
-* keyword = *smax* or *flat* or *temperature*
+* keyword = *smaxtype* or *smaxmol* or *flat* or *neighbor* or *temperature*
 
   .. parsed-literal::
 
@@ -56,6 +56,9 @@ Syntax
          maxangle = maximum angle (degrees) between a pair of connected triangles/lines for a flat connection
        *temperature* value = Tsurf
          Tsurf = surface temperature (degrees Kelvin), required if model with heat is used
+       *neighbor* value = *nsq* or *bin*
+         *nsq* = check all surfaces against particles for contacts
+         *bin* = create a bin list to find contacts
 
 Examples
 """"""""
@@ -241,6 +244,17 @@ particle even if it is contact with both surfaces simultaneously.  See
 the :doc:`Howto granular surfaces <Howto_granular_surfaces>` doc page
 for more details.  The default for *maxangle* is one degree.
 
+The *neighbor* keyword sets which algorithm is used build a neighbor
+list between surfaces and atoms. Akin to the :doc:`neighbor <neighbor>`
+command, the *bin* style (the default) spatially bins atoms and surfaces
+and constructs a neighbor list by checking atoms and surfaces in nearby
+bins. The *nsq* style instead loops through all atoms and then surfaces.
+Users are encouraged to test both options as, depending on the size and
+number of surfaces, one option may be faster than the other. As a rule
+of thumb, the *bin* option should become faster as the number of surfaces
+grow. However, if there are large number of surfaces, :doc:`fix
+surface/local <fix_surface_local>` may also be more performant.
+
 The *temperature* keyword is required if any of the granular models used
 includes a heat model which depends on the surface temperature.
 Otherwise it is ignored.  Its *Tsurf* value is the temperature of the
@@ -425,5 +439,5 @@ Default
 """""""
 
 The keyword defaults are smaxtype (mol) = max type (molecule ID) of all
-surfaces defined by the input keyword(s), flat = one degree, temperature
-= none.
+surfaces defined by the input keyword(s), flat = one degree,
+neighbor = bin,  temperature = none.

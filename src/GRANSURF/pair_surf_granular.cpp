@@ -12,7 +12,7 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing authors: Joel Clemmer (SNL)
+   Contributing authors: Joel Clemmer (SNL), Dan Bolintineanu (SNL)
 ----------------------------------------------------------------------- */
 
 #include "pair_surf_granular.h"
@@ -528,8 +528,6 @@ void PairSurfGranular::compute(int eflag, int vflag)
       }
     }
   }
-
-  // NOTE: should there be virial contributions from boundary tris?
 
   if (vflag_fdotr) virial_fdotr_compute();
 }
@@ -1303,7 +1301,7 @@ void PairSurfGranular::walk_connections3d(std::vector<int> *composite_surfs, std
 }
 
 /* ----------------------------------------------------------------------
-   Calculate forces
+   Calculate key variables needed for forces (overlap and direction)
 ------------------------------------------------------------------------- */
 
 double PairSurfGranular::calculate_2d_forces(std::vector<int> *composite_surfs)
@@ -1418,7 +1416,12 @@ double PairSurfGranular::calculate_2d_forces(std::vector<int> *composite_surfs)
 }
 
 /* ----------------------------------------------------------------------
-   Calculate forces
+   Calculate key variables needed for forces (overlap and direction)
+    Note: these rules can be quite complicated (particularly for unconnected
+          edges). Better formulations surely exist and may be a topic for
+          revisiting in the future.
+          Currently it relies on a lot of smoothing/interpolation factors
+          to ensure the direction of forces vary continuously.
 ------------------------------------------------------------------------- */
 
 double PairSurfGranular::calculate_3d_forces(std::vector<int> *composite_surfs)
