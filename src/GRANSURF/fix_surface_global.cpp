@@ -547,6 +547,13 @@ int FixSurfaceGlobal::setmask()
 
 void FixSurfaceGlobal::init()
 {
+  // global surface ghosts are created with orthogonal box offsets (see
+  // pre_neighbor()), so triclinic boxes are not yet supported
+
+  if (domain->triclinic)
+    error->all(FLERR, Error::NOLASTLINE,
+               "Fix surface/global does not yet support triclinic simulation boxes");
+
   dt = update->dt;
   triggersq = 0.25 * neighbor->skin * neighbor->skin;
 
@@ -945,9 +952,6 @@ void FixSurfaceGlobal::pre_neighbor()
 
       if (nsurf_ghost == -1) {
         nsurf_ghost = 0;
-
-        if (domain->triclinic)
-          error->all(FLERR, Error::NOLASTLINE, "Fix surface/global does not support triclinic cells");
 
         // get limits for creating ghosts
         int a;

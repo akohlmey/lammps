@@ -287,8 +287,7 @@ void FixSurfaceLocal::post_constructor()
 
   nlocal0 = 0;
   if (check_exist()) {
-    if (comm->me == 0 && screen)
-      fprintf(screen,"Connecting line/tri particles ...\n");
+    if (comm->me == 0) utils::logmesg(lmp,"Connecting line/tri particles ...\n");
 
     if (dimension == 2) connectivity2d_local();
     else connectivity3d_local();
@@ -311,11 +310,11 @@ void FixSurfaceLocal::post_constructor()
       int mode = input_modes[i];
       char *sourceID = input_sources[i];
 
-      if (comm->me == 0 && screen) {
+      if (comm->me == 0) {
         if (mode == MOLTEMPLATE)
-          fprintf(screen,"Converting molecule file to line/tri particles ...\n");
+          utils::logmesg(lmp, "Converting molecule file to line/tri particles ...\n");
         if (mode == STLFILE)
-          fprintf(screen,"Reading STL file for triangle particles ...\n");
+          utils::logmesg(lmp, "Reading STL file for triangle particles ...\n");
       }
 
       // read in lines/tris from appropriate source
