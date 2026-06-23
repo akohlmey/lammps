@@ -46,6 +46,7 @@ class DumpImage : public DumpCustom {
   void write() override;
 
   void *extract(const char *, int &) override;
+  int colormap_active(int);    // 1 if the colormap with the given index colors something
 
  protected:
   int filetype;

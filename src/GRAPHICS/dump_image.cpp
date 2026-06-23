@@ -943,7 +943,7 @@ void DumpImage::write()
 
   // set minmax color range if using dynamic atom color map
 
-  if (acolor == ATTRIBUTE && image->map_dynamic(0)) {
+  if (acolor == ATTRIBUTE && image->map_dynamic(Image::ATOM_MAP)) {
     double two[2],twoall[2];
     double lo = BIG;
     double hi = -BIG;
@@ -956,7 +956,7 @@ void DumpImage::write()
     two[0] = -lo;
     two[1] = hi;
     MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
-    int flag = image->map_minmax(0,-twoall[0],twoall[1]);
+    int flag = image->map_minmax(Image::ATOM_MAP,-twoall[0],twoall[1]);
     if (flag) error->all(FLERR,"Invalid atom color map min/max values");
   }
 
@@ -1068,7 +1068,7 @@ void DumpImage::write()
 
   // set minmax color range if using dynamic grid color map
 
-  if (gridflag && image->map_dynamic(1)) {
+  if (gridflag && image->map_dynamic(Image::GRID_MAP)) {
     double two[2],twoall[2];
     double lo = BIG;
     double hi = -BIG;
@@ -1079,7 +1079,7 @@ void DumpImage::write()
     two[0] = -lo;
     two[1] = hi;
     MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
-    int flag = image->map_minmax(1,-twoall[0],twoall[1]);
+    int flag = image->map_minmax(Image::GRID_MAP,-twoall[0],twoall[1]);
     if (flag) error->all(FLERR,"Invalid grid color map min/max values");
   }
 
@@ -1095,7 +1095,7 @@ void DumpImage::write()
       bond_compute->invoked_flag |= Compute::INVOKED_LOCAL;
     }
 
-    if (image->map_dynamic(2)) {
+    if (image->map_dynamic(Image::BOND_MAP)) {
       double *vec = bond_compute->vector_local;
       double **arr = bond_compute->array_local;
       int nrows = bond_compute->size_local_rows;
@@ -1111,7 +1111,7 @@ void DumpImage::write()
       two[0] = -lo;
       two[1] = hi;
       MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
-      int flag = image->map_minmax(2,-twoall[0],twoall[1]);
+      int flag = image->map_minmax(Image::BOND_MAP,-twoall[0],twoall[1]);
       if (flag) error->all(FLERR,"Invalid bond color map min/max values");
     }
   }
@@ -1262,7 +1262,7 @@ void DumpImage::create_image()
       } else if (acolor == ELEMENT) {
         color = colorelement[itype];
       } else if (acolor == ATTRIBUTE) {
-        color = image->map_value2color(0,buf[m]);
+        color = image->map_value2color(Image::ATOM_MAP,buf[m]);
       } else color = image->color2rgb("white");
 
       if (adiam == NUMERIC) {
@@ -1307,7 +1307,7 @@ void DumpImage::create_image()
       for (int iy = nylo_in; iy <= nyhi_in; iy++)
         for (int ix = nxlo_in; ix <= nxhi_in; ix++) {
           grid_cell_corners_2d(ix,iy);
-          color = image->map_value2color(1,gbuf[n++]);
+          color = image->map_value2color(Image::GRID_MAP,gbuf[n++]);
           image->draw_triangle(gcorners[0],gcorners[1],gcorners[3],color);
           image->draw_triangle(gcorners[0],gcorners[3],gcorners[2],color);
         }
@@ -1316,7 +1316,7 @@ void DumpImage::create_image()
         for (int iy = nylo_in; iy <= nyhi_in; iy++)
           for (int ix = nxlo_in; ix <= nxhi_in; ix++) {
             grid_cell_corners_3d(ix,iy,iz);
-            color = image->map_value2color(1,gbuf[n++]);
+            color = image->map_value2color(Image::GRID_MAP,gbuf[n++]);
             // lower x face
             image->draw_triangle(gcorners[0],gcorners[4],gcorners[6],color);
             image->draw_triangle(gcorners[0],gcorners[6],gcorners[2],color);
@@ -1369,7 +1369,7 @@ void DumpImage::create_image()
         } else if (acolor == ELEMENT) {
           color = colorelement[itype];
         } else if (acolor == ATTRIBUTE) {
-          color = image->map_value2color(0,buf[m]);
+          color = image->map_value2color(Image::ATOM_MAP,buf[m]);
         } else {
           color = image->color2rgb("white");
         }
@@ -1430,7 +1430,7 @@ void DumpImage::create_image()
         } else if (acolor == ELEMENT) {
           color = colorelement[itype];
         } else if (acolor == ATTRIBUTE) {
-          color = image->map_value2color(0,buf[m]);
+          color = image->map_value2color(Image::ATOM_MAP,buf[m]);
         } else {
           color = image->color2rgb("white");
         }
@@ -1490,7 +1490,7 @@ void DumpImage::create_image()
         } else if (acolor == ELEMENT) {
           color = colorelement[itype];
         } else if (acolor == ATTRIBUTE) {
-          color = image->map_value2color(0,buf[m]);
+          color = image->map_value2color(Image::ATOM_MAP,buf[m]);
         } else {
           color = image->color2rgb("white");
         }
@@ -1536,7 +1536,7 @@ void DumpImage::create_image()
         } else if (acolor == ELEMENT) {
           color = colorelement[itype];
         } else if (acolor == ATTRIBUTE) {
-          color = image->map_value2color(0,buf[m]);
+          color = image->map_value2color(Image::ATOM_MAP,buf[m]);
         } else {
           color = image->color2rgb("white");
         }
@@ -1663,8 +1663,8 @@ void DumpImage::create_image()
             color1 = colorelement[type[atom1]];
             color2 = colorelement[type[atom2]];
           } else if (acolor == ATTRIBUTE) {
-            color1 = image->map_value2color(0,bufcopy[atom1][0]);
-            color2 = image->map_value2color(0,bufcopy[atom2][0]);
+            color1 = image->map_value2color(Image::ATOM_MAP,bufcopy[atom1][0]);
+            color2 = image->map_value2color(Image::ATOM_MAP,bufcopy[atom2][0]);
           } else {
             color1 = image->color2rgb("white");
             color2 = image->color2rgb("white");
@@ -1677,7 +1677,7 @@ void DumpImage::create_image()
                        "bonds; its group must select the same bonds as the dump", id_bond_compute);
           double val = (bond_argindex == 0) ? bond_localvec[ibond] : bond_localarr[ibond][bond_localcol];
           ++ibond;
-          color = image->map_value2color(2,val);
+          color = image->map_value2color(Image::BOND_MAP,val);
         }
 
         if (bdiam == NUMERIC) {
@@ -1824,8 +1824,8 @@ void DumpImage::create_image()
               color1 = colorelement[type[atom1]];
               color2 = colorelement[type[atom2]];
             } else if (acolor == ATTRIBUTE) {
-              color1 = image->map_value2color(0,bufcopy[atom1][0]);
-              color2 = image->map_value2color(0,bufcopy[atom2][0]);
+              color1 = image->map_value2color(Image::ATOM_MAP,bufcopy[atom1][0]);
+              color2 = image->map_value2color(Image::ATOM_MAP,bufcopy[atom2][0]);
             } else {
               color1 = image->color2rgb("white");
               color2 = image->color2rgb("white");
@@ -2682,6 +2682,26 @@ void *DumpImage::extract(const char *str, int &dim)
   return nullptr;
 }
 
+/* ----------------------------------------------------------------------
+   return 1 if the colormap with the given index is actually used to color
+   something in this dump image, otherwise return 0.  Used by callers such
+   as fix graphics/labels to warn about color scale labels for unused maps.
+------------------------------------------------------------------------- */
+
+int DumpImage::colormap_active(int mapidx)
+{
+  switch (mapidx) {
+    case Image::ATOM_MAP:    // atoms (and bonds colored by atom) mapped by value
+      return (acolor == ATTRIBUTE) ? 1 : 0;
+    case Image::GRID_MAP:    // grid cells colored by value
+      return gridflag ? 1 : 0;
+    case Image::BOND_MAP:    // bonds colored by a per-bond /local compute value
+      return ((bondflag == YES) && (bcolor == LOCALVALUE)) ? 1 : 0;
+    default:
+      return 0;
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 int DumpImage::modify_param(int narg, char **arg)
@@ -2756,9 +2776,9 @@ int DumpImage::modify_param(int narg, char **arg)
     n = 6 + factor*nentry;
     if (narg < n)  utils::missing_cmd_args(FLERR, "dump_modify amap/gmap/bmap", error);
     int flag = 0;
-    if (strcmp(arg[0], "amap") == 0) flag = image->map_reset(0, n-1, &arg[1]);
-    if (strcmp(arg[0], "gmap") == 0) flag = image->map_reset(1, n-1, &arg[1]);
-    if (strcmp(arg[0], "bmap") == 0) flag = image->map_reset(2, n-1, &arg[1]);
+    if (strcmp(arg[0], "amap") == 0) flag = image->map_reset(Image::ATOM_MAP, n-1, &arg[1]);
+    if (strcmp(arg[0], "gmap") == 0) flag = image->map_reset(Image::GRID_MAP, n-1, &arg[1]);
+    if (strcmp(arg[0], "bmap") == 0) flag = image->map_reset(Image::BOND_MAP, n-1, &arg[1]);
     if (flag)
       error->all(FLERR, argoff+flag, "Invalid map settings in dump_modify amap/gmap/bmap command");
 
