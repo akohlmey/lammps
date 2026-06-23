@@ -817,14 +817,11 @@ void KokkosLMP::accelerator(int narg, char **arg)
 
   if (autotuning) {
     utils::logmesg(lmp,"  autotuning is enabled: nevery = {} samples = {} mode = {}\n",
-      perf_nsamples, (perf_mode == 0) ? "max" : (perf_mode == 1) ? "ave" : "median");
+      autotuning, perf_nsamples, (perf_mode == 0) ? "max" : (perf_mode == 1) ? "ave" : "median");
   }
 
-
 #else  // LMP_KOKKOS_GPU not defined
-
   if (autotuning) autotuning = 0;
-
 #endif
 
   // set newton flags

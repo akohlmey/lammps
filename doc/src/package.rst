@@ -127,7 +127,7 @@ Syntax
         *bond/chunk/size = blocksize
           chunksize = # of iterations each thread will perform for the bond force computation
         *auto/tuning = nevery nsamples mode reltol
-          nevery = # timesteps between autotuning adjustments (default = 0, no autotuning)
+          nevery = # timesteps between auto-tuning adjustments (default = 0, no auto-tuning)
           nsamples = # samples the tuner(s) collects for each parameter combination
           mode = how to pick a performance value from the samples collected, i.e. maximum, average or median value
           reltol = relative tolerance for performance degradation that triggers re-tuning of parameter values
@@ -604,50 +604,119 @@ of this parameter is determined based on the GPU architecture at runtime.
 .. versionadded:: TBD
 
 The *auto/tuning* keyword enables the auto-tuning feature of
-the KOKKOS package when using GPUs.  When enabled, the tuner of the KOKKOS styles
-in use will scan through the possible values of kernel launch parameters,
-such as *pair/team/size* and *threads/per/atom* for pair styles,
-*bond/chunk/size* for bond styles, and *nbin/atoms/per/bin* for neighbor builds.
-When the scanning completes, the tuner stores the best overall performance
-(in terms of the number of timesteps per second) with the corresponding
+the KOKKOS package when using GPUs.  The following KOKKOS styles
+currently support auto-tuning:
+
+* :doc:`bond/class2/kk <bond_class2>`
+* :doc:`bond/fene/kk <bond_fene>`
+* :doc:`bond/harmonic/kk <bond_harmonic>`
+* :doc:`lj/cut/kk <pair_lj>`
+* :doc:`lj/cut/coul/long/kk <pair_lj_cut_coul>`
+* :doc:`lj/charmm/coul/long/kk <pair_charmm>`
+* :doc:`lj/cut/dipole/cut/kk <pair_dipole>`
+* :doc:`dpd/kk <pair_dpd>`
+* :doc:`sw/kk <pair_sw>`
+* :doc:`tersoff/kk <pair_tersoff>`
+* :doc:`zbl/kk <pair_zbl>`
+
+These styles serve as templates for incorporating auto-tuners into other
+KOKKOS styles in the future. To avoid duplicated codes, one possibility
+is to refactor the tuners so that KOKKOS styles can request and enable
+them through a consistent API.
+
+It is recommended that auto-tuning is enabled only when the simulated
+system is in steady state.  The performance gain due to auto-tuning
+typically varies with the KOKKOS styles and the simulated system.  For
+the benchmark systems *bench/in.lj* and *bench/in.rhodo*, the speedup vs
+without auto-tuning could be 30% and 50%, respectively (figure below).
+
+.. |autotuning| image:: img/autotuning.png
+   :width: 50%
+
+|autotuning|
+
+
+When enabled, the tuner of the KOKKOS styles in use will scan through
+the possible values of kernel launch parameters, such as
+*pair/team/size* *threads/per/atom* for pair styles, *bond/chunk/size*
+for bond styles, and *nbin/atoms/per/bin* for neighbor builds.  When the
+scanning completes, the tuner stores the best overall performance (in
+terms of the number of time steps per second) with the corresponding
 kernel launch parameter combination.
 
-The tuner then uses the optimal parameter combination to launch the kernels
-on the GPU and monitors the simulation performance periodically.
-If the performance drops below a certain relative tolerance from
-the last stored optimal value, the tuner may attempt to find the new optimal
-parameter combination by rerunning the scanning process.
+The tuner then uses the optimal parameter combination to launch the
+kernels on the GPU and monitors the simulation performance periodically.
+If the performance repeatedly drops below a certain relative tolerance
+from the last stored optimal value, the tuner may attempt to find the
+new optimal parameter combination by rerunning the scanning process.
+
+There could be multiple tuners active in a run, for instance, when
+*bench/in.rhodo* is run on the GPUs, both :doc:`lj/charmm/coul/long/kk
+<pair_charmm>` and :doc:`bond/harmonic/kk <bond_harmonic>` have their
+tuners activated.  During the run, each tuner writes the current
+parameter combination and measured performance to a file named
+*tuning-[style-name].log*.
 
 The following parameters are needed for the auto-tuning process.
 
-   *nevery* controls the interval used to estimate the overall performance
-   for a combination of these two parameters.  *nevery* needs to be large
-   enough to have a stable estimate of the performance, to achieve
-   a sufficiently large number of kernel calls, while small enough to reduce
-   the time required for scanning over all the combinations.
-   *nevery* = 100 is usually a reasonable value.
+   **nevery:** controls the interval used to estimate the overall
+   performance for a combination of these two parameters.  *nevery*
+   needs to be large enough to have a stable estimate of the
+   performance, to achieve a sufficiently large number of kernel calls,
+   while small enough to reduce the time required for scanning over all
+   the combinations.  *nevery* = 100 is usually a reasonable value.
 
-   *nsamples* indicates the number of samples the tuners will collect
-   for each parameter combination.  *nsamples* = 5 is usually a reasonable value.
+   **nsamples:** indicates the number of samples the tuners will collect
+   for each parameter combination.  *nsamples* = 5 is usually a
+   reasonable value.
 
-   *mode* determines how the performance of a collection of samples is determined:
-   *max* means the maximum value, *ave* means the arithmetic average value,
-   and *median* means the median value.
+   **mode:** determines how the performance of a collection of samples is
+   *determined: max* means the maximum value, *ave* means the arithmetic
+   *average value, and *median* means the median value.
 
-   *reltol* sets the relative tolerance for performance degradation
+   **reltol:** sets the relative tolerance for performance degradation
    compared to the last optimal performance, which may trigger a re-scan
-   of the parameter space.  Setting *reltol* to be equal or greater than 1.0
-   will disable the re-scanning.
+   of the parameter space.  Setting *reltol* to be equal or greater than
+   1.0 will disable re-scanning.
 
-For example, suppose that the last stored best performance is
-1000 timesteps per second, and that *nevery* = 100 and *nsamples* = 5,
-*reltol* = 0.2. The tuners monitor the performance every 100 timesteps,
-and if the performance drops below 800 timesteps per second by 5 times
-the tuners will trigger a re-scanning over the parameter combinations
-to find a new optimal parameter combination.
+For example, suppose that *nevery* = 100, *nsamples* = 5, *mode* =
+median and *reltol* = 0.2. For a typical pair style, the tuner scans
+over 90 parameter combinations (*pair/team/size*, *threads/per/atom*):
+15 values of *pair/team/size* starting from 64 to 512 incremental by 32,
+and 6 values of *threads/per/atom*.  For each parameter combination, the
+tuner monitors and saves the performance after 100 steps.  When a scan
+over 90 combinations completes (9000 steps in this example), the best
+performance value is stored as a sample.  After *nsamples* = 5 samples
+are collected, the median value is stored and the optimal parameter
+combination (*pair/team/size*, *threads/per/atom*) will be used for the
+next kernel launches.  The figures above illustrate the simulation
+performance over time with auto-tuning using this setting for
+*bench/in.lj* (left panel) and *bench/in.rhodo* (right panel).  The
+plateau regions correspond to the regime where the kernels are launched
+with the corresponding optimal parameter combinations.
 
-If *nevery* is 0, autotuning is disabled and the 3 parameters *nsamples*,
-*mode* and *reltol* need to be specified but have no effect to the run.
+Suppose that the last stored best performance is 1000 time steps per
+second.  After the optimal parameter combination is locked in, the tuner
+keeps monitoring the performance every *nevery* = 100 time steps. If the
+performance drops below (1 - *reltol*) * 1000 = 800 time steps per
+second by *nsamples* = 5 times (not necessarily consecutively) the tuner
+will trigger a re-scanning over the parameter combinations to find a new
+optimal parameter combination.
+
+If *nevery* is 0, auto-tuning is effectively disabled.  The 3 parameters
+*nsamples*, *mode* and *reltol* still need to be specified but have no
+effect to the run.
+
+One can also use the output in the log files *tuning-[style-name].log*
+as hints to select a combination of *pair/team/size and
+*threads/per/atom* to specify at command line arguments without enabling
+auto-tuning.
+
+.. note::
+
+   Do not use *auto/tuning* in tandem with *pair/team/size* and/or
+   *threads/per/atom* in the same command line because the latter
+   override the scanning process of the tuners.
 
 
 OPENMP package settings
