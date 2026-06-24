@@ -459,23 +459,26 @@ boundaries can be set using :doc:`boundary <boundary>` (the slab
 approximation is not needed).  The *slab* keyword with a *volfactor*
 value (the Yeh-Berkowitz EW3DC correction) supports triclinic
 (non-orthogonal) simulation cells for :doc:`kspace_style <kspace_style>`
-*ewald*, *ewald/disp*, *pppm*, and *pppm/cg* (and the OpenMP variants
-that reuse the same slab-correction setup).  Because the slab normal must
-be the Cartesian z axis, only an *xy* tilt is allowed: a triclinic slab
-box with a non-zero *xz* or *yz* tilt is rejected with an error.  The z
-box length must be held fixed for the duration of the run.  Triclinic cells
-are not yet supported with the *slab* keyword for the *pppm/tip4p*,
-*pppm/stagger*, *esp*, *pppm/gpu*, *pppm/intel*, or *pppm/kk* styles, nor
-for the *slab nozforce* and *slab ew2d* options.  The slab correction
-has also been extended to point dipole interactions :ref:`(Klapp)
-<Klapp>` in :doc:`kspace_style <kspace_style>` *ewald/disp*,
-*ewald/dipole*, and *pppm/dipole*\ .
+*ewald*, *ewald/disp*, *pppm*, *pppm/cg*, and *pppm/kk* (and the OpenMP
+variants that reuse the same slab-correction setup).  Because the slab
+normal must be the Cartesian z axis, only an *xy* tilt is allowed: a
+triclinic slab box with a non-zero *xz* or *yz* tilt is rejected with an
+error.  The z box length must be held fixed for the duration of the run.
+Triclinic cells are not yet supported with the *slab* keyword for the
+*pppm/tip4p*, *pppm/stagger*, *esp*, *pppm/gpu*, or *pppm/intel* styles,
+nor for the *slab nozforce* and *slab ew2d* options.
+
+The slab correction has also been extended to point dipole
+interactions :ref:`(Klapp) <Klapp>` in :doc:`kspace_style
+<kspace_style>` *ewald/disp*, *ewald/dipole*, and *pppm/dipole*\ .
+This dipole slab correction is currently limited to orthogonal
+(non-triclinic) simulation cells.
 
 .. versionchanged:: TBD
 
    The *slab* correction with a *volfactor* value now supports triclinic
-   simulation cells for the *ewald*, *ewald/disp*, *pppm*, and *pppm/cg*
-   styles.
+   simulation cells for the *ewald*, *ewald/disp*, *pppm*, *pppm/cg*, and
+   *pppm/kk* styles.
 
 .. note::
 
