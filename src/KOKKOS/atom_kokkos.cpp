@@ -191,9 +191,22 @@ void *AtomKokkos::extract(const char *name)
   const auto it = extract_mask.find(name);
   if (it != extract_mask.end()) {
     sync(Host, it->second);
-  } else if (utils::strmatch(name, "^d2?_")) {
-    // custom per-atom double vectors/arrays all live in the k_dvector dual view
-    sync(Host, DVECTOR_MASK);
+  } else if (utils::strmatch(name, "^[id]2?_")) {
+    // custom per-atom data (fix property/atom). each prefix maps to its own
+    // data mask:
+    //   i_  -> ivector (IVECTOR_MASK)    d_  -> dvector (DVECTOR_MASK)
+    //   i2_ -> iarray  (IARRAY_MASK)     d2_ -> darray  (DARRAY_MASK)
+    // only dvector is currently device-resident, so the other three syncs are
+    // no-ops until that data is ported to the device; using all four masks here
+    // means extract() needs no change once it is.
+    const bool dbl = (name[0] == 'd');
+    const bool arr = (name[1] == '2');
+    uint64_t cmask;
+    if (!dbl && !arr) cmask = IVECTOR_MASK;
+    else if (dbl && !arr) cmask = DVECTOR_MASK;
+    else if (!dbl && arr) cmask = IARRAY_MASK;
+    else cmask = DARRAY_MASK;
+    sync(Host, cmask);
   }
 
   return Atom::extract(name);
