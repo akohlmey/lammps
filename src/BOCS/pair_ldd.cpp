@@ -78,7 +78,7 @@ constexpr char cite_pair_ldd2_c[] =
 /* ---------------------------------------------------------------------- */
 
 PairLdd::PairLdd(LAMMPS *lmp) :
-    Pair(lmp), indicator_map(nullptr), potential_map(nullptr), self_interaction(nullptr),
+    Pair(lmp), self_interaction(nullptr),
     ignore_pair(nullptr), ignore_me(nullptr), bGradient(nullptr), Inds(nullptr), Potls(nullptr),
     GradPotls(nullptr), local_density(nullptr), grad_density(nullptr), ld_energy(nullptr),
     ld_grad_energy(nullptr), total_energy(nullptr)
