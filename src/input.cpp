@@ -108,7 +108,7 @@ function executed, and finally the class instance is deleted.
 
 Input::Input(LAMMPS *lmp, int argc, char **argv) :
     Pointers(lmp), command(nullptr), variable(nullptr), labelstr(nullptr), infiles(nullptr),
-    inlines(nullptr), command_map(nullptr)
+    inlines(nullptr)
 {
   MPI_Comm_rank(world, &me);
 
