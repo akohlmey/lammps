@@ -179,6 +179,14 @@ void FixRigidSmallKokkos<DeviceType>::setup(int vflag)
   FixRigidSmall::setup(vflag);
   atomKK->modified(Host, datamask_modify);
 
+  // the host work above modified per-atom data on the host, but ModifyKokkos
+  // brackets this callback with modified(Device, datamask_modify) (the fix
+  // execution space is the device). push the host changes to the device now so
+  // the host side is not left "ahead", which would trip the DualView
+  // concurrent host/device modification check on a GPU build.
+
+  atomKK->sync(execution_space, datamask_modify);
+
   // body data and the per-atom body arrays become resident on the device for
   // the run loop (extended particles stay on the host)
 
@@ -197,6 +205,7 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
   atomKK->sync(Host, datamask_read);
   FixRigidSmall::setup_pre_neighbor();
   atomKK->modified(Host, datamask_modify);
+  atomKK->sync(execution_space, datamask_modify);
 }
 
 /* ----------------------------------------------------------------------
@@ -221,6 +230,7 @@ void FixRigidSmallKokkos<DeviceType>::pre_neighbor()
   atomKK->sync(Host, datamask_read);
   FixRigidSmall::pre_neighbor();
   atomKK->modified(Host, datamask_modify);
+  atomKK->sync(execution_space, datamask_modify);
 
   // the host rebuilt the (ghost) body list and the per-atom body arrays;
   // make them resident on the device again
@@ -263,6 +273,7 @@ void FixRigidSmallKokkos<DeviceType>::initial_integrate(int vflag)
     atomKK->sync(Host, datamask_read);
     FixRigidSmall::initial_integrate(vflag);
     atomKK->modified(Host, datamask_modify);
+    atomKK->sync(execution_space, datamask_modify);
     return;
   }
 
@@ -334,6 +345,7 @@ void FixRigidSmallKokkos<DeviceType>::final_integrate()
     atomKK->sync(Host, datamask_read);
     FixRigidSmall::final_integrate();
     atomKK->modified(Host, datamask_modify);
+    atomKK->sync(execution_space, datamask_modify);
     return;
   }
 
@@ -496,6 +508,7 @@ void FixRigidSmallKokkos<DeviceType>::set_xv_kokkos(int setx)
     if (setx) FixRigidSmall::set_xv();
     else FixRigidSmall::set_v();
     atomKK->modified(Host, X_MASK | V_MASK);
+    atomKK->sync(execution_space, X_MASK | V_MASK);
     return;
   }
 
@@ -815,6 +828,7 @@ void FixRigidSmallKokkos<DeviceType>::zero_momentum()
   atomKK->sync(Host, datamask_read);
   FixRigidSmall::zero_momentum();
   atomKK->modified(Host, datamask_modify);
+  atomKK->sync(execution_space, datamask_modify);
   if (body_resident_device) copy_body_to_device();
 }
 
@@ -825,6 +839,7 @@ void FixRigidSmallKokkos<DeviceType>::zero_rotation()
   atomKK->sync(Host, datamask_read);
   FixRigidSmall::zero_rotation();
   atomKK->modified(Host, datamask_modify);
+  atomKK->sync(execution_space, datamask_modify);
   if (body_resident_device) copy_body_to_device();
 }
 
