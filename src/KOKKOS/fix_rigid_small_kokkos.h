@@ -15,7 +15,7 @@
 // clang-format off
 FixStyle(rigid/small/kk,FixRigidSmallKokkos<LMPDeviceType>);
 FixStyle(rigid/small/kk/device,FixRigidSmallKokkos<LMPDeviceType>);
-FixStyle(rigid/small/kk/host,FixRigidSmallKokkos<LMPHostType>);
+FixStyle(rigid/small/host,FixRigidSmallKokkos<LMPHostType>);
 // clang-format on
 #else
 
@@ -24,85 +24,187 @@ FixStyle(rigid/small/kk/host,FixRigidSmallKokkos<LMPHostType>);
 
 #include "fix_rigid_small.h"
 #include "kokkos_base.h"
-#include "kokkos_type.h"
 #include "comm_kokkos.h"
+#include "Kokkos_Random.hpp"
+#include <map>
+
+struct TagInitialIntegrate{};
+struct TagPackForwardInitial{};
+struct TagUnpackForwardInitial{};
+template<int SETXFLAG>
+struct TagSetXV{};
+struct TagUpdateXGC{};
 
 namespace LAMMPS_NS {
 
+
+// Kokkos port of fix rigid/small.
+//
+// Design notes:
+//  - Body setup (create_bodies / rendezvous_body) is intentionally kept on the
+//    host: it runs only at setup, uses STL maps and an MPI rendezvous callback,
+//    and has no per-timestep cost, so a device reimplementation would add
+//    complexity with no runtime benefit.  The tied DualViews make the host
+//    setup results directly visible to the device kernels.
+//  - Atom exchange (migration) runs on whichever side CommKokkos/AtomKokkos
+//    select: the device path (pack/unpack_exchange_kokkos) when comm and sort
+//    are both on device (GPU default, or "-pk kokkos comm device sort device"),
+//    and the host FixRigidSmall::pack/unpack_exchange path otherwise (CPU
+//    default), with the tied DualViews flushed to the host in pre_exchange() and
+//    re-synced in pre_neighbor().  The exchange and the sort must run on the same
+//    side -- a mixed configuration would let a host sort permute the per-atom
+//    arrays out from under a device exchange -- so setup_device_push() errors on
+//    a mismatch.  Forward/reverse comm run on the device during the run.
 template<class DeviceType>
 class FixRigidSmallKokkos : public FixRigidSmall, public KokkosBase {
+
  public:
+  typedef EV_FLOAT value_type;
   typedef DeviceType device_type;
   typedef ArrayTypes<DeviceType> AT;
 
-  FixRigidSmallKokkos(class LAMMPS *, int, char **);
-  ~FixRigidSmallKokkos() override;
 
+  FixRigidSmallKokkos(class LAMMPS *, int, char **);
+  ~FixRigidSmallKokkos();
   int setmask() override;
+  void pre_exchange() override;
   void init() override;
   void setup(int) override;
-  void setup_pre_neighbor() override;
-  void pre_exchange() override;
-  void pre_neighbor() override;
   void initial_integrate(int) override;
   void post_force(int) override;
   void final_integrate() override;
   void write_restart_file(const char *) override;
+  void pre_neighbor() override;
 
-  // host-fallback methods that read/modify body[] while it is resident on the
-  // device; they sync the body data to/from the host as needed
-  double compute_scalar() override;
+  void grow_arrays(int) override;
+  void grow_body() override;
+  void set_molecule(int, tagint, int, double *, double *, double *) override;
+
+  int pack_exchange_kokkos(const int &nsend,DAT::tdual_double_2d_lr &buf,
+                           DAT::tdual_int_1d k_sendlist,
+                           DAT::tdual_int_1d k_copylist,
+                           ExecutionSpace space) override;
+
+  void unpack_exchange_kokkos(DAT::tdual_double_2d_lr &k_buf,
+                              DAT::tdual_int_1d &indices,int nrecv,
+                              int, int,
+                              ExecutionSpace space) override;
+  int pack_forward_comm_kokkos(int n, DAT::tdual_int_1d k_sendlist,
+                               DAT::tdual_double_1d &k_buf,
+                               int pbc_flag, int* pbc) override;
+  void unpack_forward_comm_kokkos(int, int, DAT::tdual_double_1d&) override;
+
+  int pack_reverse_comm_kokkos(int, int, DAT::tdual_double_1d &) override;
+  void unpack_reverse_comm_kokkos(int, DAT::tdual_int_1d,
+                                          DAT::tdual_double_1d &) override;
+  // reverse comm handled by host,
+  // only happens when body and bodyown
+  // are already on host
+
+  void setup_pre_neighbor() override;
+  bigint dof(int) override;
   void deform(int) override;
+  void enforce2d() override;
   void zero_momentum() override;
   void zero_rotation() override;
   void *extract(const char *, int &) override;
+  double extract_ke();
+  double extract_erotational();
+  double compute_scalar() override;
+  void reset_atom2body() override;
+  void image_shift() override;
+  void sort_kokkos(Kokkos::BinSort<KeyViewType, BinOp> &Sorter) override;
 
-  void grow_arrays(int) override;
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagInitialIntegrate, const int) const;
 
-  // device communication of body data (fixed stride per atom)
-  int pack_forward_comm_kokkos(int, DAT::tdual_int_1d, DAT::tdual_double_1d &,
-                               int, int *) override;
-  void unpack_forward_comm_kokkos(int, int, DAT::tdual_double_1d &) override;
-  int pack_reverse_comm_kokkos(int, int, DAT::tdual_double_1d &) override;
-  void unpack_reverse_comm_kokkos(int, DAT::tdual_int_1d, DAT::tdual_double_1d &) override;
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagPackForwardInitial, const int) const;
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUnpackForwardInitial, const int) const;
+
+  template<int SETXFLAG>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetXV<SETXFLAG>, const int, EV_FLOAT &ev) const;
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateXGC, const int) const;
+
+  void compute_forces_and_torques_kokkos();
 
  protected:
 
-  // device per-body data (a device-resident copy of the base-class body[] list)
-  Kokkos::View<Body*, DeviceType> d_body;
+  void set_xv_kokkos(int);
+  void setup_device_push();
+  void apply_langevin_thermostat_kokkos();
 
-  // true once the device copy d_body holds the canonical body data (after
-  // setup / pre_neighbor); false while the host body[] is being (re)built
-  bool body_resident_device = false;
+  using ImageIntView1D = typename AT::t_imageint_1d;
+  using TagIntView1D = typename AT::t_tagint_1d;
+  using IntView1D = typename AT::t_int_1d;
+  using View2D = typename AT::t_double_2d_lr;
 
-  class CommKokkos *commKK;
+  using Range1D = Kokkos::RangePolicy<DeviceType>;
 
-  void set_xv_kokkos(int setx);
-  void compute_forces_and_torques_kokkos();
-  void copy_body_to_device();
-  void copy_body_to_host();
-  void sync_peratom_to_device();
+  void copy_body_host();
+  void copy_body_device();
+  void refresh_atom_views();
+  KOKKOS_INLINE_FUNCTION
+  void v_tally(EV_FLOAT&, int, double[6], double[3], double[3], double[3]) const;
+  KOKKOS_INLINE_FUNCTION
+  void v_tally(EV_FLOAT&, int, double[6]) const;
+
+  // per-atom DualViews, tied to the FixRigidSmall host pointers via grow_kokkos
+  DAT::tdual_int_1d k_bodyown;
+  DAT::tdual_tagint_1d k_bodytag;
+  DAT::tdual_int_1d k_atom2body;
+  DAT::tdual_imageint_1d k_xcmimage;
+  DAT::tdual_double_2d_lr k_displace, k_vatom, k_langextra;
+
+  IntView1D d_bodyown;
+  TagIntView1D d_bodytag;
+  IntView1D d_atom2body;
+  ImageIntView1D d_xcmimage;
+  View2D d_displace, d_vatom, d_langextra;
+
+  // 1 once grow_kokkos owns the base per-atom pointers
+  bool tied_initialized = false;
+
+  int max_body_sent=0;
+  std::map<int,int> n_body_recv, first_body;
+  std::map<int*,int> n_body_sent;
+  std::map<int*,IntView1D> d_body_sendlists;
 
 
-  // per-atom rigid-body arrays, stored as DualViews so the host pointers in
-  // the FixRigidSmall base class alias the host side of each view and the
-  // existing CPU comm/exchange/sort paths keep working unchanged, while the
-  // device kernels (added in later build stages) operate on the device side.
+  IntView1D d_sendlist;
+  typename AT::t_double_1d_um d_buf;
+  int first;
 
-  DAT::tdual_int_1d k_bodyown;          // index of body owned by atom, else -1
-  DAT::tdual_tagint_1d k_bodytag;       // ID of body the atom belongs to, else 0
-  DAT::tdual_int_1d k_atom2body;        // index of body the atom is in, else -1
-  DAT::tdual_imageint_1d k_xcmimage;    // internal image flags of body atoms
-  DAT::tdual_double_2d_lr k_displace;   // displacement of atom in body coords
+  CommKokkos *commKK;
 
-  typename AT::t_int_1d d_bodyown;
-  typename AT::t_tagint_1d d_bodytag;
-  typename AT::t_int_1d d_atom2body;
-  typename AT::t_imageint_1d d_xcmimage;
-  typename AT::t_double_2d_lr d_displace;
+  // body DualView (struct array); not tied to base `body` (different allocator),
+  // bridged by copy_body_host()/copy_body_device()
+  Kokkos::DualView<Body*, DeviceType> k_body;
+  typename Kokkos::DualView<Body*, DeviceType>::t_dev d_body;
+
+  double xbox, ybox, zbox, xprd, yprd, zprd, xy, xz, yz;
+  typename AT::t_kkfloat_1d_3_lr d_x;
+  typename AT::t_kkfloat_1d_3 d_v;
+  typename AT::t_kkacc_1d_3 d_f;
+
+  typename AT::t_kkfloat_1d d_rmass, d_mass;
+  IntView1D d_type;
+
+  // RNG pool for the on-device Langevin thermostat
+  Kokkos::Random_XorShift64_Pool<DeviceType> rand_pool;
+  typedef typename Kokkos::Random_XorShift64_Pool<DeviceType>::generator_type rand_type;
 };
 
+KOKKOS_INLINE_FUNCTION
+void copy_body(FixRigidSmall::Body *dest, FixRigidSmall::Body *src){
+  memcpy(dest, src, sizeof(FixRigidSmall::Body));
+}
+
 }    // namespace LAMMPS_NS
+
 
 #endif
 #endif
