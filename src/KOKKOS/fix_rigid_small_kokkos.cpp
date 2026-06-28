@@ -223,6 +223,12 @@ void FixRigidSmallKokkos<DeviceType>::setup(int vflag)
 
   atomKK->modified(Host, datamask_modify);
 
+  // the host setup wrote x/v/virial on the host, but ModifyKokkos brackets this
+  // callback with modified(Device, datamask_modify) (execution_space == device),
+  // so push the host changes to the device now to avoid a DualView concurrent
+  // host/device modification abort (same reconcile as setup_pre_neighbor()).
+  atomKK->sync(execution_space, datamask_read);
+
   setup_device_push();
 }
 
@@ -237,7 +243,19 @@ template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::setup_device_push()
 {
   // FixRigidSmall::setup() populated the host per-atom arrays, which are the
-  // host mirrors of the tied DualViews -> mark host-modified and push to device
+  // host mirrors of the tied DualViews -> mark host-modified and push to device.
+  // The setup-time device exchange/sort (enabled by exchange_comm_device /
+  // sort_device in the constructor) already marked these DualViews
+  // device-modified, but they held only pre-body placeholders then; the host
+  // arrays the (host) setup routines just wrote are now the authoritative copy.
+  // Drop that stale device-modified flag first, otherwise modify_host() aborts
+  // with a DualView concurrent host/device modification error on a GPU build.
+  k_bodyown.clear_sync_state();
+  k_bodytag.clear_sync_state();
+  k_atom2body.clear_sync_state();
+  k_xcmimage.clear_sync_state();
+  k_displace.clear_sync_state();
+  k_vatom.clear_sync_state();
   k_bodyown.modify_host();
   k_bodytag.modify_host();
   k_atom2body.modify_host();
