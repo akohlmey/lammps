@@ -403,6 +403,12 @@ void FixRigidNHSmallKokkos<DeviceType>::setup(int vflag)
 
   // --- push host state to device and enable device comm/sort for the run ---
 
+  // the host setup wrote x/v/virial on the host; ModifyKokkos brackets this
+  // callback with modified(Device, datamask_modify) (execution_space == device),
+  // so reconcile the host changes to the device first to avoid a DualView
+  // concurrent host/device modification abort (matches FixRigidSmallKokkos::setup).
+  atomKK->sync(execution_space, datamask_read);
+
   setup_device_push();
 }
 
