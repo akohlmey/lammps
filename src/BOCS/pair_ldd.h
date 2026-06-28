@@ -30,6 +30,7 @@ PairStyle(ldd,PairLdd);
 
 namespace LAMMPS_NS {
 
+//Forward Declarations
 class LddIndicator;
 class LddPotential;
 
