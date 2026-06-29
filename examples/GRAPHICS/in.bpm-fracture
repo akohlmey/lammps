@@ -10,6 +10,7 @@
 # color map.  This works for any /local compute that produces one value per
 # bond, e.g. "compute bond/local dist" (bond length) or "engpot" (bond
 # energy), and for ordinary molecular bond styles as well as BPM bonds.
+# Please also note the fix graphics/labels command to draw the color scale
 
 units           lj
 dimension       3
@@ -53,13 +54,27 @@ bond_coeff      2 1.0 0.20 1.0
 
 velocity        projectile set -0.05 0.0 0.0
 
-# per-bond force; the dump image command below maps it to
-# a color.  the disk lies in the y-z plane, so we view it face-on with view 90 0
+# define a variable for dump output frequency, so that graphics fix and dump
+# are run one the same steps and making this an index style variable lets you
+# override it from the command line with -var dumpfreq 100
+
+variable        dumpfreq index 200
+
+# to add a color scale we have to reference a dump that has not been created.
+# the fix has to come *before* the dump image command so it can be enabled by it,
+# but it needs the dump-ID so it can query it for the color map information.
+
+fix             scale all graphics/labels ${dumpfreq} &
+                colorscale viz "Bond Force" 400 50 0 size 28 &
+                length 900 horizontal tics 10 map bond
+
+# compute per-bond force; the dump image command below maps it to a color
+
 compute         bforce all bond/local force
 
-dump            viz all image 200 fracture.*.ppm type type adiam 0.4 bond c_bforce 0.3 &
-                size 800 800 zoom 1.9 view 80 20 box no 0.0 center s 0.7 0.5 0.5 &
-                shiny 0.2 fsaa yes ssao yes 15267243 0.6
+dump            viz all image ${dumpfreq} fracture.*.ppm type type adiam 0.4 bond c_bforce 0.3 &
+                size 800 800 zoom 1.9 view 80 20 box no 0.0 center s 0.7 0.5 0.45 &
+                shiny 0.2 fsaa yes ssao yes 15267243 0.6 fix scale type 1 0
 
 # bmap sets the bond color map exactly like amap does for atoms.  Instead of a
 # plain blue-to-red ramp we build a "plasma" perceptually uniform color map (as
@@ -69,19 +84,17 @@ dump            viz all image 200 fracture.*.ppm type type adiam 0.4 bond c_bfor
 # contrast across the range and place a bright yellow at the top end, so the
 # most critical (near-breaking, highest-force) bonds stand out clearly, while
 # relaxed bonds stay a muted dark purple.
+
 dump_modify     viz color map1 0x0d0887 color map2 0x7e03a8 color map3 0xcc4778 &
                     color map4 0xf89540 color map5 0xf0f921 acolor 1 map1 &
-                    bmap 0.0 0.04 ca 0.0 5 min map1 0.01 map2 0.02 map3 &
+                    bmap 0.0 0.05 ca 0.0 5 min map1 0.01 map2 0.02 map3 &
                     0.03 map4 max map5 backcolor2 silver backcolor darkgray
 
-
-# For the equally popular "viridis" map, define map1..map5 from these hex codes
-# instead:  0x440154  0x3b528b  0x21908c  0x5dc963  0xfde725
-
 # broken bonds are removed from the topology, so atoms become "lost"; allow it
+
 thermo          200
 thermo_style    custom step ke pe
 thermo_modify   lost ignore lost/bond ignore
 
 timestep        0.1
-run             8000
+run             10000
