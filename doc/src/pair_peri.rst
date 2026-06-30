@@ -151,17 +151,31 @@ details please see the description in "(Mitchell2011a)".
 
 .. versionchanged:: TBD
 
-Two corrections were made to the *peri/eps* plasticity.  The deviatoric
-force-state norm used in the yield check now matches the deviatoric force
-state the model actually applies (the previous norm carried a spurious extra
-dilatation factor, so the material yielded much later than intended).  The
-update of the per-bond plastic deviatoric extension now uses the consistent
-radial-return form ``edp += (e_dev - edp)*(1 - sqrt(2*psi)/||t_d||)`` instead
-of the previous ``edp += rkNew*deltalambda``, which was dimensionally
-inconsistent and could diverge under sustained plastic flow.  As a result the
-elastic-plastic response now yields at the intended stress and remains stable;
-results for *peri/eps* runs that reached the plastic regime will differ from
-earlier versions.
+Two corrections were made to the *peri/eps* plasticity relative to the source
+report :ref:`(Mitchell2011a) <Mitchell2011a>`.  First, the deviatoric
+force-state norm used in the yield check now matches the deviatoric force state
+the model actually applies; the previous norm carried a spurious extra
+dilatation factor, so the material yielded much later than intended (and never
+yielded under purely volume-preserving deformation).
+
+Second, the update of the stored per-bond plastic deviatoric extension was
+corrected.  The original code transcribed the continuum flow rule literally as
+``edp += rkNew*deltalambda``.  Because LAMMPS evaluates the peridynamic
+influence function as :math:`\omega = 1/r_0` (units of inverse length), that
+product is dimensionless in the code's force-state units while the plastic
+extension is a length, so the literal update injected a spurious gain of order
+:math:`2/r_0` and the plastic deformation diverged under sustained flow.  The
+update now restores the missing length factor, which removes the runaway and,
+in the interior of a body, coincides with the closest-point ("radial") return
+that places the deviatoric force state exactly on the yield surface.  As a
+result the elastic-plastic response yields at the intended stress and remains
+stable; results for *peri/eps* runs that reached the plastic regime will differ
+from earlier versions.
+
+The dimensionally exact form of this update is a per-bond radial return that is
+also exact at free surfaces (where the interior approximation leaves a small
+bounded residual).  Adopting it would slightly change results near boundaries,
+so it is left for a future revision and review by a peridynamics expert.
 
 ----------
 
