@@ -310,55 +310,21 @@ void PairPeriEPS::compute(int eflag, int vflag)
       if (elastic) {
         rkNew = tdtrialValue;
       } else {
-        // Plastic step.  The deviatoric force state used for the force is the
+        // Plastic step. The deviatoric force state used for the force is the
         // trial state projected back onto the yield surface (the closest-point
-        // or "radial" return), rkNew = (sqrt(2*psi0)/||t_d||) * t_d_trial.
-        // This is unchanged from the original implementation.
+        // or "radial" return), rkNew = (sqrt(2*psi0)/||t_d||) * t_d_trial, as in:
+        //    Mitchell 2011 (SAND2011-3166) Eq. 45.
+        // but need to multiply by 0.5 * r0 to account for definition of influence
+        // function omega (here has units of 1/length but report assumes dimensionless).
         rkNew = (sqrt(2.0*pointwiseYieldvalue) * tdtrialValue) / tdnorm;
-
-        // Update of the stored per-bond plastic deviatoric extension (the
-        // history variable carried to the next step), Mitchell 2011
-        // (SAND2011-3166) Eq. 45.  The original code transcribed the continuum
-        // flow rule literally as
-        //
-        //     deviatorPlasticExtTemp[i][jj] = edpNp1 + rkNew * deltalambda;
-        //
-        // but that is dimensionally inconsistent in the discrete force-state
-        // convention LAMMPS uses.  Here the influence function is omega = 1/r0
-        // (PairPeri::influence_function, units 1/length), which makes the trial
-        // force state t_d ~ 15G*(omega/m)*(e_dev-edp) carry units force/length^6
-        // and the plastic multiplier deltalambda ~ (...)*m/(15G) carry units
-        // length^6/force, so their product rkNew*deltalambda is DIMENSIONLESS
-        // while the plastic extension edp is a length.  The literal update
-        // therefore injects a spurious gain of omega*(1 + m_i/m_j) =
-        // (1/r0)*(1 + wvolume[i]/wvolume[j]) -- equal to 2/r0 in the
-        // equal-weighted-volume interior.  With a sub-millimeter horizon that
-        // factor is ~10^3, so edp is over-incremented by ~thousands and the
-        // plastic integration diverges under sustained flow.
-        //
-        // The missing factor is a length of order r0/2.  Restoring it (multiply
-        // the literal increment by 0.5*r0) makes the update dimensionally
-        // consistent and removes the catastrophic gain.  In the interior, where
-        // the two endpoints have equal weighted volume, this is *exactly* the
-        // closest-point radial return: it scales the stored elastic deviatoric
-        // extension so that ||t_d|| lands on sqrt(2*psi0), i.e. on the yield
-        // surface, every step.
         deviatorPlasticExtTemp[i][jj] = edpNp1 + rkNew * deltalambda * (0.5 * r0[i][jj]);
 
-        // NOTE for a peridynamics expert (none of the current LAMMPS
-        // maintainers is one): the factor 0.5*r0 above is the equal-weighted-
-        // volume form of the missing length.  The dimensionally exact, per-bond
-        // form divides the literal increment by the full omega*(1 + m_i/m_j),
-        // which is identically the radial return written in extension space,
+        // NOTE: a better solution might be to use radial return to ensure the
+        //  solution does not leave the yield surface, such as
         //
         //     edpNp1 + (deviatoric_extension - edpNp1) * (1.0 - sqrt(2*psi0)/||t_d||);
         //
-        // and places ||t_d|| exactly on sqrt(2*psi0) for *every* bond, including
-        // those near a free surface (where m_i != m_j and the 0.5*r0 form leaves
-        // a bounded O(1) residual factor (1 + m_i/m_j)/2).  Adopting that exact
-        // radial-return form changes results near free surfaces, so it is left
-        // to a future PR and review by a domain expert; see the discussion in
-        // pull request #5046 and doc/src/pair_peri.rst.
+        // See the discussion in pull request #5046 and issue #5064
       }
 
       if (r > 0.0) fbondElastoPlastic = -((rkNew/r) * vfrac[j] * vfrac_scale);
@@ -609,8 +575,7 @@ double PairPeriEPS::compute_DeviatoricForceStateNorm(int i)
       double omega_minus = influence_function(delx0,dely0,delz0);
 
       // the yield-norm trial force state must match the deviatoric force state
-      // the force loop actually applies (line ~306, with no dilatation factor);
-      // the previous (omega*theta/wvolume) form carried a spurious extra theta
+      // prior to 6/26, (omega*theta/wvolume) form carried a spurious extra theta
       tdtrial = ( 15 * shearmodulus[itype][itype]) *
            ((omega_plus / wvolume[i]) +
              ( omega_minus / wvolume[j] ) ) * (ed - edPNP1);
