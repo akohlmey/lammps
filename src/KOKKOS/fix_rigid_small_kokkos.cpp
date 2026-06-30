@@ -219,7 +219,23 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
 {
   atomKK->sync(Host, datamask_read);
 
+  // On the 2nd and later runs reinitflag re-runs the host body build
+  // (setup_bodies_static/dynamic -> pre_neighbor/reset_atom2body/image_shift plus
+  // non-FORCE_TORQUE forward/reverse comms).  Run 1's setup_device_push() left
+  // *_comm_device=1 and setupflag=1, which would route all of that to the device
+  // packers (FORCE_TORQUE/body-sendlist only) and abort.  Restore the run-1
+  // conditions around the base call: force the host fallback in the overrides
+  // (setup_host_rebuild) and the host comm path; setup_device_push() re-enables
+  // device comm for the run.
+  const int saved_forward_comm_device = forward_comm_device;
+  const int saved_reverse_comm_device = reverse_comm_device;
+  forward_comm_device = 0;
+  reverse_comm_device = 0;
+  setup_host_rebuild = true;
   FixRigidSmall::setup_pre_neighbor();
+  setup_host_rebuild = false;
+  forward_comm_device = saved_forward_comm_device;
+  reverse_comm_device = saved_reverse_comm_device;
 
   atomKK->modified(Host, datamask_modify);
   atomKK->sync(execution_space, datamask_read);
@@ -451,7 +467,7 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
 
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::pre_neighbor(){
-  if (!setupflag) {
+  if (!setupflag || setup_host_rebuild) {
     FixRigidSmall::pre_neighbor();
     return;
   }
@@ -2206,7 +2222,7 @@ void FixRigidSmallKokkos<DeviceType>::grow_body()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::reset_atom2body()
 {
-  if (!setupflag) {
+  if (!setupflag || setup_host_rebuild) {
     // called during setup_bodies
     FixRigidSmall::reset_atom2body();
     return;
@@ -2264,7 +2280,7 @@ void FixRigidSmallKokkos<DeviceType>::reset_atom2body()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::image_shift()
 {
-  if (!setupflag) {
+  if (!setupflag || setup_host_rebuild) {
     // called during setup_bodies
     FixRigidSmall::image_shift();
     return;

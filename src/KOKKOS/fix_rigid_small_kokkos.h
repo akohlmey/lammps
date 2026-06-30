@@ -188,6 +188,11 @@ template <class DeviceType> class FixRigidSmallKokkos : public FixRigidSmall, pu
   // 1 once grow_kokkos owns the base per-atom pointers
   bool tied_initialized = false;
 
+  // set while the host body rebuild runs in setup_pre_neighbor() on the 2nd and
+  // later runs, so the pre_neighbor()/reset_atom2body()/image_shift() overrides
+  // take their host fallback even though setupflag is already 1 by then
+  bool setup_host_rebuild = false;
+
   int max_body_sent = 0;
   std::map<int, int> n_body_recv, first_body;
   std::map<int *, int> n_body_sent;
