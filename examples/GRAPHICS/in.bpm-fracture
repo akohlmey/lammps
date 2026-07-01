@@ -58,7 +58,7 @@ velocity        projectile set -0.05 0.0 0.0
 # are run one the same steps and making this an index style variable lets you
 # override it from the command line with -var dumpfreq 100
 
-variable        dumpfreq index 200
+variable        dumpfreq index 100
 
 # to add a color scale we have to reference a dump that has not been created.
 # the fix has to come *before* the dump image command so it can be enabled by it,
@@ -66,29 +66,30 @@ variable        dumpfreq index 200
 
 fix             scale all graphics/labels ${dumpfreq} &
                 colorscale viz "Bond Force" 400 50 0 size 28 &
-                length 900 horizontal tics 10 map bond
+                length 950 horizontal tics 10 map bond &
+                colorscale viz "Atom Kinetic Energy" 400 125 0 size 28 &
+                length 800 horizontal tics 10 map atom
 
-# compute per-bond force; the dump image command below maps it to a color
+# for coloring atoms
+compute ke all ke/atom
 
-compute         bforce all bond/local force
+# for coloring bonds
+compute bond_dump_viz all bond/local force
 
-dump            viz all image ${dumpfreq} fracture.*.ppm type type adiam 0.4 bond c_bforce 0.3 &
-                size 800 800 zoom 1.9 view 80 20 box no 0.0 center s 0.7 0.5 0.45 &
-                shiny 0.2 fsaa yes ssao yes 15267243 0.6 fix scale type 1 0
+dump viz all image ${dumpfreq} fracture-*.ppm c_ke type bond c_bond_dump_viz type &
+     size 800 800 zoom 1.75 view 80 50 center s 0.6 0.5 0.4 box no 0.0 &
+     shiny 0.4 fsaa yes ssao yes 12453 0.4  fix scale type 1 0
 
-# bmap sets the bond color map exactly like amap does for atoms.  Instead of a
-# plain blue-to-red ramp we build a "plasma" perceptually uniform color map (as
-# popularized by matplotlib): first define custom colors map1..map5 from hex RGB
-# codes, then list them as the color map stops.  This is the same workflow the
-# LAMMPS-GUI uses for custom color maps.  Such maps keep a uniform perceived
-# contrast across the range and place a bright yellow at the top end, so the
-# most critical (near-breaking, highest-force) bonds stand out clearly, while
-# relaxed bonds stay a muted dark purple.
+# define and apply two custom color maps for atoms and bonds
 
-dump_modify     viz color map1 0x0d0887 color map2 0x7e03a8 color map3 0xcc4778 &
-                    color map4 0xf89540 color map5 0xf0f921 acolor 1 map1 &
-                    bmap 0.0 0.05 ca 0.0 5 min map1 0.01 map2 0.02 map3 &
-                    0.03 map4 max map5 backcolor2 silver backcolor darkgray
+dump_modify viz pad 9 backcolor black backcolor2 white adiam * 0.66 &
+     color map1 0.250 0.025 0.329 color map2 0.191 0.407 0.556 &
+     color map3 0.208 0.719 0.473 color map4 0.993 0.906 0.144 &
+     amap 0.00001 0.003 cf 0.0 4 min map1 0.333 map2 0.667 map3 max map4 &
+     color bm1 0.250 0.025 0.329 color bm2 0.611 0.090 0.620 &
+     color bm3 0.928 0.473 0.326 color bm4 0.940 0.975 0.131 &
+     bmap 0.001 0.5 cf 0.0 4 min bm1 0.333 bm2 0.667 bm3 max bm4 &
+     lights 0.2 0.9 0.45 0.9
 
 # broken bonds are removed from the topology, so atoms become "lost"; allow it
 
