@@ -264,6 +264,7 @@ Barashev
 Barbosa
 barnes
 barostat
+barostats
 Barostats
 barostatted
 barostatting
@@ -2482,7 +2483,7 @@ mie
 Mie
 Mij
 Mikami
-Mikkelsens
+Mikkelsen
 Milano
 Militzer
 Minary
@@ -3302,6 +3303,7 @@ priori
 Priya
 prmtop
 pRNG
+pRNGs
 proc
 Proc
 procs
@@ -3795,7 +3797,7 @@ SHM
 shockvel
 shrinkexceed
 Shugaev
-Shur
+Schur
 si
 SiC
 Siegmund
