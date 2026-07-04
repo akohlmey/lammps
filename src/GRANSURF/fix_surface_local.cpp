@@ -3598,6 +3598,9 @@ void FixSurfaceLocal::connectivity3d_complete()
       else if (same_point(cpts[iconnect][1], cpts[jconnect][2]))
         jpsecond = 3;
 
+      if ((jpfirst < 0) || (jpsecond < 0))
+        error->one(FLERR, Error::NOLASTLINE, "Inconsistent surface connectivity");
+
       MathExtra::sub3(cpts[iconnect][1], cpts[iconnect][0], iedge);
       edge_connection3d(normals[iconnect], normals[jconnect], iedge, jpfirst, jpsecond,
                         flatthresh, connect3d[iconnect].fflag_e1[m],
@@ -3626,6 +3629,9 @@ void FixSurfaceLocal::connectivity3d_complete()
       else if (same_point(cpts[iconnect][2], cpts[jconnect][2]))
         jpsecond = 3;
 
+      if ((jpfirst < 0) || (jpsecond < 0))
+        error->one(FLERR, Error::NOLASTLINE, "Inconsistent surface connectivity");
+
       MathExtra::sub3(cpts[iconnect][2], cpts[iconnect][1], iedge);
       edge_connection3d(normals[iconnect], normals[jconnect], iedge, jpfirst, jpsecond,
                         flatthresh, connect3d[iconnect].fflag_e2[m],
@@ -3653,6 +3659,9 @@ void FixSurfaceLocal::connectivity3d_complete()
         jpsecond = 2;
       else if (same_point(cpts[iconnect][0], cpts[jconnect][2]))
         jpsecond = 3;
+
+      if ((jpfirst < 0) || (jpsecond < 0))
+        error->one(FLERR, Error::NOLASTLINE, "Inconsistent surface connectivity");
 
       MathExtra::sub3(cpts[iconnect][0], cpts[iconnect][2], iedge);
       edge_connection3d(normals[iconnect], normals[jconnect], iedge, jpfirst, jpsecond,

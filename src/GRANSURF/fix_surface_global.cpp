@@ -2547,6 +2547,9 @@ void FixSurfaceGlobal::connectivity3d_complete()
       else if (tris[i].p2 == tris[j].p2) jpsecond = 2;
       else if (tris[i].p2 == tris[j].p3) jpsecond = 3;
 
+      if ((jpfirst < 0) || (jpsecond < 0))
+        error->one(FLERR, Error::NOLASTLINE, "Inconsistent surface connectivity");
+
       MathExtra::sub3(points[tris[i].p2].x,points[tris[i].p1].x,iedge);
       edge_connection3d(tris[i].norm,tris[j].norm,iedge,jpfirst,jpsecond,flatthresh,
                         connect3d[i].fflag_e1[m],connect3d[i].ewhich_e1[m],
@@ -2565,6 +2568,9 @@ void FixSurfaceGlobal::connectivity3d_complete()
       else if (tris[i].p3 == tris[j].p2) jpsecond = 2;
       else if (tris[i].p3 == tris[j].p3) jpsecond = 3;
 
+      if ((jpfirst < 0) || (jpsecond < 0))
+        error->one(FLERR, Error::NOLASTLINE, "Inconsistent surface connectivity");
+
       MathExtra::sub3(points[tris[i].p3].x,points[tris[i].p2].x,iedge);
       edge_connection3d(tris[i].norm,tris[j].norm,iedge,jpfirst,jpsecond,flatthresh,
                         connect3d[i].fflag_e2[m],connect3d[i].ewhich_e2[m],
@@ -2582,6 +2588,9 @@ void FixSurfaceGlobal::connectivity3d_complete()
       if (tris[i].p1 == tris[j].p1) jpsecond = 1;
       else if (tris[i].p1 == tris[j].p2) jpsecond = 2;
       else if (tris[i].p1 == tris[j].p3) jpsecond = 3;
+
+      if ((jpfirst < 0) || (jpsecond < 0))
+        error->one(FLERR, Error::NOLASTLINE, "Inconsistent surface connectivity");
 
       MathExtra::sub3(points[tris[i].p1].x,points[tris[i].p3].x,iedge);
       edge_connection3d(tris[i].norm,tris[j].norm,iedge,jpfirst,jpsecond,flatthresh,
@@ -4066,6 +4075,7 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
     flag = contact_surfs[n].flag;
     MathExtra::copy3(contact_surfs[n].surf_norm, jnorm);
 
+    which1 = which2 = -1;
     if (flag == -4) {
       which1 = 0;
       which2 = 2;
