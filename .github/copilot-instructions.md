@@ -159,8 +159,11 @@ mapped to keywords via macros (`PairStyle`, `FixStyle`, ...) in the style header
   branch is always kept functional (continuous release model).
 - Run `cd src && make check` before committing; watch CI on the PR.
 - The PR template contains a mandatory **AI Tools Usage** section whose default text
-  states no AI was used; when AI tools generated code, edit it to disclose that
-  honestly (consistent with any `Co-Authored-By` commit trailers).
+  states no AI was used; when AI tools generated code, edit that section to disclose it
+  honestly.  This section is the ONLY place for AI attribution: do NOT add
+  `Co-Authored-By:`, `Claude-Session:`, `Generated with ...`, or similar AI-attribution
+  trailer lines to commit messages or PR descriptions.  This applies to Claude Code,
+  GitHub Copilot, and any other coding agent alike.
 
 ## Code Review
 
