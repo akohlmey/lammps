@@ -67,3 +67,6 @@ src/Makefile.package.settings-e
 /test
 /dev
 .Rhistory
+
+/plans
+/CLAUDE.local.md
