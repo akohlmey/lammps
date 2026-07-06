@@ -246,7 +246,7 @@ lammps/
    *internal* commands which can be recognized by their style name written in upper case.  The
    following applies only to publicly visible commands that have style names in lower case.
    Put `.. versionadded:: TBD` or `.. versionchanged:: TBD` in front of paragraphs documenting
-   the new or changed functionality or in front of the "Description" headline for completely
+   the new or changed functionality or following the "Description" headline for completely
    new commands. The `.. versionadded:: TBD` directive should be used with new features or added
    keywords.  The `.. versionchanged:: TBD` directive should be used when the behavior of a
    keyword changes.  The `TBD` will be manually replaced with the release version string during
