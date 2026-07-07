@@ -34,7 +34,7 @@ void PairTIP4PCutKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
   if (this->eflag || this->vflag)
     Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType,TagPairTIP4PCutCompute<1>>(0,inum), *this, ev);
   else
-    Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType,TagPairTIP4PCutCompute<0>>(0,inum), *this, ev);
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType,TagPairTIP4PCutCompute<0>>(0,inum), *this);
 
   this->copymode = 0;
 
@@ -64,6 +64,7 @@ void PairTIP4PCutKokkos<DeviceType>::operator()(TagPairTIP4PCutCompute<EVFLAG>,
   if (itype == m_typeO) {
     iH1 = d_hneigh(i,0);
     iH2 = d_hneigh(i,1);
+    if (iH1 < 0) { d_h_missing() = 1; return; }
     x1[0] = d_newsite(i,0); x1[1] = d_newsite(i,1); x1[2] = d_newsite(i,2);
   } else {
     x1[0] = xtmp; x1[1] = ytmp; x1[2] = ztmp;
@@ -90,6 +91,7 @@ void PairTIP4PCutKokkos<DeviceType>::operator()(TagPairTIP4PCutCompute<EVFLAG>,
       if (jtype == m_typeO) {
         jH1 = d_hneigh(j,0);
         jH2 = d_hneigh(j,1);
+        if (jH1 < 0) { d_h_missing() = 1; continue; }
         x2[0] = d_newsite(j,0); x2[1] = d_newsite(j,1); x2[2] = d_newsite(j,2);
       } else {
         x2[0] = x(j,0); x2[1] = x(j,1); x2[2] = x(j,2);
@@ -107,81 +109,28 @@ void PairTIP4PCutKokkos<DeviceType>::operator()(TagPairTIP4PCutCompute<EVFLAG>,
     const KK_FLOAT cforce = factor_coul * forcecoul * r2inv;
 
     int n = 0, key = 0, vlist[6];
-    KK_FLOAT v[6] = {0,0,0,0,0,0};
+    KK_ACC_FLOAT v[6] = {0,0,0,0,0,0};
+    const bool do_virial = EVFLAG && this->vflag;
 
-    if (itype != m_typeO) {
-      Kokkos::atomic_add(&f(i,0), (KK_ACC_FLOAT)(delx*cforce));
-      Kokkos::atomic_add(&f(i,1), (KK_ACC_FLOAT)(dely*cforce));
-      Kokkos::atomic_add(&f(i,2), (KK_ACC_FLOAT)(delz*cforce));
-      if (EVFLAG && this->vflag) {
-        v[0] = x(i,0)*delx*cforce; v[1] = x(i,1)*dely*cforce; v[2] = x(i,2)*delz*cforce;
-        v[3] = x(i,0)*dely*cforce; v[4] = x(i,0)*delz*cforce; v[5] = x(i,1)*delz*cforce;
-      }
-      vlist[n++] = i;
-    } else {
-      key++;
-      const KK_FLOAT fdx = delx*cforce, fdy = dely*cforce, fdz = delz*cforce;
-      const KK_FLOAT fOx = fdx*(1.0-m_alpha), fOy = fdy*(1.0-m_alpha), fOz = fdz*(1.0-m_alpha);
-      const KK_FLOAT fHx = 0.5*m_alpha*fdx, fHy = 0.5*m_alpha*fdy, fHz = 0.5*m_alpha*fdz;
-      Kokkos::atomic_add(&f(i,0), (KK_ACC_FLOAT)fOx);
-      Kokkos::atomic_add(&f(i,1), (KK_ACC_FLOAT)fOy);
-      Kokkos::atomic_add(&f(i,2), (KK_ACC_FLOAT)fOz);
-      Kokkos::atomic_add(&f(iH1,0), (KK_ACC_FLOAT)fHx);
-      Kokkos::atomic_add(&f(iH1,1), (KK_ACC_FLOAT)fHy);
-      Kokkos::atomic_add(&f(iH1,2), (KK_ACC_FLOAT)fHz);
-      Kokkos::atomic_add(&f(iH2,0), (KK_ACC_FLOAT)fHx);
-      Kokkos::atomic_add(&f(iH2,1), (KK_ACC_FLOAT)fHy);
-      Kokkos::atomic_add(&f(iH2,2), (KK_ACC_FLOAT)fHz);
-      if (EVFLAG && this->vflag) {
-        v[0] = x(i,0)*fOx + x(iH1,0)*fHx + x(iH2,0)*fHx;
-        v[1] = x(i,1)*fOy + x(iH1,1)*fHy + x(iH2,1)*fHy;
-        v[2] = x(i,2)*fOz + x(iH1,2)*fHz + x(iH2,2)*fHz;
-        v[3] = x(i,0)*fOy + x(iH1,0)*fHy + x(iH2,0)*fHy;
-        v[4] = x(i,0)*fOz + x(iH1,0)*fHz + x(iH2,0)*fHz;
-        v[5] = x(i,1)*fOz + x(iH1,1)*fHz + x(iH2,1)*fHz;
-      }
-      vlist[n++] = i; vlist[n++] = iH1; vlist[n++] = iH2;
-    }
-
-    if (jtype != m_typeO) {
-      Kokkos::atomic_add(&f(j,0), (KK_ACC_FLOAT)(-delx*cforce));
-      Kokkos::atomic_add(&f(j,1), (KK_ACC_FLOAT)(-dely*cforce));
-      Kokkos::atomic_add(&f(j,2), (KK_ACC_FLOAT)(-delz*cforce));
-      if (EVFLAG && this->vflag) {
-        v[0] -= x(j,0)*delx*cforce; v[1] -= x(j,1)*dely*cforce; v[2] -= x(j,2)*delz*cforce;
-        v[3] -= x(j,0)*dely*cforce; v[4] -= x(j,0)*delz*cforce; v[5] -= x(j,1)*delz*cforce;
-      }
-      vlist[n++] = j;
-    } else {
-      key += 2;
-      const KK_FLOAT fdx = -delx*cforce, fdy = -dely*cforce, fdz = -delz*cforce;
-      const KK_FLOAT fOx = fdx*(1.0-m_alpha), fOy = fdy*(1.0-m_alpha), fOz = fdz*(1.0-m_alpha);
-      const KK_FLOAT fHx = 0.5*m_alpha*fdx, fHy = 0.5*m_alpha*fdy, fHz = 0.5*m_alpha*fdz;
-      Kokkos::atomic_add(&f(j,0), (KK_ACC_FLOAT)fOx);
-      Kokkos::atomic_add(&f(j,1), (KK_ACC_FLOAT)fOy);
-      Kokkos::atomic_add(&f(j,2), (KK_ACC_FLOAT)fOz);
-      Kokkos::atomic_add(&f(jH1,0), (KK_ACC_FLOAT)fHx);
-      Kokkos::atomic_add(&f(jH1,1), (KK_ACC_FLOAT)fHy);
-      Kokkos::atomic_add(&f(jH1,2), (KK_ACC_FLOAT)fHz);
-      Kokkos::atomic_add(&f(jH2,0), (KK_ACC_FLOAT)fHx);
-      Kokkos::atomic_add(&f(jH2,1), (KK_ACC_FLOAT)fHy);
-      Kokkos::atomic_add(&f(jH2,2), (KK_ACC_FLOAT)fHz);
-      if (EVFLAG && this->vflag) {
-        v[0] += x(j,0)*fOx + x(jH1,0)*fHx + x(jH2,0)*fHx;
-        v[1] += x(j,1)*fOy + x(jH1,1)*fHy + x(jH2,1)*fHy;
-        v[2] += x(j,2)*fOz + x(jH1,2)*fHz + x(jH2,2)*fHz;
-        v[3] += x(j,0)*fOy + x(jH1,0)*fHy + x(jH2,0)*fHy;
-        v[4] += x(j,0)*fOz + x(jH1,0)*fHz + x(jH2,0)*fHz;
-        v[5] += x(j,1)*fOz + x(jH1,1)*fHz + x(jH2,1)*fHz;
-      }
-      vlist[n++] = j; vlist[n++] = jH1; vlist[n++] = jH2;
-    }
+    apply_site_force(i,iH1,iH2,itype == m_typeO,delx,dely,delz, cforce,do_virial,1,n,key,vlist,v);
+    apply_site_force(j,jH1,jH2,jtype == m_typeO,delx,dely,delz,-cforce,do_virial,2,n,key,vlist,v);
 
     KK_FLOAT ecoul = 0.0;
     if (EVFLAG && this->eflag) ecoul = factor_coul * qqrd2e * qtmp * q(j) * Kokkos::sqrt(r2inv);
 
     if (EVFLAG) ev_tally_tip4p(ev,key,vlist,v,ecoul);
   }
+}
+
+template<class DeviceType>
+template<int EVFLAG>
+// NOLINTNEXTLINE
+KOKKOS_INLINE_FUNCTION
+void PairTIP4PCutKokkos<DeviceType>::operator()(TagPairTIP4PCutCompute<EVFLAG>,
+                                                const int &ii) const
+{
+  EV_FLOAT ev;
+  this->operator()(TagPairTIP4PCutCompute<EVFLAG>(), ii, ev);
 }
 
 /* ---------------------------------------------------------------------- */

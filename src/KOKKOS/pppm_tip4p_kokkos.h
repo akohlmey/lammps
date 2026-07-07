@@ -23,6 +23,7 @@ KSpaceStyle(pppm/tip4p/kk/host,PPPMTIP4PKokkos<LMPHostType>);
 #ifndef LMP_PPPM_TIP4P_KOKKOS_H
 #define LMP_PPPM_TIP4P_KOKKOS_H
 
+#include "atom_kokkos.h"
 #include "pppm_kokkos.h"
 #include <Kokkos_UnorderedMap.hpp>
 
@@ -40,6 +41,8 @@ struct TagPPPMTIP4P_make_rho{};
 struct TagPPPMTIP4P_fieldforce_ik{};
 struct TagPPPMTIP4P_fieldforce_peratom{};
 struct TagPPPMTIP4P_slabcorr1{};
+struct TagPPPMTIP4P_slabcorr2{};
+struct TagPPPMTIP4P_slabcorr3{};
 struct TagPPPMTIP4P_slabcorr4{};
 
 template<class DeviceType>
@@ -87,6 +90,14 @@ class PPPMTIP4PKokkos : public PPPMKokkos<DeviceType> {
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
+  void operator()(TagPPPMTIP4P_slabcorr2, const int&, double&) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagPPPMTIP4P_slabcorr3, const int&) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
   void operator()(TagPPPMTIP4P_slabcorr4, const int&) const;
 
  protected:
@@ -102,20 +113,9 @@ class PPPMTIP4PKokkos : public PPPMKokkos<DeviceType> {
   // find the periodic image of j closest to i (orthogonal box only)
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  int closest_image(const int i, int j) const
+  int closest_image(const int i, const int j) const
   {
-    if (j < 0) return j;
-    const KK_FLOAT xi0 = x(i,0), xi1 = x(i,1), xi2 = x(i,2);
-    int closest = j;
-    KK_FLOAT delx = xi0 - x(j,0), dely = xi1 - x(j,1), delz = xi2 - x(j,2);
-    KK_FLOAT rsqmin = delx*delx + dely*dely + delz*delz;
-    while (d_sametag[j] >= 0) {
-      j = d_sametag[j];
-      delx = xi0 - x(j,0); dely = xi1 - x(j,1); delz = xi2 - x(j,2);
-      const KK_FLOAT rsq = delx*delx + dely*dely + delz*delz;
-      if (rsq < rsqmin) { rsqmin = rsq; closest = j; }
-    }
-    return closest;
+    return AtomKokkos::closest_image_kokkos(i,j,x,d_sametag);
   }
 
   // TIP4P device state
@@ -154,7 +154,8 @@ class PPPMTIP4PKokkos : public PPPMKokkos<DeviceType> {
   using Base::nyhi_out; using Base::nzlo_out; using Base::nzhi_out;
   using Base::ngrid; using Base::ix; using Base::iy; using Base::nlocal;
   using Base::slabflag; using Base::eflag_atom; using Base::vflag_atom;
-  using Base::qsum; using Base::dipole_all; using Base::zprd_slab; using Base::ffact;
+  using Base::qsum; using Base::dipole_all; using Base::dipole_r2;
+  using Base::zprd_slab; using Base::efact; using Base::ffact;
   using Base::numx_out; using Base::numy_out; using Base::numz_out;
 };
 
