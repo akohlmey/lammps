@@ -40,7 +40,7 @@ following the enforcement process of the project's
 
 ### 1.3 Collaborators
 
-Contributor submitting pull requests with significant new features are
+Contributors submitting pull requests with significant new features are
 invited to become Collaborators on the project. They are added to the
 `.github/CODEOWNERS.md` file for their files / packages to be automatically
 flagged as reviewer of any changes to their contributed files and are
