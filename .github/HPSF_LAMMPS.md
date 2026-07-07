@@ -16,8 +16,9 @@ LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
 ### 2. Project Description
 
 LAMMPS is a particle simulation code with a focus on large-scale
-classical molecular dynamics for materials.  It is widely used in
-materials science, materials chemistry, condensed matter physics, and
+classical molecular dynamics for materials while also supporting many
+other particle-based simulation methods. It is widely used in materials
+science, materials chemistry, condensed matter physics, engineering, and
 related fields.  LAMMPS is designed to work well on massively parallel
 computers, while also achieving good single-node performance on CPU and
 GPU systems.  It has a large, well-established community of users
