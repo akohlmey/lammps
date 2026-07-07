@@ -19,9 +19,6 @@ __pycache__
 Obj_*
 log.lammps
 log.cite
-CLAUDE.local.md
-/.claude/settings.local.json
-/.claude/scheduled_tasks.lock
 *.bz2
 *.gz
 *.tar
@@ -68,5 +65,9 @@ src/Makefile.package.settings-e
 /dev
 .Rhistory
 
+# Claude code generated/maintained files
+/CLAUDE.md
 /plans
 /CLAUDE.local.md
+/.claude/settings.local.json
+/.claude/scheduled_tasks.lock
