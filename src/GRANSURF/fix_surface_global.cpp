@@ -757,7 +757,7 @@ void FixSurfaceGlobal::init()
         jmotion = mol2motion[jmol];
         if (imotion != jmotion) ecount++;
       }
-      for (j = 0; j < nc1; j++) {
+      for (j = 0; j < nc2; j++) {
         jtri = connect3d[itri].neigh_c2[j];
         if (jtri < itri) continue;
         jmol = tris[jtri].mol;
@@ -872,19 +872,10 @@ void FixSurfaceGlobal::initial_integrate(int /*vflag*/)
 
 void FixSurfaceGlobal::pre_neighbor()
 {
-  int i,j,j2,k,n,nn,dnum,dnumbytes;
+  int i,j,j2,k,n;
   double xtmp,ytmp,ztmp,delx,dely,delz;
   double radi,rsq,radsum,cutsq;
   int *neighptr;
-  double *valueptr;
-
-  int *npartner;
-  tagint **partner;
-  double **valuepartner;
-  int **firstflag;
-  double **firstvalue;
-  MyPage<tagint> *ipage_atom;
-  MyPage<double> *dpage_atom;
 
   double **x = atom->x;
   double *radius = atom->radius;
@@ -904,15 +895,6 @@ void FixSurfaceGlobal::pre_neighbor()
   if (use_history) {
     fix_history->otherlist = list;
     fix_history->nlocal_neigh = nlocal;
-    npartner = fix_history->get_npartner();         // # of touching partners of each atom
-    partner = fix_history->get_partner();           // global atom IDs for the partners
-    valuepartner = fix_history->get_valuepartner(); // values for the partners
-    ipage_atom = fix_history->get_ipage_atom();     // pages of partner atom IDs
-    dpage_atom = fix_history->get_dpage_atom();     // pages of partner values
-    firstflag = fix_history->firstflag;       // ptr to each atom's neighbor flag
-    firstvalue = fix_history->firstvalue;     // ptr to each atom's values
-    dnum = fix_history->get_dnum();
-    dnumbytes = dnum * sizeof(double);
   }
 
   // store current point positions for future neighbor trigger check
@@ -928,10 +910,6 @@ void FixSurfaceGlobal::pre_neighbor()
 
   int inum = 0;
   ipage->reset();
-  if (use_history) {
-    ipage_atom->reset();
-    dpage_atom->reset();
-  }
 
   if (neigh_style == BIN) {
     if (nb == nullptr) {
@@ -1051,10 +1029,6 @@ void FixSurfaceGlobal::pre_neighbor()
     for (i = 0; i < nlocal; i++) {
       n = 0;
       neighptr = ipage->vget();
-      if (use_history) {
-        nn = 0;
-        valueptr = dpage_atom->vget();
-      }
 
       xtmp = x[i][0];
       ytmp = x[i][1];
@@ -1120,10 +1094,6 @@ void FixSurfaceGlobal::pre_neighbor()
     for (i = 0; i < nlocal; i++) {
       n = 0;
       neighptr = ipage->vget();
-      if (use_history) {
-        nn = 0;
-        valueptr = dpage_atom->vget();
-      }
 
       xtmp = x[i][0];
       ytmp = x[i][1];
@@ -1417,7 +1387,7 @@ void FixSurfaceGlobal::post_force(int /*vflag*/)
     std::sort(contact_surfs.begin(), contact_surfs.end(), FixSurface::contact_presort);
 
     contacts_map.clear();
-    for (auto n = 0; n < contact_surfs.size(); n++)
+    for (std::size_t n = 0; n < contact_surfs.size(); n++)
       contacts_map[contact_surfs[n].index] = n;
 
     // Initial walk to assign consistent sides of surfaces
@@ -1429,11 +1399,11 @@ void FixSurfaceGlobal::post_force(int /*vflag*/)
     // Given corrected surface norms, resort contacts
     std::sort(contact_surfs.begin(), contact_surfs.end(), FixSurface::contact_sort);
 
-    for (auto n = 0; n < contact_surfs.size(); n++)
+    for (std::size_t n = 0; n < contact_surfs.size(); n++)
       contacts_map[contact_surfs[n].index] = n;
 
     processed_contacts.clear();
-    for (auto n = 0; n < contact_surfs.size(); n++) {
+    for (std::size_t n = 0; n < contact_surfs.size(); n++) {
 
       j = contact_surfs[n].index;
       if (processed_contacts.find(j) != processed_contacts.end()) continue;
@@ -1455,7 +1425,7 @@ void FixSurfaceGlobal::post_force(int /*vflag*/)
 
         // Calculate overlap-weighted average normal vector
         MathExtra::zero3(dr);
-        for (auto it = 0; it < composite_surfs.size(); it++) {
+        for (std::size_t it = 0; it < composite_surfs.size(); it++) {
           m = composite_surfs[it];
           if (contact_surfs[m].overlap < EPSILON) continue;
           MathExtra::scaleadd3(contact_surfs[m].overlap * contact_surfs[m].weight_contribution, contact_surfs[m].dr_force, dr, dr);
@@ -1504,7 +1474,7 @@ void FixSurfaceGlobal::post_force(int /*vflag*/)
       if (use_history) {
         // Check if another flat contact has a stored history
         if (touch[jj] != 1) {
-          for (auto it = 0; it < composite_surfs.size(); it++) {
+          for (std::size_t it = 0; it < composite_surfs.size(); it++) {
             m = composite_surfs[it];
             jjtmp = contact_surfs[m].neigh_index;
             if (touch[jjtmp] == 1)
@@ -1523,7 +1493,7 @@ void FixSurfaceGlobal::post_force(int /*vflag*/)
       //   can be arbitrary if not all connected flat surfaces are mutually flat
       //   e.g. a hair pin turn where surfs on either end of the 'U' are not flat
       if (use_history) {
-        for (auto it = 0; it < composite_surfs.size(); it++) {
+        for (std::size_t it = 0; it < composite_surfs.size(); it++) {
           m = composite_surfs[it];
           jjtmp = contact_surfs[m].neigh_index;
           if (jj != jjtmp) {
@@ -3918,7 +3888,7 @@ double FixSurfaceGlobal::calculate_2d_forces(std::vector<int> &composite_surfs)
 
   double max_overlap = -BIG;
   double max_overlap_ext = -BIG;
-  for (auto it = 0; it < composite_surfs.size(); it++) {
+  for (std::size_t it = 0; it < composite_surfs.size(); it++) {
     n = composite_surfs[it];
     j = contact_surfs[n].index;
 
@@ -3947,7 +3917,7 @@ double FixSurfaceGlobal::calculate_2d_forces(std::vector<int> &composite_surfs)
   // Calculate constraints on force norm
   int i, ck, pt, ptk, caflag;
   double max_dot;
-  for (auto it = 0; it < composite_surfs.size(); it++) {
+  for (std::size_t it = 0; it < composite_surfs.size(); it++) {
     n = composite_surfs[it];
     j = contact_surfs[n].index;
     flag = contact_surfs[n].flag;
@@ -4039,7 +4009,7 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
   int uc_flag = 0;
 
   // Find if surface is hidden and/or whether it's unconnected
-  for (auto it = 0; it < composite_surfs.size(); it++) {
+  for (std::size_t it = 0; it < composite_surfs.size(); it++) {
     n = composite_surfs[it];
     j = contact_surfs[n].index;
 
@@ -4071,7 +4041,7 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
   // Find primary constraint for all corner/edge connections
   int which1, which2;
   double max_dot1, max_dot2;
-  for (auto it = 0; it < composite_surfs.size(); it++) {
+  for (std::size_t it = 0; it < composite_surfs.size(); it++) {
     n = composite_surfs[it];
     j = contact_surfs[n].index;
     flag = contact_surfs[n].flag;
@@ -4122,7 +4092,7 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
   double w_connect = 1.0;
   if (uc_flag) {
     double max_dist_uc = 0.0;
-    for (auto it = 0; it < composite_surfs.size(); it++) {
+    for (std::size_t it = 0; it < composite_surfs.size(); it++) {
       n = composite_surfs[it];
       j = contact_surfs[n].index;
       flag = contact_surfs[n].flag;
@@ -4190,12 +4160,12 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
   //    per-surf calculations
   // -----------------------------------
 
-  int pt, pt1, pt2, external1, external2, edge1_uc, edge2_uc;
+  int pt, pt1, pt2, external1, external2;
   double w_in_plane, dot1a, dot2a, dot1xp, dot2xp, dot1ip, dot2ip, w1_in_plane, w2_in_plane, w1, w2, wtmp;
   double line1[3], line2[3], dr_in_plane[3];
   double dr1[3], dr2[3], fn1[3], fn2[3], fntot[3], normave[3];
 
-  for (auto it = 0; it < composite_surfs.size(); it++) {
+  for (std::size_t it = 0; it < composite_surfs.size(); it++) {
     n = composite_surfs[it];
     j = contact_surfs[n].index;
 
@@ -4305,8 +4275,6 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
       MathExtra::zero3(fntot);
       w1_in_plane = 1.0;
       w2_in_plane = 1.0;
-      edge1_uc = 0;
-      edge2_uc = 0;
 
       // default, use dr w/o component along edge
       dot = MathExtra::dot3(dr, line1);
@@ -4342,7 +4310,6 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
           if (dist < rmag)
             w1_in_plane = MAX(0.0, MIN(1.0, dist / (rmag * (1.0 - w_connect))));
         }
-        edge1_uc = 1;
       }
 
       // ---------- Edge 2 ----------
@@ -4367,7 +4334,6 @@ double FixSurfaceGlobal::calculate_3d_forces(std::vector<int> &composite_surfs)
           if (dist < rmag)
             w2_in_plane = MAX(0.0, MIN(1.0, dist / (rmag * (1.0 - w_connect))));
         }
-        edge2_uc = 1;
       }
 
       // ---------- Interpolation ----------
