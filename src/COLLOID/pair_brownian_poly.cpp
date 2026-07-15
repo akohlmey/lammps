@@ -56,9 +56,9 @@ using namespace MathSpecial;
 
 double PairBrownianPoly::pair_uniform(tagint ti, tagint tj, bigint step, int seed, int k)
 {
-  uint64_t lo = (uint64_t) (ti < tj ? ti : tj);
-  uint64_t hi = (uint64_t) (ti < tj ? tj : ti);
-  uint64_t h = (uint64_t) seed * 0x9E3779B97F4A7C15ULL;
+  auto lo = (uint64_t) (ti < tj ? ti : tj);
+  auto hi = (uint64_t) (ti < tj ? tj : ti);
+  auto h = (uint64_t) seed * 0x9E3779B97F4A7C15ULL;
   h ^= lo + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
   h ^= hi + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
   h ^= (uint64_t) step + 0x9E3779B97F4A7C15ULL + (h << 6) + (h >> 2);
