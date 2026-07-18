@@ -383,10 +383,13 @@ void FixSurfaceLocal::post_constructor()
     }
   }
 
-  // set max size for comm of connection info
-  // 2d = 2 end points, 4 vectors, each of length npmaxall
-  // 3d = 3 edges, 4 vectors, each of length nemaxall
-  //      plus 3 corner points, 2 vectors, each of length ncmaxall
+  // set max size for comm of connection info, matching pack_border():
+  // 2d = flag + 2 end point counts + 2 external_pt flags
+  //      plus 2 end points, 5 vectors, each of length npmaxall
+  // 3d = flag + 3 edge counts + 3 external_edge flags
+  //      plus 3 corner point counts + 3 external_cor flags
+  //      plus 3 edges, 5 vectors, each of length nemaxall
+  //      plus 3 corner points, 4 vectors, each of length ncmaxall
 
   if (dimension == 2) {
     int nlocal = atom->nlocal;
@@ -403,7 +406,8 @@ void FixSurfaceLocal::post_constructor()
 
     int npmaxall;
     MPI_Allreduce(&npmax, &npmaxall, 1, MPI_INT, MPI_MAX, world);
-    comm_border = comm_forward = 3 + 2 * 5 * npmaxall;
+    comm_border = comm_forward = 5 + 2 * 5 * npmaxall;
+    maxexchange = comm_border;
 
   } else if (dimension == 3) {
     int nlocal = atom->nlocal;
@@ -426,7 +430,8 @@ void FixSurfaceLocal::post_constructor()
     int nemaxall, ncmaxall;
     MPI_Allreduce(&nemax, &nemaxall, 1, MPI_INT, MPI_MAX, world);
     MPI_Allreduce(&ncmax, &ncmaxall, 1, MPI_INT, MPI_MAX, world);
-    comm_border = comm_forward = 7 + 3 * 5 * nemaxall + 3 * 4 * ncmaxall;
+    comm_border = comm_forward = 13 + 3 * 5 * nemaxall + 3 * 4 * ncmaxall;
+    maxexchange = comm_border;
   }
 
   // error checks on duplicate surfs or zero-size surfs
@@ -710,8 +715,10 @@ void FixSurfaceLocal::setup_pre_neighbor()
 
   const double cutghost = MAX(neighbor->cutneighmax, comm->cutghostuser);
   if (cutghost < 2 * max_radius)
-    error->warning(FLERR, "Maximum triangle diameter {} may be less than ghost cutoff {}",
-                   2 * max_radius, cutghost);
+    error->warning(FLERR,
+                   "Ghost cutoff {} is smaller than the maximum surface element diameter {}: "
+                   "connected surfaces may be missed; increase it with comm_modify cutoff",
+                   cutghost, 2 * max_radius);
 
   // one-time calculation of remaining fields in Connect2d/3d
   // cannot do until now, b/c need ghost connection info via border comm
@@ -1151,12 +1158,12 @@ int FixSurfaceLocal::unpack_border(int n, int first, double *buf)
         }
 
         if (np2) {
-          connect2d[j].neigh_p2 = tpc->get(np1, pool2d[j].neigh_p2);
-          connect2d[j].pwhich_p2 = ipc->get(np1, pool2d[j].pwhich_p2);
-          connect2d[j].nside_p2 = ipc->get(np1, pool2d[j].nside_p2);
-          connect2d[j].aflag_p2 = ipc->get(np1, pool2d[j].aflag_p2);
-          connect2d[j].fflag_p2 = ipc->get(np1, pool2d[j].fflag_p2);
-          for (int k = 0; k < np1; k++) {
+          connect2d[j].neigh_p2 = tpc->get(np2, pool2d[j].neigh_p2);
+          connect2d[j].pwhich_p2 = ipc->get(np2, pool2d[j].pwhich_p2);
+          connect2d[j].nside_p2 = ipc->get(np2, pool2d[j].nside_p2);
+          connect2d[j].aflag_p2 = ipc->get(np2, pool2d[j].aflag_p2);
+          connect2d[j].fflag_p2 = ipc->get(np2, pool2d[j].fflag_p2);
+          for (int k = 0; k < np2; k++) {
             connect2d[j].neigh_p2[k] = (tagint) ubuf(buf[m++]).i;
             connect2d[j].pwhich_p2[k] = (int) ubuf(buf[m++]).i;
             connect2d[j].nside_p2[k] = (int) ubuf(buf[m++]).i;
@@ -1554,10 +1561,13 @@ int FixSurfaceLocal::unpack_exchange(int nlocal, double *buf)
       ne1 = (int) ubuf(buf[m++]).i;
       ne2 = (int) ubuf(buf[m++]).i;
       ne3 = (int) ubuf(buf[m++]).i;
+      checkmaxpool(FLERR, ne1, error);
+      checkmaxpool(FLERR, ne2, error);
+      checkmaxpool(FLERR, ne3, error);
+
       connect3d[nlocal_connect].ne1 = ne1;
       connect3d[nlocal_connect].ne2 = ne2;
       connect3d[nlocal_connect].ne3 = ne3;
-
       connect3d[nlocal_connect].external_edge[0] = (int) ubuf(buf[m++]).i;
       connect3d[nlocal_connect].external_edge[1] = (int) ubuf(buf[m++]).i;
       connect3d[nlocal_connect].external_edge[2] = (int) ubuf(buf[m++]).i;
@@ -1628,10 +1638,13 @@ int FixSurfaceLocal::unpack_exchange(int nlocal, double *buf)
       nc1 = (int) ubuf(buf[m++]).i;
       nc2 = (int) ubuf(buf[m++]).i;
       nc3 = (int) ubuf(buf[m++]).i;
+      checkmaxpool(FLERR, nc1, error);
+      checkmaxpool(FLERR, nc2, error);
+      checkmaxpool(FLERR, nc3, error);
+
       connect3d[nlocal_connect].nc1 = nc1;
       connect3d[nlocal_connect].nc2 = nc2;
       connect3d[nlocal_connect].nc3 = nc3;
-
       connect3d[nlocal_connect].external_cor[0] = (int) ubuf(buf[m++]).i;
       connect3d[nlocal_connect].external_cor[1] = (int) ubuf(buf[m++]).i;
       connect3d[nlocal_connect].external_cor[2] = (int) ubuf(buf[m++]).i;
@@ -3007,7 +3020,6 @@ void FixSurfaceLocal::assign2d()
       memcpy(&connect2d[nlocal_connect], &connect2dall[i], sizeof(Connect2d));
 
       num = connect2d[nlocal_connect].np1;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect2d[nlocal_connect].neigh_p1 = tpc->get(num, pool2d[nlocal_connect].neigh_p1);
         connect2d[nlocal_connect].pwhich_p1 = ipc->get(num, pool2d[nlocal_connect].pwhich_p1);
@@ -3032,7 +3044,6 @@ void FixSurfaceLocal::assign2d()
       }
 
       num = connect2d[nlocal_connect].np2;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect2d[nlocal_connect].neigh_p2 = tpc->get(num, pool2d[nlocal_connect].neigh_p2);
         connect2d[nlocal_connect].pwhich_p2 = ipc->get(num, pool2d[nlocal_connect].pwhich_p2);
@@ -3244,7 +3255,6 @@ void FixSurfaceLocal::assign3d()
       memcpy(&connect3d[nlocal_connect], &connect3dall[i], sizeof(Connect3d));
 
       num = connect3d[nlocal_connect].ne1;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect3d[nlocal_connect].neigh_e1 = tpc->get(num, pool3d[nlocal_connect].neigh_e1);
         connect3d[nlocal_connect].ewhich_e1 = ipc->get(num, pool3d[nlocal_connect].ewhich_e1);
@@ -3269,7 +3279,6 @@ void FixSurfaceLocal::assign3d()
       }
 
       num = connect3d[nlocal_connect].ne2;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect3d[nlocal_connect].neigh_e2 = tpc->get(num, pool3d[nlocal_connect].neigh_e2);
         connect3d[nlocal_connect].ewhich_e2 = ipc->get(num, pool3d[nlocal_connect].ewhich_e2);
@@ -3294,7 +3303,6 @@ void FixSurfaceLocal::assign3d()
       }
 
       num = connect3d[nlocal_connect].ne3;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect3d[nlocal_connect].neigh_e3 = tpc->get(num, pool3d[nlocal_connect].neigh_e3);
         connect3d[nlocal_connect].ewhich_e3 = ipc->get(num, pool3d[nlocal_connect].ewhich_e3);
@@ -3319,7 +3327,6 @@ void FixSurfaceLocal::assign3d()
       }
 
       num = connect3d[nlocal_connect].nc1;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect3d[nlocal_connect].neigh_c1 = tpc->get(num, pool3d[nlocal_connect].neigh_c1);
         connect3d[nlocal_connect].cwhich_c1 = ipc->get(num, pool3d[nlocal_connect].cwhich_c1);
@@ -3341,7 +3348,6 @@ void FixSurfaceLocal::assign3d()
       }
 
       num = connect3d[nlocal_connect].nc2;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect3d[nlocal_connect].neigh_c2 = tpc->get(num, pool3d[nlocal_connect].neigh_c2);
         connect3d[nlocal_connect].cwhich_c2 = ipc->get(num, pool3d[nlocal_connect].cwhich_c2);
@@ -3363,7 +3369,6 @@ void FixSurfaceLocal::assign3d()
       }
 
       num = connect3d[nlocal_connect].nc3;
-      checkmaxpool(FLERR, num, error);
       if (num) {
         connect3d[nlocal_connect].neigh_c3 = tpc->get(num, pool3d[nlocal_connect].neigh_c3);
         connect3d[nlocal_connect].cwhich_c3 = ipc->get(num, pool3d[nlocal_connect].cwhich_c3);
