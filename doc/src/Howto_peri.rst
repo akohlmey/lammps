@@ -86,14 +86,19 @@ BPM-based peridynamics
 
 The same four constitutive models are also available through the
 :doc:`bond_style bpm/peri <bond_bpm_peri>` command, which recasts
-peridynamics within the :doc:`BPM (bonded particle model) framework
+peridynamics within the :doc:`BPM (bonded particle model) package
 <Howto_bpm>`.  Peridynamic bonds become real LAMMPS bonds, so the model
 uses the standard :doc:`atom_style bond <atom_style>` (no dedicated atom
-style), stores per-bond reference state in :doc:`restart files <restart>`,
-and gains BPM tooling such as broken-bond dumps.  The constitutive law is
-the first :doc:`bond_coeff <bond_coeff>` argument (*pmb*, *lps*, *ves*, or
-*eps*), and a companion :doc:`pair_style bpm/peri <pair_bpm_peri>`
-provides the short-range contact force.
+style) and the domains of solid bodies can be controlled using standard
+LAMMPS commands such as :doc:`create_bonds <create_bonds>` or
+:doc:`delete_bonds <delete_bonds>` or by reading bonds from a data file.
+This allows one to create distinct solid bodies within arbitrary distances or
+create small flaws within a body like a crack or void. Each bond stores
+per-bond reference state in :doc:`restart files <restart>`, and gains BPM
+tooling such as broken-bond dumps.  The constitutive law is the first
+:doc:`bond_coeff <bond_coeff>` argument (*pmb*, *lps*, *ves*, or *eps*),
+and a companion :doc:`pair_style bpm/peri <pair_bpm_peri>` provides the
+short-range contact force.
 
 Here is the minimal example above expressed in the BPM framework:
 
@@ -114,7 +119,7 @@ Here is the minimal example above expressed in the BPM framework:
 
    # nodal mass (per-type) and nodal volume (the lone user-declared input)
    mass            * 2.75e-7
-   fix             vol all property/atom d_vfrac ghost yes
+   fix             vol all property/atom d_vfrac d_damage ghost yes
    set             group all d_vfrac 1.25e-10
 
    pair_style      bpm/peri
@@ -124,7 +129,7 @@ Here is the minimal example above expressed in the BPM framework:
 
    bond_style      bpm/peri
    bond_coeff      1 pmb 1.6863e22 0.0015001 0.0005 0.25
-   compute         dmg all bpm/peri/damage/atom
+   compute         dmg all property/atom d_damage
    fix             1 all nve
    timestep        1.0e-7
 
@@ -179,7 +184,7 @@ translation:
    * - bonds implicit in the pair neighbor list
      - explicit ``create_bonds many all all <type> 0.0 <horizon>``
    * - ``compute damage/atom``
-     - ``compute bpm/peri/damage/atom``
+     - ``fix property/atom d_damage`` + ``compute property/atom d_damage``
 
 The two implementations follow the same constitutive equations.  The
 analytic elastic response (dilatation, energy) agrees; for the *eps*

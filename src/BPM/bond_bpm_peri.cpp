@@ -47,13 +47,14 @@ static constexpr double EPSILON = 1e-10;
 static constexpr double NEAR_ZERO = 2.2204e-16;
 
 using namespace LAMMPS_NS;
+using namespace MathConst;
 
 static const char cite_bpm_peri[] =
     "BPM peridynamics (bond_style bpm/peri), derived from the PERI package: "
     "https://doi.org/10.1016/j.cpc.2008.06.011\n\n"
     "@Article{Parks08,\n"
     " author = {M. L. Parks and R. B. Lehoucq and S. J. Plimpton and S. A. Silling},\n"
-    " title = {Implementing Peridynamics Within a Molecular Dynamics Code},\n"
+    " title = {Implementing peridynamics within a molecular dynamics code},\n"
     " journal = {Comput.\\ Phys.\\ Commun.},\n"
     " year =    2008,\n"
     " volume =  179,\n"
@@ -68,7 +69,7 @@ static const char cite_bpm_peri_plastic[] =
     "BPM peridynamics eps/ves models: https://doi.org/10.1002/nme.2725\n\n"
     "@Article{Foster10,\n"
     " author = {J. T. Foster and S. A. Silling and W. W. Chen},\n"
-    " title = {Viscoplasticity Using Peridynamics},\n"
+    " title = {Viscoplasticity using peridynamics},\n"
     " journal = {Int.\\ J.\\ Numer.\\ Methods Eng.},\n"
     " year =    2010,\n"
     " volume =  81,\n"
@@ -92,7 +93,7 @@ BondBPMPeri::BondBPMPeri(LAMMPS *_lmp) :
     BondBPM(_lmp), model(nullptr), c(nullptr), kbulk(nullptr), gshear(nullptr), lambda(nullptr),
     tau(nullptr), yieldstress(nullptr), cut(nullptr), s00(nullptr), alpha(nullptr),
     id_fix_property_peri(nullptr), index_vfrac(-1), index_s0(-1), index_smin(-1), index_lambda(-1),
-    index_vinter(-1), index_dtheta(-1),
+    index_vinter(-1), index_dtheta(-1), index_ddamage(-1),
     smin_new(nullptr), s0_new(nullptr), nmax(0), state_based(0), wvolume_setup(0), kbulk_rep(0.0),
     wvolume(nullptr), theta(nullptr), winv(nullptr), commflag(COMM_SMIN), plastic(0), tdnorm(nullptr),
     pointwise_yield(0.0), gshear_rep(0.0)
@@ -259,9 +260,9 @@ void BondBPMPeri::compute(int eflag, int vflag)
   // state-based (LPS) prep: weighted volume (static) then this step's dilatation,
   // each published to ghosts so the force loop can read both bond endpoints
   if (state_based) {
-    if (!wvolume_setup)
+    if (!wvolume_setup) {
       compute_wvolume();
-    else if (neighbor->ago == 0) {
+    } else if (neighbor->ago == 0) {
       commflag = COMM_WVOLUME;
       comm->forward_comm(this);
     }
@@ -353,11 +354,10 @@ void BondBPMPeri::compute(int eflag, int vflag)
       if ((winv1 > 0.0) && (winv2 > 0.0)) {
         rk = (3.0 * kbulk[type] - 5.0 * gshear[type]) * vfrac_eff * vfrac_scale *
             (theta[i1] * winv1 + theta[i2] * winv2);
-        rk += 15.0 * gshear[type] * vfrac_eff * vfrac_scale * rinv0 *
-            (winv1 + winv2) * dr;
+        rk += 15.0 * gshear[type] * vfrac_eff * vfrac_scale * rinv0 * (winv1 + winv2) * dr;
         // deviatoric energy per bond (vanishes for a pure dilatation)
-        const double dev1 = dr - theta[i1] * r0 / 3.0;
-        const double dev2 = dr - theta[i2] * r0 / 3.0;
+        const double dev1 = dr - theta[i1] * r0 * THIRD;
+        const double dev2 = dr - theta[i2] * r0 * THIRD;
         ebond = 0.25 * 15.0 * gshear[type] * vfrac_eff * vfrac_scale * rinv0 *
             (dev1 * dev1 * winv1 + dev2 * dev2 * winv2);
       }
@@ -372,7 +372,7 @@ void BondBPMPeri::compute(int eflag, int vflag)
       if ((winv1 > 0.0) && (winv2 > 0.0)) {
         rk = 3.0 * kbulk[type] * vfrac_eff * vfrac_scale * (theta[i1] * winv1 + theta[i2] * winv2);
 
-        const double dev = dr - 0.5 * (theta[i1] + theta[i2]) * r0 / 3.0;
+        const double dev = dr - 0.5 * (theta[i1] + theta[i2]) * r0 * THIRD;
         const double c1 = tau[type] / update->dt;
         const double decay = exp(-1.0 / c1);
         const double beta = 1.0 - c1 * (1.0 - decay);
@@ -402,7 +402,7 @@ void BondBPMPeri::compute(int eflag, int vflag)
       double rk = 0.0;
       ebond = 0.0;
       if ((winv1 > 0.0) && (winv2 > 0.0)) {
-        const double dev = dr - 0.5 * (theta[i1] + theta[i2]) * r0 / 3.0;
+        const double dev = dr - 0.5 * (theta[i1] + theta[i2]) * r0 * THIRD;
         const double edp = bondstore[n][1];
         rk = 3.0 * kbulk[type] * (theta[i1] * winv1 + theta[i2] * winv2);
 
@@ -462,8 +462,7 @@ void BondBPMPeri::compute(int eflag, int vflag)
     // fbond already holds vfrac_eff (matching the force); the extra vfrac_eff
     // here reproduces legacy PERI's fbond*vfrac[i] virial (exact for uniform
     // nodal volume, symmetric otherwise). Energy keeps a single vfrac (ebond).
-    if (evflag)
-      ev_tally(i1, i2, nlocal, newton_bond, ebond, fbond * vfrac_eff, delx, dely, delz);
+    if (evflag) ev_tally(i1, i2, nlocal, newton_bond, ebond, fbond * vfrac_eff, delx, dely, delz);
 
     // accumulate this step's minimum stretch (for breaking) and the diagnostic
     // critical stretch on each owned endpoint (newton bond off: each atom sees
@@ -487,6 +486,10 @@ void BondBPMPeri::compute(int eflag, int vflag)
     smin[i] = (smin_new[i] == DBL_MAX) ? -DBL_MAX : smin_new[i];
     s0[i] = (s0_new[i] == -DBL_MAX) ? DBL_MAX : s0_new[i];
   }
+
+  // if optional damage variable exists, compute it
+  if (index_ddamage != -1)
+    compute_damage();
 
   // revert changes for hybrid bond style, handled by parent
   post_compute();
@@ -587,6 +590,37 @@ void BondBPMPeri::compute_dilatation()
 }
 
 /* ----------------------------------------------------------------------
+  compute optional per-atom damage
+------------------------------------------------------------------------- */
+
+void BondBPMPeri::compute_damage()
+{
+  int nlocal = atom->nlocal;
+  int *mask = atom->mask;
+  tagint **bond_atom = atom->bond_atom;
+  int **bond_type = atom->bond_type;
+  int *num_bond = atom->num_bond;
+  double *vfrac = atom->dvector[index_vfrac];
+  double *vinter = atom->dvector[index_vinter];
+
+  double *damage = atom->dvector[index_ddamage];
+
+  // bond_style bpm/peri mandates newton bond off, so every bond touching atom i
+  // is stored at i; the surviving interaction volume is a purely local sum.
+  for (int i = 0; i < nlocal; i++) {
+    double surviving = 0.0;
+    for (int m = 0; m < num_bond[i]; m++) {
+      if (bond_type[i][m] <= 0) continue;    // broken/turned-off bond
+      int j = atom->map(bond_atom[i][m]);
+      if (j < 0) continue;
+      surviving += vfrac[j];
+    }
+
+    damage[i] = (vinter[i] > 0.0) ? 1.0 - surviving / vinter[i] : 0.0;
+  }
+}
+
+/* ----------------------------------------------------------------------
    EPS per-atom plastic state: the deviatoric force-state norm tdnorm[i] and the
    yield check, accumulating the plastic multiplier into lambdaValue (a public
    diagnostic). Only tdnorm is published to ghosts; the force loop's radial return
@@ -631,7 +665,7 @@ void BondBPMPeri::compute_plastic_state()
 
     double scale = vfrac_taper(r0, cut[type], half_lc);
 
-    double dev = dr - 0.5 * (theta[i1] + theta[i2]) * r0 / 3.0;
+    double dev = dr - 0.5 * (theta[i1] + theta[i2]) * r0 * THIRD;
     double edp = bondstore[n][1];
     double tdtrial = 15.0 * gshear[type] * (1.0 / r0) * (winv1 + winv2) * (dev - edp);
 
@@ -893,6 +927,9 @@ void BondBPMPeri::init_style()
   // the state-based models publish the per-step dilatation into it (only then,
   // so a compute property/atom defined in the input can read it from the start)
   index_dtheta = (state_based) ? atom->find_custom("theta", flag, cols) : -1;
+
+  // ditto for optional damage
+  index_ddamage = atom->find_custom("damage", flag, cols);
 
   // initialize the no-breaking sentinels on the freshly created s0/smin (s0 =
   // +DBL_MAX and smin = -DBL_MAX, so the implied critical stretch is +infinity)

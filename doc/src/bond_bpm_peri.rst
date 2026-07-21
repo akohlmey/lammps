@@ -46,14 +46,9 @@ models of the :doc:`PERI package <pair_peri>` --- bond-based prototype
 microelastic brittle (*pmb*), state-based linear peridynamic solid
 (*lps*), state-based viscoelastic solid (*ves*), and state-based
 elastic-plastic solid (*eps*) --- recast as a bond style within the
-:doc:`BPM framework <Howto_bpm>`.  A peridynamic "bond" is a BPM bond:
-it is created from the reference configuration, stores its reference
-length, and breaks individually on a stretch criterion.  The model is
-selected by the first :doc:`bond_coeff <bond_coeff>` argument.  This
-allows peridynamic materials to reuse BPM's tooling (per-bond history in
-:doc:`restart files <restart>`, broken-bond output via *store/local*,
-:doc:`hybrid <bond_hybrid>` composition) and the standard
-:doc:`atom_style bond <atom_style>` instead of a dedicated atom style.
+:doc:`BPM package <Howto_bpm>`.  Each bond stores its reference
+length and breaks individually on a stretch criterion.  The model is
+selected by the first :doc:`bond_coeff <bond_coeff>` argument.
 
 Like the other :doc:`BPM bond styles <Howto_bpm>`, the reference state is
 stored by each bond when it is first computed in the setup of a run, is
@@ -175,8 +170,6 @@ bond topology by setting the bond type to 0.
 The :doc:`compute property/atom <compute_property_atom>` *s0* and *smin*
 per-atom properties report the per-particle critical stretch and minimum
 stretch; for *eps*, *lambda* reports the accumulated plastic multiplier.
-Volume-weighted damage is available through :doc:`compute
-bpm/peri/damage/atom <compute_bpm_peri_damage_atom>`.
 
 For the state-based models (*lps*, *ves*, *eps*) the per-step dilatation
 :math:`\theta` can optionally be exposed for visualization: declare a
@@ -190,6 +183,28 @@ and the bond style writes the dilatation of each owned node into it every
 step, readable with :doc:`compute property/atom <compute_property_atom>`
 *theta*.  (It must be declared up front, like *vfrac*, so a compute that
 references it can be defined from the start of the input.)
+
+Similarly, a volume-weighted bond damage of each peridynamics node will
+be calculated by declaring a per-atom *damage* property before the bond
+style,
+
+.. code-block:: LAMMPS
+
+   fix dmg all property/atom d_damage
+
+The damage of node *i* is
+
+.. math::
+
+   d_i = 1 - \frac{\sum_{j\,\mathrm{(intact)}} V_j}{\sum_{j\,\mathrm{(initial)}} V_j}
+
+where the numerator sums the nodal volumes :math:`V_j` of the bonds that
+are still intact and the denominator is the reference interaction volume
+(the same sum over all bonds present in the initial configuration).
+Damage is 0 for a fully intact node and approaches 1 as a node loses
+bonds, so it is a convenient measure for visualizing cracks and fracture
+surfaces.  It is the BPM-framework equivalent of the legacy :doc:`compute
+damage/atom <compute_damage_atom>`.
 
 ----------
 
@@ -232,8 +247,7 @@ script and a guide to migrating PERI inputs to the BPM framework.
 Related commands
 """"""""""""""""
 
-:doc:`pair_style bpm/peri <pair_bpm_peri>`, :doc:`compute
-bpm/peri/damage/atom <compute_bpm_peri_damage_atom>`, :doc:`bond_coeff
+:doc:`pair_style bpm/peri <pair_bpm_peri>`, :doc:`bond_coeff
 <bond_coeff>`, :doc:`pair_style peri/pmb <pair_peri>`, :doc:`Howto BPM
 <Howto_bpm>`, :doc:`Howto peridynamics <Howto_peri>`
 
