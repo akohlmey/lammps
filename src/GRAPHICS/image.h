@@ -34,10 +34,20 @@ class Image : protected Pointers {
   double up[3];               // up direction in image
   double zoom;                // zoom factor
   double shiny;               // shininess of objects
+  double gamma;               // gamma correction of rendered objects, 1.0 = off
   int fsaa;                   // antialiasing on or off
   int ssao;                   // SSAO on or off
   int seed;                   // RN seed for SSAO
   double ssaoint;             // strength of shading from 0 to 1
+  int ssaosamples;            // SSAO samples per pixel; 0 = derived from ssaoint
+  int depthcue;               // depth cueing on or off
+  double depthcueint;         // strength of depth cueing from 0 to 1
+  double *depthcuecolor;      // fog color; fade toward background color if null
+  int depthcuestartflag;      // 1 if fading starts at a box fraction, 0 at nearest object
+  double depthcuestart;       // start of fading as box fraction along the view direction
+  int outline;                // outline drawing on or off
+  int outlinewidth;           // width of outlines in pixels
+  double *outlinecolor;       // color of the outlines
   double *boxcolor;           // color to draw box outline with
   int background[3];          // RGB values of background
   int background2[3];         // RGB values of second background color for gradient (off if < 0.0)
@@ -46,6 +56,11 @@ class Image : protected Pointers {
   double keyLightColor[3];
   double fillLightColor[3];
   double backLightColor[3];
+
+  int specularflag;            // 1 if the specular exponent is set explicitly
+  int nospecular;              // 1 = disable the specular highlight entirely
+  double specularHardness;     // exponent of the specular highlight
+  double specularIntensity;    // strength of the specular highlight
 
   Image(class LAMMPS *, int);
   ~Image() override;
@@ -112,22 +127,13 @@ class Image : protected Pointers {
   // constant view params
 
   double FOV;
-  //double ambientColor[3];
 
   double keyLightTheta;
   double keyLightPhi;
-  //double keyLightColor[3];
-
   double fillLightTheta;
   double fillLightPhi;
-  //double fillLightColor[3];
-
   double backLightTheta;
   double backLightPhi;
-  //double backLightColor[3];
-
-  double specularHardness;
-  double specularIntensity;
 
   double SSAORadius;
   int SSAOSamples;
@@ -137,18 +143,18 @@ class Image : protected Pointers {
 
   double zdist;
   double tanPerPixel;
+  double boxbounds[6];    // box bounds from the last view_params() call
   double camDir[3], camUp[3], camRight[4], camPos[3];
   double keyLightDir[3], fillLightDir[3], backLightDir[3];
   double keyHalfDir[3];
 
-  // SSAO RNG
-
-  class RanMars *random;
-
   // internal methods
 
   void draw_pixel(int, int, double, const double *, const double *);
+  void setup_lights();
   void compute_SSAO();
+  void compute_outline();
+  void compute_depthcue();
 
   // inline functions
 

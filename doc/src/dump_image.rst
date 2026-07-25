@@ -24,7 +24,7 @@ Syntax
 * color = atom attribute that determines color of each atom
 * diameter = atom attribute that determines size of each atom
 * zero or more keyword/value pairs may be appended
-* keyword = *atom* or *adiam* or *autobond* or *bond* or *grid* or *line* or *tri* or *ellipsoid* or *body* or *compute* or *fix* or *size* or *view* or *center* or *up* or *zoom* or *box* or *axes* or *region* or *subbox* or *shiny* or *fsaa* or *ssao*
+* keyword = *atom* or *adiam* or *autobond* or *bond* or *grid* or *line* or *tri* or *ellipsoid* or *body* or *compute* or *fix* or *size* or *view* or *center* or *up* or *zoom* or *box* or *axes* or *region* or *subbox* or *shiny* or *fsaa* or *ssao* or *depthcue* or *outline*
 
   .. parsed-literal::
 
@@ -115,6 +115,15 @@ Syntax
          shading = *yes* or *no* = turn depth shading on/off
          seed = random # seed (positive integer)
          dfactor = strength of shading from 0.0 to 1.0
+       *depthcue* values = cueing cfactor color start = depth cueing
+         cueing = *yes* or *no* = turn depth cueing on/off
+         cfactor = strength of fading from 0.0 to 1.0
+         color = fog color name or *auto* = fade toward the background color
+         start = box fraction along the view direction where fading starts, or *auto* = nearest rendered object
+       *outline* values = flag width color = outlines at depth jumps
+         flag = *yes* or *no* = turn outline drawing on/off
+         width = width of the outlines in pixels (from 1 to 16)
+         color = color name of the outlines
 
 .. _dump_modify_image:
 
@@ -129,7 +138,7 @@ Syntax
    dump_modify dump-ID keyword values ...
 
 * these keywords apply only to the *image* and *movie* styles and are documented on this page
-* keyword = *acolor* or *adiam* or *amap* or *gmap* or *bmap* or *atrans* or *backcolor* or *backcolor2* or *bcolor* or *bdiam* or *btrans* or *bitrate* or *boxcolor* or *color* or *gtrans* or *lights* or *loadcolors* or *savecolors* or *framerate* or *axestrans* or *boxtrans* or *subboxtrans* or *ccolor* or *ctrans* or *fcolor* or *ftrans*
+* keyword = *acolor* or *adiam* or *amap* or *gmap* or *bmap* or *atrans* or *backcolor* or *backcolor2* or *bcolor* or *bdiam* or *btrans* or *bitrate* or *boxcolor* or *color* or *gamma* or *gtrans* or *lights* or *specular* or *ssaosamples* or *loadcolors* or *savecolors* or *framerate* or *axestrans* or *boxtrans* or *subboxtrans* or *ccolor* or *ctrans* or *fcolor* or *ftrans*
 * see the :doc:`dump modify <dump_modify>` doc page for more general keywords
 
   .. parsed-literal::
@@ -188,10 +197,16 @@ Syntax
          name = name of color
          R,G,B = red/green/blue numeric values from 0.0 to 1.0
          hex = 24-bit RGB color in hexadecimal
+       *gamma* arg = gvalue
+         gvalue = gamma adjustment applied to rendered objects (from 0.1 to 10.0, 1.0 = no change)
        *gtrans* arg = transparency
          transparency = transparency for visualized grid (value between 0 (invisible) and 1 (fully opaque))
        *lights* args = ambient key fill back
          ambient key fill back = set light intensity value from 0.0 to 1.0
+       *specular* arg = style
+         style = *none* or *wide* or *narrow* or *tight* = specular highlights off or their width
+       *ssaosamples* arg = nsamples
+         nsamples = number of SSAO sampling directions per pixel (from 4 to 64)
        *loadcolors* arg = filename
          filename = load color definitions, per-type colors, and lights from JSON format file
        *savecolors* arg = filename
@@ -861,6 +876,52 @@ shading is particularly large.  In case LAMMPS has been :doc:`compiled
 with OpenMP support <Build_basics>`, the SSAO processing is distributed
 across multiple threads.
 
+.. versionchanged:: TBD
+
+The randomization of the SSAO shading is now computed from a
+deterministic noise pattern derived from the pixel position and the
+*seed* value.  Rendered images no longer depend on the number of MPI
+ranks or OpenMP threads, and images of an unchanged scene are exactly
+reproducible, which avoids flickering shading in movies.  Different
+*seed* values shift the noise pattern.
+
+.. versionadded:: TBD
+
+The *depthcue* keyword turns on/off depth cueing.  If *yes* is set,
+rendered objects fade toward the fog color the more distant from the
+viewer they are, similar to looking through fog.  This is perceived as
+depth and helps to visually untangle dense systems.  The *cfactor*
+value scales the strength of the fading: with *cfactor* = 1.0 the most
+distant objects blend completely into the fog color, smaller values
+reduce the maximum amount of fading.  The *color* setting selects the
+fog color: with *auto* the objects fade toward the background color,
+following the background gradient when one is set with the *backcolor2*
+option; any color name known to LAMMPS selects that color instead,
+e.g. white or gray fog over a dark background.  The *start* setting
+determines where the fading begins.  With *auto* it begins at the
+nearest rendered object, so the front of the scene never fades.
+A numeric value instead positions the start as a fraction of the
+simulation box projected onto the view direction, similar to the
+fractions of the *center* keyword but reduced to a single number: 0.0
+starts the fading at the side of the box nearest to the camera, 0.5 at
+its middle, and 1.0 at its far side; values outside this range are
+allowed.  Objects in front of the start position are not faded, which
+avoids darkening most of the scene when the rendered objects span a
+large depth range.  The fading always ends at the most distant rendered
+object.  Unlike the *ssao* keyword, depth cueing adds no significant
+computational cost, and both can be combined.
+
+.. versionadded:: TBD
+
+The *outline* keyword turns on/off drawing outlines where the distance
+from the viewer jumps, i.e. along the visible edges of atoms and other
+objects in front of the background or in front of more distant objects.
+This produces a flat, illustration-like appearance similar to
+hand-drawn molecular graphics, especially when combined with reduced
+shininess or increased ambient lighting.  The *width* value sets the
+width of the outlines in pixels of the final image; the *color* value
+sets their color, e.g. black.
+
 ----------
 
 Dump_modify keywords for dump image and dump movie
@@ -1281,6 +1342,48 @@ the main highlights. The *fill* light is a secondary light source that
 softens shadows created by the key light. The *back* light illuminates
 the scene from behind the camera to provide depth.
 
+.. versionadded:: TBD
+
+The *gamma* keyword adjusts the gamma value of the rendered objects:
+the summed up light contributions of each pixel are raised to the power
+of 1/*gvalue* before they are converted to the 8-bit color values of
+the image file, similar to the gamma adjustment of image manipulation
+programs.  A value larger than 1.0 lightens the image, most strongly in
+the darker regions, and thus can bring out shading detail on the dimly
+lit side of objects; a value smaller than 1.0 darkens the image and
+increases the contrast.  The default rendering is already tuned to look
+right on typical displays, and no gamma information is stored in the
+image files, so this setting fine-tunes the tonal balance rather than
+applying a required display correction.  The adjustment applies only to
+rendered objects; the background colors are used exactly as
+specified.
+
+.. versionadded:: TBD
+
+The *specular* keyword adjusts the specular highlights independently
+from the *shiny* keyword of the dump image command.  The *none*
+setting turns the highlights off entirely, which results in a rough,
+matte surface appearance from the remaining diffuse lighting.  The
+other settings select the width of the highlights: *wide* highlights
+are close to the default appearance, *narrow* highlights are visibly
+smaller, and *tight* produces small sharp highlights with a
+plastic-like appearance.  The *sfactor* value of the *shiny* keyword
+scales the brightness of the highlights; without the *specular*
+keyword it also sets their width.
+
+.. versionadded:: TBD
+
+The *ssaosamples* keyword sets the number of directions that the SSAO
+depth shading enabled by the *ssao* keyword examines around each
+pixel.  More directions produce smoother shading; fewer directions
+render proportionally faster but make the shading grainier.  Without
+this setting the number of directions is derived from the *dfactor*
+value of the *ssao* keyword and ranges from 8 to 40.  Reducing the
+number of directions is a simple way to trade some image quality for
+faster image output, for example for preview renderings.  The
+graininess is less visible when the *fsaa* keyword of the dump image
+command is also enabled.
+
 ----------
 
 .. versionadded:: 4Jul2026
@@ -1408,6 +1511,8 @@ The defaults for the dump image and dump movie keywords are as follows:
 * shiny = 1.0
 * ssao = no
 * fsaa = no
+* depthcue = no
+* outline = no
 
 ----------
 
@@ -1427,7 +1532,10 @@ The defaults for the dump_modify keywords specific to dump image and dump movie 
 * boxtrans = 1.0
 * subboxtrans = 1.0
 * color = 140 color names are pre-defined as listed below
+* gamma = 1.0
 * lights = 0.0 0.9 0.45 0.9
+* specular = width derived from the *shiny* keyword of the dump image command
+* ssaosamples = number derived from the *dfactor* value of the *ssao* keyword
 * bitrate = 2000
 * framerate = 24
 * gmap = min max cf 0.0 2 min blue max red

@@ -25,7 +25,6 @@
 #include "math_const.h"
 #include "math_extra.h"
 #include "memory.h"
-#include "random_mars.h"
 #include "version.h"
 
 #include <array>
@@ -349,7 +348,7 @@ constexpr char letter_z[] = {
 Image::Image(LAMMPS *lmp, int nmap_caller) :
     Pointers(lmp), maps(nullptr), depthBuffer(nullptr), surfaceBuffer(nullptr), depthcopy(nullptr),
     surfacecopy(nullptr), imageBuffer(nullptr), rgbcopy(nullptr), writeBuffer(nullptr),
-    recvcounts(nullptr), displs(nullptr), random(nullptr)
+    recvcounts(nullptr), displs(nullptr)
 {
   MPI_Comm_rank(world, &me);
   MPI_Comm_size(world, &nprocs);
@@ -361,8 +360,19 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
   phi = 30.0 * DEG2RAD;
   zoom = 1.0;
   shiny = 1.0;
+  gamma = 1.0;
   ssao = NO;
+  ssaosamples = 0;
   fsaa = NO;
+  depthcue = NO;
+  depthcueint = 0.0;
+  depthcuecolor = nullptr;
+  depthcuestartflag = 0;
+  depthcuestart = 0.0;
+  outline = NO;
+  outlinewidth = 0;
+  outlinecolor = nullptr;
+  for (auto &b : boxbounds) b = 0.0;
 
   up[0] = 0.0;
   up[1] = 0.0;
@@ -397,6 +407,11 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
   backLightColor[0] = 0.9;
   backLightColor[1] = 0.9;
   backLightColor[2] = 0.9;
+
+  specularflag = 0;
+  nospecular = 0;
+  specularHardness = 16.0;
+  specularIntensity = 1.0;
 
   // named colors
   rgbcolors = {{"aliceblue", {0.941, 0.973, 1.000}},
@@ -622,8 +637,6 @@ Image::~Image()
   memory->destroy(surfacecopy);
   memory->destroy(rgbcopy);
 
-  delete random;
-
   memory->destroy(recvcounts);
   memory->destroy(displs);
 }
@@ -660,6 +673,15 @@ void Image::buffers()
 void Image::view_params(double boxxlo, double boxxhi, double boxylo,
                         double boxyhi, double boxzlo, double boxzhi)
 {
+  // keep box bounds for projecting the box onto the view direction
+
+  boxbounds[0] = boxxlo;
+  boxbounds[1] = boxxhi;
+  boxbounds[2] = boxylo;
+  boxbounds[3] = boxyhi;
+  boxbounds[4] = boxzlo;
+  boxbounds[5] = boxzhi;
+
   // camDir points at the camera, view direction = -camDir
 
   camDir[0] = sin(theta)*cos(phi);
@@ -723,6 +745,39 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
 
   // light directions in terms of -camDir = z
 
+  setup_lights();
+
+  // the brightness of the specular highlights follows shiny; their width
+  // also follows shiny unless set with a dump_modify specular preset;
+  // dump_modify specular none disables the highlights entirely
+
+  specularIntensity = nospecular ? 0.0 : shiny;
+  if (!specularflag) specularHardness = 16.0 * shiny;
+
+  // adjust strength of the SSAO
+
+  if (ssao) {
+    SSAORadius = maxdel * 0.05 * ssaoint;
+    SSAOSamples = static_cast<int>(8.0 + 32.0*ssaoint);
+    SSAOJitter = MY_PI / 12;
+    ambientColor[0] = 0.5;
+    ambientColor[1] = 0.5;
+    ambientColor[2] = 0.5;
+  }
+
+  // param for rasterizing spheres
+
+  tanPerPixel = -(maxdel / (double) height);
+}
+
+/* ----------------------------------------------------------------------
+   compute light directions from their theta/phi angles
+   the angles are relative to the viewer with z pointing at the camera:
+   theta > 0 moves a light above the view direction, phi > 0 to the right
+------------------------------------------------------------------------- */
+
+void Image::setup_lights()
+{
   keyLightDir[0] = cos(keyLightTheta) * sin(keyLightPhi);
   keyLightDir[1] = sin(keyLightTheta);
   keyLightDir[2] = cos(keyLightTheta) * cos(keyLightPhi);
@@ -739,27 +794,6 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
   keyHalfDir[1] = 0 + keyLightDir[1];
   keyHalfDir[2] = 1 + keyLightDir[2];
   MathExtra::norm3(keyHalfDir);
-
-  // adjust shinyness of the reflection
-
-  specularHardness = 16.0 * shiny;
-  specularIntensity = shiny;
-
-  // adjust strength of the SSAO
-
-  if (ssao) {
-    if (!random) random = new RanMars(lmp,seed+me);
-    SSAORadius = maxdel * 0.05 * ssaoint;
-    SSAOSamples = static_cast<int>(8.0 + 32.0*ssaoint);
-    SSAOJitter = MY_PI / 12;
-    ambientColor[0] = 0.5;
-    ambientColor[1] = 0.5;
-    ambientColor[2] = 0.5;
-  }
-
-  // param for rasterizing spheres
-
-  tanPerPixel = -(maxdel / (double) height);
 }
 
 /* ----------------------------------------------------------------------
@@ -884,6 +918,14 @@ void Image::merge()
   } else {
     writeBuffer = imageBuffer;
   }
+
+  // draw outlines at depth discontinuities
+
+  if (outline && (me == 0)) compute_outline();
+
+  // apply depth cueing to the final composited image
+
+  if (depthcue && (me == 0)) compute_depthcue();
 
   // scale down image for antialiasing. can be done in place with simple averaging
   if (fsaa) {
@@ -1730,8 +1772,6 @@ void Image::draw_pixel(int ix, int iy, double depth, const double *surface,
   diffuseKey = saturate(MathExtra::dot3(surface, keyLightDir));
   diffuseFill = saturate(MathExtra::dot3(surface, fillLightDir));
   diffuseBack = saturate(MathExtra::dot3(surface, backLightDir));
-  specularKey = pow(saturate(MathExtra::dot3(surface, keyHalfDir)),
-                    specularHardness) * specularIntensity;
 
   double c[3];
   c[0] = surfaceColor[0] * ambientColor[0];
@@ -1742,9 +1782,18 @@ void Image::draw_pixel(int ix, int iy, double depth, const double *surface,
   c[1] += surfaceColor[1] * keyLightColor[1] * diffuseKey;
   c[2] += surfaceColor[2] * keyLightColor[2] * diffuseKey;
 
-  c[0] += keyLightColor[0] * specularKey;
-  c[1] += keyLightColor[1] * specularKey;
-  c[2] += keyLightColor[2] * specularKey;
+  // specular highlights are disabled with dump_modify specular none.
+  // check the flag here since view_params() may not run again after
+  // dump_modify for static views
+
+  if (!nospecular && (specularIntensity > 0.0)) {
+    specularKey = pow(saturate(MathExtra::dot3(surface, keyHalfDir)),
+                      specularHardness) * specularIntensity;
+
+    c[0] += keyLightColor[0] * specularKey;
+    c[1] += keyLightColor[1] * specularKey;
+    c[2] += keyLightColor[2] * specularKey;
+  }
 
   c[0] += surfaceColor[0] * fillLightColor[0] * diffuseFill;
   c[1] += surfaceColor[1] * fillLightColor[1] * diffuseFill;
@@ -1758,6 +1807,14 @@ void Image::draw_pixel(int ix, int iy, double depth, const double *surface,
   c[1] = saturate(c[1]);
   c[2] = saturate(c[2]);
 
+  // apply gamma adjustment to the summed up light contributions
+
+  if (gamma != 1.0) {
+    c[0] = pow(c[0], 1.0 / gamma);
+    c[1] = pow(c[1], 1.0 / gamma);
+    c[2] = pow(c[2], 1.0 / gamma);
+  }
+
   imageBuffer[0 + ix*3 + iy*width*3] = static_cast<int>(c[0] * 255.0);
   imageBuffer[1 + ix*3 + iy*width*3] = static_cast<int>(c[1] * 255.0);
   imageBuffer[2 + ix*3 + iy*width*3] = static_cast<int>(c[2] * 255.0);
@@ -1767,9 +1824,14 @@ void Image::draw_pixel(int ix, int iy, double depth, const double *surface,
 
 void Image::compute_SSAO()
 {
+  // number of horizon directions per pixel.  a chosen value must override
+  // the automatic one here, since view_params() may have run before it was set
+
+  const int nsamples = (ssaosamples > 0) ? ssaosamples : SSAOSamples;
+
   // used for rasterizing the spheres
 
-  double delTheta = 2.0*MY_PI / SSAOSamples;
+  double delTheta = 2.0*MY_PI / nsamples;
 
   // typical neighborhood value for shading
 
@@ -1785,9 +1847,18 @@ void Image::compute_SSAO()
   int pixelstart = static_cast<int>(1.0*me/nprocs * npixels);
   int pixelstop = static_cast<int>(1.0*(me+1)/nprocs * npixels);
 
-  // fill buffer with random numbers to avoid race conditions
-  auto *uniform = new double[pixelstop - pixelstart];
-  for (int i = 0; i < pixelstop - pixelstart; ++i) uniform[i] = random->uniform();
+  // shift of the jitter noise pattern derived from the seed value
+
+  const double seedshift = fmod(0.618033988749895 * (double) seed, 1.0);
+
+  // table of evenly spaced horizon directions, computed once; each pixel
+  // rotates the whole table by its per-pixel jitter angle
+
+  auto *dirTable = new double[2*nsamples];
+  for (int s = 0; s < nsamples; ++s) {
+    dirTable[2*s]   = cos(s * delTheta);
+    dirTable[2*s+1] = sin(s * delTheta);
+  }
 
 #if defined(_OPENMP)
 #pragma omp parallel for
@@ -1803,13 +1874,19 @@ void Image::compute_SSAO()
     double sy = surfaceBuffer[index * 2 + 1];
     double sin_t = -sqrt(sx*sx + sy*sy);
 
-    double mytheta = uniform[index - pixelstart] * SSAOJitter;
+    // deterministic per-pixel jitter from interleaved gradient noise, so
+    // shading is independent of the number of MPI ranks and OpenMP threads
+    // and images of unchanged scenes are reproducible
+
+    double ign = fmod(0.06711056 * x + 0.00583715 * y + seedshift, 1.0);
+    const double mytheta = fmod(52.9829189 * ign, 1.0) * SSAOJitter;
+    const double cosj = cos(mytheta);
+    const double sinj = sin(mytheta);
     double ao = 0.0;
 
-    for (int s = 0; s < SSAOSamples; ++s) {
-      double hx = cos(mytheta);
-      double hy = sin(mytheta);
-      mytheta += delTheta;
+    for (int s = 0; s < nsamples; ++s) {
+      double hx = cosj * dirTable[2*s] - sinj * dirTable[2*s+1];
+      double hy = sinj * dirTable[2*s] + cosj * dirTable[2*s+1];
 
       // multiply by z cross surface tangent
       // so that dot (aka cos) works here
@@ -1880,7 +1957,7 @@ void Image::compute_SSAO()
         ao += saturate(-scaled_sin_t);
       }
     }
-    ao /= (double)SSAOSamples;
+    ao /= (double)nsamples;
 
     double c[3];
     c[0] = (double) (*(unsigned char *) &imageBuffer[index * 3 + 0]);
@@ -1893,7 +1970,200 @@ void Image::compute_SSAO()
     imageBuffer[index * 3 + 1] = (int) c[1];
     imageBuffer[index * 3 + 2] = (int) c[2];
   }
-  delete[] uniform;
+
+  delete[] dirTable;
+}
+
+/* ----------------------------------------------------------------------
+   draw outlines on the composited image on the output rank: color
+   drawn pixels that have a significantly more distant pixel or the
+   background within the outline width.  the outline hugs the nearer
+   object at depth discontinuities, which gives the flat illustration
+   look known from hand-drawn molecular graphics.
+------------------------------------------------------------------------- */
+
+void Image::compute_outline()
+{
+  // only depth jumps between immediately adjacent pixels that are larger
+  // than a small fraction of the box size count as edges.  the smooth but
+  // steep depth changes where a curved surface turns away from the viewer
+  // must not be outlined, so the threshold is of the order of typical
+  // particle sizes and the comparison spans only one pixel
+
+  const double delx = 2.0 * (boxbounds[1] - boxbounds[0]);
+  const double dely = 2.0 * (boxbounds[3] - boxbounds[2]);
+  const double delz = 2.0 * (boxbounds[5] - boxbounds[4]);
+  double maxdel = MAX(delx,dely);
+  maxdel = MAX(maxdel,delz);
+  const double threshold = 0.02 * maxdel;
+
+  // the outline width follows the internal image size with FSAA
+
+  int w = outlinewidth;
+  if (fsaa) w *= 2;
+
+  const unsigned char red   = static_cast<unsigned char>(outlinecolor[0] * 255.0);
+  const unsigned char green = static_cast<unsigned char>(outlinecolor[1] * 255.0);
+  const unsigned char blue  = static_cast<unsigned char>(outlinecolor[2] * 255.0);
+
+  // mark drawn pixels that have a much more distant immediate neighbor
+  // or border on the background
+
+  auto *edges = new unsigned char[npixels];
+  memset(edges,0,npixels);
+
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
+  for (int iy = 0; iy < height; ++iy) {
+    for (int ix = 0; ix < width; ++ix) {
+      const double d = depthBuffer[iy*width + ix];
+      if (d < 0.0) continue;
+
+      constexpr int xoff[4] = {-1, 1, 0, 0};
+      constexpr int yoff[4] = {0, 0, -1, 1};
+      for (int k = 0; k < 4; ++k) {
+        const int jx = ix + xoff[k];
+        const int jy = iy + yoff[k];
+        if (jx < 0 || jx >= width || jy < 0 || jy >= height) continue;
+        const double dj = depthBuffer[jy*width + jx];
+        if (dj < 0.0 || (dj - d) > threshold) {
+          edges[iy*width + ix] = 1;
+          break;
+        }
+      }
+    }
+  }
+
+  // widen the outline: color drawn pixels near an edge pixel, but only
+  // on the near side of the depth jump so the outline hugs the nearer
+  // object and does not bleed onto more distant objects
+
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
+  for (int iy = 0; iy < height; ++iy) {
+    for (int ix = 0; ix < width; ++ix) {
+      const double d = depthBuffer[iy*width + ix];
+      if (d < 0.0) continue;
+
+      bool paint = false;
+      for (int dy = -w+1; dy < w && !paint; ++dy) {
+        const int jy = iy + dy;
+        if (jy < 0 || jy >= height) continue;
+        for (int dx = -w+1; dx < w; ++dx) {
+          const int jx = ix + dx;
+          if (jx < 0 || jx >= width) continue;
+          if (!edges[jy*width + jx]) continue;
+          if ((d - depthBuffer[jy*width + jx]) < threshold) {
+            paint = true;
+            break;
+          }
+        }
+      }
+
+      if (paint) {
+        const int i = iy*width + ix;
+        writeBuffer[i*3+0] = red;
+        writeBuffer[i*3+1] = green;
+        writeBuffer[i*3+2] = blue;
+      }
+    }
+  }
+
+  delete[] edges;
+}
+
+/* ----------------------------------------------------------------------
+   apply depth cueing to the composited image on the output rank:
+   fade drawn pixels toward the fog color with increasing distance from
+   the viewer.  the fade ends at the most distant drawn pixel and starts
+   at the nearest drawn pixel or at a chosen fraction of the simulation
+   box projected onto the view direction.
+------------------------------------------------------------------------- */
+
+void Image::compute_depthcue()
+{
+  // determine depth range of drawn pixels; background pixels have depth < 0
+
+  bool first = true;
+  double dmin = 0.0, dmax = 0.0;
+  for (int i = 0; i < npixels; i++) {
+    const double d = depthBuffer[i];
+    if (d < 0.0) continue;
+    if (first) {
+      dmin = dmax = d;
+      first = false;
+    } else {
+      dmin = MIN(dmin,d);
+      dmax = MAX(dmax,d);
+    }
+  }
+
+  // nothing to do without drawn pixels or without depth variation
+
+  if (first || ((dmax - dmin) < EPSILON)) return;
+
+  // start of the fade: by default the nearest drawn pixel.  with a start
+  // fraction set, project the corners of the simulation box onto the view
+  // direction and place the start at that fraction between the near and
+  // far side of the box as seen from the camera
+
+  double dstart = dmin;
+  if (depthcuestartflag) {
+    const double dcam = MathExtra::dot3(camPos,camDir);
+    double dnear = 0.0, dfar = 0.0;
+    for (int ic = 0; ic < 8; ++ic) {
+      double corner[3];
+      corner[0] = ((ic & 1) ? boxbounds[1] : boxbounds[0]) - xctr;
+      corner[1] = ((ic & 2) ? boxbounds[3] : boxbounds[2]) - yctr;
+      corner[2] = ((ic & 4) ? boxbounds[5] : boxbounds[4]) - zctr;
+      const double d = dcam - MathExtra::dot3(corner,camDir);
+      if (ic == 0) {
+        dnear = dfar = d;
+      } else {
+        dnear = MIN(dnear,d);
+        dfar = MAX(dfar,d);
+      }
+    }
+    dstart = dnear + depthcuestart * (dfar - dnear);
+    if (dstart >= (dmax - EPSILON)) return;    // fading starts behind all drawn pixels
+  }
+  const double dscale = depthcueint / (dmax - dstart);
+
+  // blend pixel colors toward the fog color.  by default this is the
+  // background color, with a gradient enabled the same per-row color as
+  // in clear(); a custom fog color is used for all rows unchanged
+
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
+  for (int iy = 0; iy < height; ++iy) {
+    int red, green, blue;
+    if (depthcuecolor) {
+      red   = static_cast<int>(depthcuecolor[0] * 255.0);
+      green = static_cast<int>(depthcuecolor[1] * 255.0);
+      blue  = static_cast<int>(depthcuecolor[2] * 255.0);
+    } else if (background2[0] >= 0) {
+      const double fraction = (double) iy / (double) height;
+      red   = static_cast<int>(fraction * background2[0] + (1.0 - fraction) * background[0]);
+      green = static_cast<int>(fraction * background2[1] + (1.0 - fraction) * background[1]);
+      blue  = static_cast<int>(fraction * background2[2] + (1.0 - fraction) * background[2]);
+    } else {
+      red   = background[0];
+      green = background[1];
+      blue  = background[2];
+    }
+    for (int ix = 0; ix < width; ++ix) {
+      const int i = iy * width + ix;
+      const double d = depthBuffer[i];
+      if (d < 0.0 || d <= dstart) continue;
+      const double f = std::min(1.0, (d - dstart) * dscale);
+      writeBuffer[i*3+0] = static_cast<unsigned char>((1.0 - f) * writeBuffer[i*3+0] + f * red);
+      writeBuffer[i*3+1] = static_cast<unsigned char>((1.0 - f) * writeBuffer[i*3+1] + f * green);
+      writeBuffer[i*3+2] = static_cast<unsigned char>((1.0 - f) * writeBuffer[i*3+2] + f * blue);
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
