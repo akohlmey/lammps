@@ -22,6 +22,8 @@ FixStyle(saed/vtk,FixSAEDVTK);
 
 #include "fix.h"
 
+#include <string>
+
 namespace LAMMPS_NS {
 
 class FixSAEDVTK : public Fix {
@@ -39,7 +41,6 @@ class FixSAEDVTK : public Fix {
   int nrepeat, nfreq, irepeat;
   bigint nvalid;
   char *ids;
-  FILE *fp;
   int nrows;
 
   int ave, nwindow, nsum, startstep;
@@ -52,6 +53,7 @@ class FixSAEDVTK : public Fix {
   void invoke_scalar(bigint);
   void invoke_vector(bigint);
   void options(int, char **);
+  std::string filecurrent() const;
 
   bigint nextvalid();
 
@@ -72,6 +74,8 @@ class FixSAEDVTK : public Fix {
 
   char *filename;    // user-specified file
   int nOutput;
+  int vtkformat;     // VTKLEGACY or VTKXML
+  int binaryflag;    // 1 if the data is written in binary
   int Dim[3];
   bool manual;    // Turn on manual recpiprocal map
 };
