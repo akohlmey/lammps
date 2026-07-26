@@ -262,6 +262,7 @@ void PairSDPDTaitwaterIsothermal::settings (int narg, char **arg) {
 #ifdef USE_ZEST
   generator.seed (seed);
 #else
+  delete random;
   random = new RanMars (lmp, seed);
 #endif
 }
