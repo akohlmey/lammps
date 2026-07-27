@@ -32,5 +32,10 @@
       SPIN/read_restart,
     ]
 
+  # input scripts without a reference log file cannot be checked against anything, so
+  # they are only tested for not crashing, with their run commands shortened to this
+  # many steps (0 or empty: run them unchanged)
+  smoke_steps: 100
+
   nugget: 1.0
   epsilon: 1e-16

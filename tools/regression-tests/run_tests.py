@@ -150,9 +150,12 @@ import get_quick_list
              recorded also for runs that crash or time out (0.0 if not run)
    checks  : number of performed numerical checks
    diverged: number of quantities that leave their tolerance somewhere in the run
-   divfrom : the earliest thermo output where that happens, as a fraction of the run;
-             near zero means that the run differs from the reference from the start,
-             near one that only its end diverges (None if nothing diverges)
+   divat   : the timestep at which the earliest of them does so (None if nothing
+             deviates or if the thermo output has no Step column)
+   divrow  : how many thermo outputs into the trajectory that is
+   attention: description of a problem with the input script itself that a developer
+             has to fix, e.g. initial velocities that depend on the number of MPI
+             processes (empty if there is none)
    timeout : whether the run was killed after exceeding the timeout
    memleak : whether valgrind detected memory leaks
 '''
@@ -168,7 +171,9 @@ class TestResult:
     self.elapsed = 0.0
     self.checks = checks
     self.diverged = 0
-    self.divfrom = None
+    self.divat = None
+    self.divrow = None
+    self.attention = ""
     self.timeout = False
     self.memleak = False
 
@@ -230,7 +235,11 @@ def write_junit_xml(output_file, results, suite_name, properties=None):
         # drifts apart, which need very different responses
         if result.diverged:
             case.set('diverged', str(result.diverged))
-            case.set('diverged-from', f"{result.divfrom:.3f}")
+            case.set('diverged-row', str(result.divrow))
+            if result.divat is not None:
+                case.set('diverged-at', str(result.divat))
+        if result.attention:
+            case.set('attention', shorten(result.attention))
 
         if result.category == 'failed':
             elem = ET.SubElement(case, 'failure')
@@ -293,6 +302,16 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
     compiler = config['compiler']
     use_valgrind = 'valgrind' in config['mpiexec']
 
+    # inputs without a reference log file are run with their run commands shortened to
+    # this many steps, since all that can be checked for them is that they do not crash
+    smoke_steps = int(config['smoke_steps']) if str(config.get('smoke_steps', "")) != "" else 0
+
+    # runs are killed after this many seconds (must match the default in execute());
+    # an input that needs a good fraction of it is a production run rather than an
+    # example and should be shortened in the repository
+    timeout_seconds = int(config['timeout']) if str(config.get('timeout', "")) != "" else 60
+    long_run_seconds = 0.25 * timeout_seconds
+
     # record the outcome of a test: append it to the results list, write one line
     # to the progress file and, for failed or errored tests, to the failure file;
     # each line is a flow-style YAML mapping so that the whole file parses as a
@@ -302,6 +321,8 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         if not write_progress:
             return
         entry = { 'folder': result.folder, 'status': result.status }
+        if result.attention:
+            entry['attention'] = result.attention
         if failed_checks is not None:
             entry['failed_checks'] = failed_checks
         entry['walltime'] = float(result.time)
@@ -365,6 +386,20 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                 test_id = test_id + 1
                 continue
 
+        # input scripts that need a multi-partition run write one log file per partition
+        # and cannot be tested with a configuration that runs them in a single partition
+        if not ({'-p', '-partition'} & set(config['args'].split())):
+            command = needs_partitions(input)
+            if command:
+                msg = ("   + " + input + f" ({test_id+1}/{num_tests}): skipped, needs a"
+                       f" multi-partition run because of \"{command}\"")
+                print(msg)
+                logger.info(msg)
+                result.status = f'skipped, needs a multi-partition run ("{command}")'
+                record(result)
+                test_id = test_id + 1
+                continue
+
         str_t = "   + " + input_test + f" ({test_id+1}/{num_tests})"
         logger.info(str_t)
         print(str_t)
@@ -416,14 +451,69 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
             config['mpiexec_numproc_flag'] = ""
             nprocs = 1
 
+        # The initial velocities of some inputs depend on the domain decomposition, so
+        # their output can never match a reference log file that was written with a
+        # different number of MPI processes.  This has to be corrected in the input
+        # script, after which its reference log files have to be recreated.
+        if ref_logfile_exist and nprocs != max_np:
+            reason = velocity_decomposition_dependent(input_test)
+            if reason:
+                result.attention = (f"{reason}: cannot match the reference log file, which"
+                                    f" was written with {max_np} MPI processes instead of {nprocs}")
+                logger.info(f"     {result.attention}")
+
         # walltime =   -2: skipped tests
         #              -1: failed tests
         #            >= 0: walltime in seconds (e.g. in.melt walltime = 0.2 seconds)
         # default walltime value of failed tests
         result.time = -1.0
 
+        # Without a reference log file nothing can be checked, so the only thing left to
+        # test is that the input starts and runs without crashing.  There is no reason to
+        # run it to the end for that, so a copy with shortened run commands is used.  This
+        # is where most of the time of a full test run used to go: those are the inputs
+        # that nobody trimmed for testing and that hit the timeout.
+        smoke_input = ""
+        shortened = 0
+        smoke_failed = False
+        if (smoke_steps > 0) and (ref_logfile_exist == False) and (use_valgrind == False) \
+                and (genref == False) and not os.path.isfile('thermo.' + input + '.yaml'):
+            smoke_input = input_test + '.smoke'
+            try:
+                shortened = write_shortened_input(input_test, smoke_input, smoke_steps)
+            except OSError as err:
+                logger.info(f"     Cannot write {smoke_input}: {err}")
+                smoke_input = ""
+            if smoke_input and shortened == 0:
+                # nothing to shorten, so run the input script itself
+                try:
+                    os.remove(smoke_input)
+                except OSError:
+                    pass
+                smoke_input = ""
+            elif smoke_input:
+                logger.info(f"     No reference log file: running {input_test} with"
+                            f" {shortened} run command(s) shortened to {smoke_steps} steps")
+
         # run the LAMMPS binary with the input script
-        status = execute(lmp_binary, config, input_test)
+        status = execute(lmp_binary, config, smoke_input if smoke_input else input_test)
+
+        # Shortening the runs can break an input script, for example when a variable
+        # refers to a fix that only produces output after more steps than the shortened
+        # run has.  There is no way to tell such an artifact from a real problem, so the
+        # input script is run unchanged in that case, as it was before.
+        if smoke_input and (("ERROR" in status['stdout']) or (status['returncode'] != 0)):
+            logger.info(f"     {input_test} does not work with shortened runs, running it unchanged")
+            elapsed = status['elapsed']
+            try:
+                os.remove(smoke_input)
+            except OSError:
+                pass
+            smoke_input = ""
+            smoke_failed = True
+            status = execute(lmp_binary, config, input_test)
+            status['elapsed'] += elapsed
+
         output = status['stdout']
         error = status['stderr']
         returncode = int(status['returncode'])
@@ -431,8 +521,28 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         result.timeout = status['timedout']
         result.elapsed = status['elapsed']
 
+        # Many example inputs are older contributions that were never trimmed for
+        # testing: they run a production number of steps, which costs most of the time
+        # of a full test run and, for the ones that hit the timeout, produces no result
+        # at all.  Those have to be shortened in the repository, so flag them.
+        if result.timeout or result.elapsed >= long_run_seconds:
+            note = (f"the run needs {result.elapsed:.0f} s"
+                    + (f" and hits the timeout of {timeout_seconds} s" if result.timeout else "")
+                    + ": a production sized run that should be shortened in the repository")
+            if smoke_failed:
+                note += " (shortening its run commands makes it fail, so it has to be done by hand)"
+            result.attention = f"{result.attention}; {note}" if result.attention else note
+            logger.info(f"     {note}")
+
         # restore the nprocs value in the configuration
         config['nprocs'] = saved_nprocs
+
+        # the shortened copy of the input script is not needed any longer
+        if smoke_input:
+            try:
+                os.remove(smoke_input)
+            except OSError:
+                pass
 
         # check if the output contains ERROR
         #   there might not be a log file generated at this point, or the log file contains only the date line
@@ -606,7 +716,11 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                 # most likely to reach here if the reference log file does not exist
                 logger.info(f"       {thermo_ref_file} also does not exist in the working directory.")
                 result.category = 'completed'
-                result.status = 'completed, numerical checks skipped due to missing the reference log file'
+                if smoke_input:
+                    result.status = (f"completed, no reference log file, only checked that a run"
+                                     f" shortened to {smoke_steps} steps does not crash")
+                else:
+                    result.status = 'completed, numerical checks skipped due to missing the reference log file'
                 record(result, walltime_norm=walltime_norm)
                 test_id = test_id + 1
                 continue
@@ -690,7 +804,14 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         num_rel_failed = comparison['num_rel_failed']
         failed_abs_output = comparison['failed_abs']
         failed_rel_output = comparison['failed_rel']
-        divergence = format_divergence(comparison['diverged'])
+
+        # judge the earliest deviation: too early for the chaotic nature of a classical
+        # MD trajectory to explain it, or late enough that it is expected
+        assessment = divergence_assessment(comparison['diverged_at'], comparison['diverged_row'],
+                                           comparison['thermo_every'])
+        if assessment and result.attention:
+            assessment += f"; NOTE: {result.attention}"
+        divergence = ([assessment] if assessment else []) + format_divergence(comparison['diverged'])
 
         if verbose == True:
             width = 20
@@ -775,14 +896,16 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                           'abs_diff_failed': num_abs_failed,
                           'rel_diff_failed': num_rel_failed }
         if comparison['diverged']:
-            # the earliest thermo output where any quantity leaves its tolerance, as a
-            # fraction of the run: a value near zero means that the deviation is there
-            # from the start, a value near one that only the end of the run diverges
+            # the earliest deviation from the reference log file: a deviation in the
+            # first thermo outputs is a difference in what is computed, while one after
+            # a few thousand steps is the chaotic nature of a classical MD trajectory
             result.diverged = len(comparison['diverged'])
-            result.divfrom = min(entry['first_row'] / max(entry['rows'] - 1, 1)
-                                 for entry in comparison['diverged'])
+            result.divat = comparison['diverged_at']
+            result.divrow = comparison['diverged_row']
             failed_checks['diverged'] = result.diverged
-            failed_checks['diverged_from'] = round(result.divfrom, 3)
+            failed_checks['diverged_row'] = result.divrow
+            if result.divat is not None:
+                failed_checks['diverged_at'] = result.divat
         record(result, walltime_norm=walltime_norm, failed_checks=failed_checks)
         test_id = test_id + 1
 
@@ -813,6 +936,112 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
     return stat
 
 # HELPER FUNCTIONS
+
+# commands that only work when LAMMPS is started with more than one partition, i.e. with
+# "-partition NxM" and a matching number of MPI processes.  Without that they either stop
+# with an error or compute something meaningless, and their thermo output goes to one log
+# file per partition instead of the single log file that is compared here.  The list
+# follows the universe->nworlds checks in the sources.
+PARTITION_COMMANDS = [
+    re.compile(r'^\s*(neb|neb/spin|prd|tad|temper|temper/npt|temper/grem)\s', re.IGNORECASE),
+    re.compile(r'^\s*fix\s+\S+\s+\S+\s+(pimd/langevin|pimd/nvt|alchemy|gemc|neb|neb/spin)\s',
+               re.IGNORECASE),
+    re.compile(r'^\s*run_style\s+verlet/split\s*$', re.IGNORECASE),
+    re.compile(r'^\s*kspace_style\s+pppm/rk\s', re.IGNORECASE),
+    re.compile(r'^\s*partition\s', re.IGNORECASE),
+    re.compile(r'^\s*variable\s+\S+\s+(universe|uloop)\s', re.IGNORECASE),
+]
+
+'''
+    check whether an input script needs a multi-partition run
+
+    return the offending command, or an empty string if the input script can be run
+    with a single partition
+'''
+def needs_partitions(input_file):
+    try:
+        with open(input_file, 'r', errors='ignore') as f:
+            for line in f:
+                if line.lstrip().startswith('#'):
+                    continue
+                for pattern in PARTITION_COMMANDS:
+                    match = pattern.match(line)
+                    if match:
+                        return ' '.join(match.group(0).split())
+    except OSError:
+        pass
+    return ""
+
+'''
+    check whether the initial velocities of an input script depend on the number of
+    MPI processes, which makes its output impossible to compare against a reference log
+    file that was created with a different number of processes
+
+    Following the documentation of the velocity command:
+      + "loop geom" seeds the random numbers with the coordinates of each atom and always
+        assigns the same velocity to an atom
+      + "loop local" adjusts the seed per process and always gives different velocities
+      + "loop all" (the default) assigns velocities by atom ID, which only gives the same
+        result when the atoms were read from a data file: atoms created with create_atoms
+        get their IDs assigned depending on the domain decomposition
+
+    Such an input needs to be corrected at the source (add "loop geom" to the velocity
+    command) and its reference log files have to be recreated.
+
+    return a description of the problem, or an empty string if the velocities are
+    reproducible or if the input script does not create any
+'''
+def velocity_decomposition_dependent(input_file):
+    create = re.compile(r'^\s*velocity\s+\S+\s+create\s', re.IGNORECASE)
+    lines = []
+    try:
+        with open(input_file, 'r', errors='ignore') as f:
+            # join the lines that are continued with a trailing "&"
+            text = f.read().replace('&\n', ' ')
+    except OSError:
+        return ""
+
+    lines = [line for line in text.splitlines() if not line.lstrip().startswith('#')]
+    velocity = [line for line in lines if create.match(line)]
+    if not velocity:
+        return ""
+    if all('loop geom' in ' '.join(line.split()) for line in velocity):
+        return ""
+    if any(re.search(r'\bloop\s+local\b', line, re.IGNORECASE) for line in velocity):
+        return 'velocity create with "loop local"'
+    if any(re.match(r'^\s*create_atoms\s', line, re.IGNORECASE) for line in lines):
+        return 'velocity create with the default "loop all" and atoms from create_atoms'
+    return ""
+
+'''
+    copy an input script and reduce the number of steps of its run commands
+
+    This is for input scripts without a reference log file: their output cannot be
+    checked against anything, so the only thing left to test is that they start and run
+    without crashing, and there is no reason to run them to the end.
+
+    input_file : the input script to read
+    output_file: the shortened input script to write
+    maxsteps   : upper limit for the number of steps of a run command
+    return the number of run commands that were shortened
+'''
+def write_shortened_input(input_file, output_file, maxsteps):
+    # "run 10000 upto", "run ${nsteps} post no", ...: only the number of steps is replaced
+    pattern = re.compile(r'^(\s*run\s+)(\S+)(.*)$', re.IGNORECASE)
+    shortened = 0
+    with open(input_file, 'r', errors='ignore') as src, open(output_file, 'w') as dst:
+        for line in src:
+            match = pattern.match(line)
+            if match:
+                steps = match.group(2)
+                # never make a run longer than it was, e.g. the "run 0" of a single point
+                nsteps = min(int(steps), maxsteps) if steps.isdigit() else maxsteps
+                if str(nsteps) != steps:
+                    line = f"{match.group(1)}{nsteps}{match.group(3)}\n"
+                    shortened += 1
+            dst.write(line)
+    return shortened
+
 '''
     compare the thermo output of a run against the reference log file
 
@@ -841,13 +1070,19 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
       diverged      : one entry per run and quantity that exceeds its tolerance in at
                       least one row, with the first diverging row, the largest deviation
                       and the deviation in the last row
+      diverged_at   : the earliest timestep at which any quantity leaves its tolerance
+                      (None if the thermo output has no Step column)
+      diverged_row  : how many thermo outputs into the whole trajectory that is
+      thermo_every  : the number of steps between two thermo outputs of the first run,
+                      which is the resolution at which a deviation can be detected at all
       last_row      : the compared values in the last row of each run, for verbose output
 '''
 def compare_thermo(thermo, thermo_ref, tolerance, overrides, epsilon, nugget):
     result = { 'status': 'ok', 'run': 0, 'num_checks': 0,
                'num_abs_failed': 0, 'num_rel_failed': 0,
                'failed_abs': [], 'failed_rel': [], 'num_rows': 0, 'skipped_rows': 0,
-               'diverged': [], 'last_row': [] }
+               'diverged': [], 'diverged_at': None, 'diverged_row': None,
+               'thermo_every': None, 'last_row': [] }
 
     for irun in range(len(thermo)):
         keywords = thermo[irun]['keywords']
@@ -884,6 +1119,7 @@ def compare_thermo(thermo, thermo_ref, tolerance, overrides, epsilon, nugget):
             result['run'] = irun
             return result
 
+        rows_before = result['num_rows']
         result['num_rows'] += len(rows)
         last_row = rows[-1]
 
@@ -891,6 +1127,10 @@ def compare_thermo(thermo, thermo_ref, tolerance, overrides, epsilon, nugget):
         steps = None
         if 'Step' in keywords:
             steps = [row[keywords.index('Step')] for row in data]
+            # how far apart two thermo outputs are: a deviation cannot be seen any
+            # earlier than the first thermo output after the one where it starts
+            if result['thermo_every'] is None and len(rows) > 1:
+                result['thermo_every'] = steps[rows[1]] - steps[rows[0]]
 
         for i in range(len(keywords)):
             quantity = keywords[i]
@@ -946,7 +1186,58 @@ def compare_thermo(thermo, thermo_ref, tolerance, overrides, epsilon, nugget):
                             'last_abs': abs_diff, 'last_rel': rel_diff,
                             'abs_tol': abs_tol, 'rel_tol': rel_tol,
                         })
+                        # the earliest deviation over the whole trajectory: a run that
+                        # continues a previous one starts out deviating if that one did,
+                        # so this has to be tracked across the runs and not per run
+                        row_overall = rows_before + rows.index(first)
+                        if result['diverged_row'] is None or row_overall < result['diverged_row']:
+                            result['diverged_row'] = row_overall
+                            result['diverged_at'] = steps[first] if steps else None
     return result
+
+# A classical MD trajectory is chaotic: the tiniest difference in the computed forces,
+# as it comes from a different machine, compiler, level of optimization or number of MPI
+# processes, grows exponentially.  It takes about this many steps before such a rounding
+# difference has grown enough to be visible in the printed thermo output, and a few
+# thousand more before it reaches the printed precision of all quantities.  Anything that
+# deviates later than this is expected and says nothing about the correctness of the code.
+CHAOS_STEPS = 1000
+
+# A real difference in what is computed, on the other hand, is normally visible within
+# the first steps, and in subtle cases after one or two hundred.  A deviation that shows
+# up this early is worth looking at.
+SUSPICIOUS_STEPS = 200
+
+'''
+    judge the earliest deviation of a run from its reference log file
+
+    diverged_at : timestep of the earliest deviation (None if there is no Step column)
+    diverged_row: how many thermo outputs into the trajectory that is
+    thermo_every: number of steps between two thermo outputs
+
+    return a short assessment for the test report, or an empty string if nothing deviates
+'''
+def divergence_assessment(diverged_at, diverged_row, thermo_every):
+    if diverged_row is None:
+        return ""
+    if diverged_row == 0:
+        return ("deviates in the very first thermo output, before the trajectory can"
+                " diverge: a difference in the setup or in the computation")
+    if diverged_at is None:
+        return f"deviates after {diverged_row} thermo outputs (no Step column in the output)"
+
+    # a deviation cannot be seen before the first thermo output after it starts, so with
+    # thermo output every few thousand steps the two cases cannot be told apart
+    if thermo_every and thermo_every > SUSPICIOUS_STEPS and diverged_row <= 1:
+        return (f"deviates in the second thermo output (step {diverged_at}); with thermo"
+                f" output only every {thermo_every} steps this cannot be told apart from"
+                " chaotic divergence")
+    if diverged_at <= SUSPICIOUS_STEPS:
+        return (f"deviates after {diverged_at} steps, too early for chaotic divergence:"
+                " a difference in the computation until proven otherwise")
+    if diverged_at <= CHAOS_STEPS:
+        return f"deviates after {diverged_at} steps, early for chaotic divergence"
+    return f"deviates after {diverged_at} steps, consistent with chaotic divergence"
 
 '''
     describe how a quantity deviates from the reference, to tell apart the cases that

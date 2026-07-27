@@ -98,6 +98,35 @@ The verdict of a test is still decided by the last row of thermo output of each 
 this does not by itself turn passing tests into failing ones. A test that passes but
 deviates in between says so in its status.
 
+Inputs that are not tested, and inputs that need to be fixed
+------------------------------------------------------------
+
+The example inputs were not written to be tests, so a number of them cannot be compared
+against a reference log file at all, and some need to be corrected before their result
+means anything. Those cases are recognized and reported rather than counted as failures:
+
+    + input scripts that need a multi-partition run (neb, prd, tad, temper, fix pimd,
+      universe style variables, ...) are skipped: they write one log file per partition
+      and need their own test configuration with "-partition NxM" and a matching number
+      of MPI processes
+    + input scripts without a reference log file cannot be checked against anything, so
+      they are run with their run commands shortened to "smoke_steps" steps, which only
+      tests that they do not crash. If the shortened run fails, which happens when a
+      variable refers to a fix that only produces output after more steps, the input is
+      run unchanged instead and flagged as needing manual attention.
+    + input scripts whose initial velocities depend on the number of MPI processes
+      (a "velocity create" command without "loop geom" on a system built with
+      create_atoms) cannot match a reference log file that was written with a different
+      number of processes; they are flagged for a fix in the repository
+    + input scripts that need a good part of the timeout are production sized runs that
+      should be shortened in the repository; they are flagged as well
+
+The last two are reported in an "attention" field of the progress file and as an
+attribute of the JUnit test case, independently of whether the test passed or failed.
+
+REPORTING.md in this folder documents all of that information and how a dashboard can
+turn it into a work list.
+
 The JUnit XML files from multiple (distributed) runs can be merged and summarized
 with the merge_results.py script in this folder (which only needs the Python
 standard library):

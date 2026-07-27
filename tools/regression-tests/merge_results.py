@@ -33,6 +33,11 @@ the end of the run look like chaotic amplification of rounding differences.
 Since the cost of a test depends on how it is run, each test configuration (serial,
 4 MPI tasks, ...) needs its own cost file.
 
+The summary also lists the input scripts that a developer has to fix before their result
+means anything: input scripts whose initial velocities depend on the number of MPI
+processes, and production sized runs that should be shortened.  REPORTING.md in this
+folder documents all the fields of the JSON output and how to classify them.
+
 Example:
     python3 merge_results.py --title "Full Regression Test" \
             --output-xml regression.xml --json run.json --summary summary.md \
@@ -49,10 +54,13 @@ import xml.etree.ElementTree as ET
 # statuses that count as broken for the comparison with a previous run
 BAD = ('failed', 'error')
 
-# a run whose output deviates from the reference within the first / after the last of
-# these fractions of its thermo output is reported as diverging early / late
-EARLY = 0.05
-LATE = 0.5
+# A classical MD trajectory is chaotic, so the tiniest rounding difference from another
+# machine, compiler or number of MPI processes grows exponentially and shows up in the
+# thermo output after roughly this many steps.  A deviation that appears later than this
+# is expected and says nothing about the correctness of the code, while one that appears
+# within the first steps is a difference in what is computed.
+CHAOS_STEPS = 1000
+SUSPICIOUS_STEPS = 200
 
 '''
     parse a single JUnit XML file as written by run_tests.py (a single <testsuite>
@@ -88,7 +96,11 @@ def parse_junit_xml(filename):
             # how far into the run the output starts to deviate from the reference
             if case.get('diverged'):
                 entry['diverged'] = int(case.get('diverged'))
-                entry['diverged_from'] = float(case.get('diverged-from', 0.0))
+                entry['diverged_row'] = int(case.get('diverged-row', 0))
+                if case.get('diverged-at') is not None:
+                    entry['diverged_at'] = int(case.get('diverged-at'))
+            if case.get('attention'):
+                entry['attention'] = case.get('attention')
             tests[key] = entry
     return properties, tests
 
@@ -121,7 +133,11 @@ def write_merged_xml(filename, title, properties, tests, counts):
         case.set('time', f"{entry['time']:.3f}")
         if 'diverged' in entry:
             case.set('diverged', str(entry['diverged']))
-            case.set('diverged-from', f"{entry['diverged_from']:.3f}")
+            case.set('diverged-row', str(entry['diverged_row']))
+            if 'diverged_at' in entry:
+                case.set('diverged-at', str(entry['diverged_at']))
+        if 'attention' in entry:
+            case.set('attention', entry['attention'])
         if entry['status'] != 'passed':
             tag = 'failure' if entry['status'] == 'failed' else entry['status']
             elem = ET.SubElement(case, tag)
@@ -277,23 +293,36 @@ if __name__ == "__main__":
         failed = [key for key, entry in tests.items() if entry['status'] == 'failed']
         errors = [key for key, entry in tests.items() if entry['status'] == 'error']
 
-        # sort the failed runs by where their output starts to deviate from the
-        # reference log file, which says what to do about them
-        early = [key for key in failed if tests[key].get('diverged_from', 1.0) <= EARLY]
-        late = [key for key in failed if tests[key].get('diverged_from', -1.0) >= LATE]
+        # inputs that a developer has to fix before their result means anything
+        attention = [key for key, entry in tests.items() if entry.get('attention')]
+        if attention:
+            md += f"### Input scripts that need to be fixed ({len(attention)})\n\n"
+            md += ("These have to be corrected in the repository and their reference log"
+                   " files recreated; until then their result says little.\n\n")
+            md += ''.join(f"- `{key}`: {tests[key]['attention']}\n" for key in sorted(attention)[:50])
+            if len(attention) > 50:
+                md += f"- ... and {len(attention) - 50} more\n"
+            md += '\n'
+
+        # sort the failed runs by where their output starts to deviate from the reference
+        # log file: that is what says whether a failure is worth investigating
+        early = [key for key in failed
+                 if tests[key].get('diverged_row') == 0
+                 or tests[key].get('diverged_at', CHAOS_STEPS + 1) <= SUSPICIOUS_STEPS]
+        late = [key for key in failed if tests[key].get('diverged_at', 0) > CHAOS_STEPS]
         if early or late:
             md += "### Where the failed runs start to deviate\n\n"
             if early:
-                md += (f"**Deviating from the start of the run ({len(early)}):** these do not"
-                       " agree with the reference log file before the trajectory can diverge,"
-                       " so they are a difference in the model or in the setup until proven"
-                       " otherwise.\n\n")
+                md += (f"**Deviating within the first {SUSPICIOUS_STEPS} steps ({len(early)}):**"
+                       " too early for a rounding difference to have grown that far, so these"
+                       " are a difference in what is computed until proven otherwise.\n\n")
                 md += markdown_list(early, tests) + '\n'
             if late:
-                md += (f"**Deviating only in the last half of the run ({len(late)}):** these"
-                       " agree at first and drift apart later, which is what chaotic"
-                       " amplification of rounding differences looks like. Consider a shorter"
-                       " run or a wider tolerance for these.\n\n")
+                md += (f"**Deviating only after {CHAOS_STEPS} steps ({len(late)}):** a classical"
+                       " MD trajectory is chaotic, so a rounding difference from another"
+                       " machine, compiler or number of MPI processes grows into a visible"
+                       " deviation on its own. Expect these unless something else is wrong;"
+                       " a shorter run or a wider tolerance is the usual answer.\n\n")
                 md += markdown_list(late, tests) + '\n'
 
         if failed:
