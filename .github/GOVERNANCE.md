@@ -1,108 +1,111 @@
-# LAMMPS Project Governance
+---
+title: "Governance"
+description: "How the LAMMPS project is managed"
+---
 
-This document describes how the LAMMPS project is led, how technical and
-administrative decisions are made, and how contributors can become part of
-that process.  It formalizes practices the project has followed informally
-for many years.
+<sub>(this page and its content is currently a work in progress and not final)</sub>
 
-## 1. Roles
+<!-- # Governance of the LAMMPS project -->
 
-### 1.1 Contributors
+All information in this file is pursuant to the LAMMPS Project
+[Technical Charter](/about/charter).  In case of any conflict or
+difference in language, the LAMMPS Project Technical Charter takes
+priority over this document.
 
-Anyone who submits an issue or pull request, or takes part in discussions on
-the project's GitHub repository or official communication channels
-(developers@lammps.org, lammps.slack.com, https://matsci.org/c/lammps) is a
-Contributor.  No approval or affiliation is required.
+## Technical Steering Committee
 
-### 1.2 Core Developers
+### Role
 
-Core Developers are Contributors who have been granted commit access to the
-mainline repository.  They review and merge pull requests, participate in
-technical and administrative decisions, and attend the project's regular
-developer meetings.
+The role of the Technical Steering Committee (TSC) is to provide
+technical direction to the project.  The TSC will vote on any matters on
+which the community is unable to reach consensus.
 
-**Becoming a Core Developer:** A Contributor is nominated by an existing
-Core Developer on the basis of a sustained record of high-quality
-contributions and sound judgment in review.  The nomination is confirmed by
-consensus of the existing Core Developers (see Section 3).
+### Membership
 
-**Stepping down / Emeritus status:** Core Developers may step down
-voluntarily at any time.  A Core Developer who has been inactive for an
-extended period (nominally 18 months) may be moved to Emeritus status by
-consensus of the remaining Core Developers; commit access is removed, but
-Emeritus developers remain credited for their contributions and may request
-reinstatement.
+Members can be added to the TSC by a majority vote of the TSC.  Members
+may be removed from the TSC by a 2/3 vote of the TSC.  If a TSC member
+has been inactive for over 6 months, the TSC must hold a vote on whether
+to remove that member from the TSC.
 
-**Removal for cause:** Commit access may be revoked by consensus of the
-Lead Developers in response to a substantiated Code of Conduct violation,
-following the enforcement process of the project's
-[Code of Conduct](CODE_OF_CONDUCT.md).
+Current Membership:
 
-### 1.3 Collaborators
+1. Steve Plimpton  ([@sjplimp](https://github.com/sjplimp)), unaffiliated
+1. Axel Kohlmeyer ([akohlmey](https://github.com/akohlmey)), Temple U.
+1. Aidan Thompson ([@athomps](https://github.com/athomps)), SNL
+1. Richard Berger ([@rbberger](https://github.com/rbberger)), LANL
+1. Stan Moore ([@stanmoore1](https://github.com/stanmoore1)), SNL
+1. Joel Clemmer, ([@jtclemm](https://github.com/jtclemm)), SNL
+1. Jake Gissinger ([@jrgissing](https://github.com/jrgissing)), Stevens IT
+1. Larry Fried (), LLNL
+1. [TBD], LANL, ORNL,ANL, NVIDIA, Other stakeholders
 
-Contributors submitting pull requests with significant new features are
-invited to become Collaborators on the project. They are added to the
-`.github/CODEOWNERS.md` file for their files / packages to be automatically
-flagged as reviewer of any changes to their contributed files and are
-given Triage permissions to review any changes to their contribution.
+### TSC Chair
 
-### 1.4 Lead Developers
+The TSC will elect a chair.  The TSC chair runs TSC meetings and may
+make interim decisions on urgent matters on behalf of the TSC, which may
+be reviewed by the TSC at its next meeting.
 
-The Lead Developers are Core Developers who additionally hold overall
-technical and administrative responsibility for the project: they
-facilitate consensus-building, act as tie-breakers of last resort when
-consensus cannot be reached among the Core Developers, sign off on
-releases, and represent LAMMPS externally.
+Current chair: Aidan Thompson ([@athomps](https://github.com/athomps)), SNL
 
-Lead Developers are drawn from, and remain, Core Developers; they do not
-constitute a separate governing body and do not have authority to
-overrule a clear Core Developer consensus.  New Lead Developers are
-selected by the current Lead Developers from among the Core Developers,
-in consultation with the Core Developer group.
+### Meetings and Notes
 
-## 2. Institutional diversity
+The TSC meets are held quarterly.  These meetings are open to the
+public, and are held virtually.
 
-The Core Developer group is intentionally composed of individuals
-affiliated with multiple independent institutions.  The project is
-committed to maintaining this diversity: no single institution may
-employ more than half of the Core Developers, and no single institution
-may control project decisions.
+Meeting notes can be found in [tsc-meeting-notes](tsc-meeting-notes)
+in this repository.
 
-## 3. Decision-making process
+## Other Public LAMMPS fora
 
-Technical and administrative decisions — including feature and package
-proposals, API changes, deprecations, committer nominations, and
-governance changes — are made by seeking broad consensus among the Core
-Developers.  This happens primarily through:
+### Monthly Developer Meetings
 
-- discussion and review on GitHub pull requests and issues;
-- monthly developer videoconference meetings;
-- an annual in-person developer meeting, used for larger architectural and
-  strategic decisions.
+Public LAMMPS developer meetings are held on the second Tuesday of every
+month that is not a TSC meeting, at 12 noon Albuquerque Time. These
+meetings are held virtually over
+[Teams](https://teams.microsoft.com/l/meetup-join/19%3ameeting_YWVlZjUwYzYtMTBhOS00MjM2LTgzMjgtOWU1NzdkNTUwZDZh%40thread.v2/0?context=%7b%22Tid%22%3a%227ccb5a20-a303-498c-b0c1-29007381b574%22%2c%22Oid%22%3a%22e1d7203f-43a9-4df0-a5fe-cbae01e46797%22%7d).
 
-If consensus cannot be reached through discussion, the Lead Developers
-make the final decision, informed by the range of views expressed by the
-Core Developers.
+### LAMMPS Slack
 
-## 4. Release process
+The LAMMPS project uses slack for day-to-day developer communication at
+[lammps.slack.com](https://lammps.slack.com).  Invitations to the LAMMPS
+slack instance can be obtained by sending an email to slack@lammps.org.
 
-The Lead Developers decide when feature releases are cut and when a
-release is promoted to a stable release, and are responsible for
-publishing and announcing releases.  The release mechanics — branch
-structure, tagging conventions, testing requirements, and integrity
-protection — are documented in the LAMMPS manual and in
-`.github/release_steps.md`.
+<!-- https://lammps.slack.com/archives/C1G0VMHSL -->
 
-## 5. Code of Conduct
+### LAMMPS Github
 
-All participants in the project are expected to follow the [LAMMPS Code
-of Conduct](CODE_OF_CONDUCT.md).  Violations may be reported
-confidentially to the project team at developers@lammps.org; reports are
-reviewed and investigated by the Lead Developers as described in the
-Code of Conduct's enforcement section.
+LAMMPS [issues](https://github.com/lammps/lammps/issues) and [pull
+requests](https://github.com/lammps/lammps/pulls), are tracked on the
+[LAMMPS GitHub page](https://github.com/lammps/lammps).
 
-## 6. Amending this document
+### Announcements
 
-Changes to this governance document are proposed as pull requests and
-adopted by consensus of the Core Developers, following the same process
-as other administrative decisions (Section 3).
+Announcements will be posted on the LAMMPS website
+[lammps.org](https://www.lammps.org/) and on
+[MatSci.org/lammps](https://matsci.org/lammps).
+
+## Teams within the LAMMPS project
+
+### Administrative Access to the Github Repository
+
+Only members of the TSC may have administrative access to the LAMMPS
+repository. TSC members will be given access as needed. This list is not
+generally published for operational security reasons.
+
+### Other teams within the LAMMPS project
+
+There are other teams within the LAMMPS GitHub project which control
+access to various permissions on the repository. These teams are:
+
+- `tsc`: see above
+- `maintainers`: can merge an approved pull request to LAMMPS
+- `core-developers`: can override a request for change, effectively
+  allowing them to approve a pull request
+
+See the relevant teams in the LAMMPS GitHub repository for membership
+of these teams.  Membership in these teams is controlled by the TSC.
+
+-----
+
+A [copy of this document](https://github.com/akohlmey/lammps/blob/internal-docs/.github/GOVERNANCE.md)
+is also available in the LAMMPS git repository as `.github/GOVERNANCE.md`.
