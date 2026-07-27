@@ -16,19 +16,28 @@ Output (all optional, selected via command line flags):
                                 archived for tracking results over time
     + --summary summary.md    : summary in Markdown format (use "-" for stdout),
                                 suitable for $GITHUB_STEP_SUMMARY
+    + --cost-file costs.json  : measured run times per input script, to be passed to
+                                the next "run_tests.py --analyze" run with --cost-file
+                                so that it can distribute the input scripts evenly
+                                over the workers; an existing file is updated in
+                                place, keeping the times of tests that did not run
 
 With --compare previous-run.json, the Markdown summary also reports the changes
 relative to a previous run: new failures, fixed tests, new tests, removed tests.
 
+Since the cost of a test depends on how it is run, each test configuration (serial,
+4 MPI tasks, ...) needs its own cost file.
+
 Example:
     python3 merge_results.py --title "Full Regression Test" \
             --output-xml regression.xml --json run.json --summary summary.md \
-            --compare previous-run.json output-*.xml
+            --cost-file costs.json --compare previous-run.json output-*.xml
 '''
 
 from argparse import ArgumentParser
 import datetime
 import json
+import os
 import sys
 import xml.etree.ElementTree as ET
 
@@ -104,6 +113,45 @@ def write_merged_xml(filename, title, properties, tests, counts):
     tree.write(filename, encoding='UTF-8', xml_declaration=True)
 
 '''
+    update the file with the measured run times of the individual input scripts
+
+    The file maps the test names ("<folder>/<input script>", relative to the top-level
+    examples folder) to the measured wall-clock time of the run in seconds.  It is read
+    back by "run_tests.py --analyze --cost-file ..." to distribute the input scripts
+    over the workers such that they all take about the same time.
+
+    Tests that did not run in this test run have a recorded time of zero; their previous
+    time is kept, since it is a better estimate than assuming that they are free.
+'''
+def write_cost_file(filename, title, tests):
+    costs = {}
+    if os.path.isfile(filename):
+        try:
+            with open(filename, 'r') as f:
+                costs = json.load(f).get('costs', {})
+        except (OSError, ValueError) as err:
+            print(f"WARNING: ignoring unreadable cost file {filename}: {err}", file=sys.stderr)
+
+    updated = 0
+    for key, entry in tests.items():
+        time = round(float(entry['time']), 3)
+        if time > 0.0 or key not in costs:
+            costs[key] = time
+            updated += 1
+
+    data = {
+        'metadata': {
+            'title': title,
+            'generated': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'updated': updated,
+        },
+        'costs': dict(sorted(costs.items())),
+    }
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=1)
+        f.write('\n')
+
+'''
     format a capped Markdown list of test names with messages
 '''
 def markdown_list(keys, tests, maxlen=50):
@@ -126,6 +174,8 @@ if __name__ == "__main__":
     parser.add_argument("--json", dest="json_file", default="", help="JSON output file with results and metadata")
     parser.add_argument("--summary", dest="summary", default="", help="Markdown summary output file ('-' for stdout)")
     parser.add_argument("--compare", dest="compare", default="", help="JSON file from a previous run to compare against")
+    parser.add_argument("--cost-file", dest="cost_file", default="",
+                        help="JSON file with the measured run times, updated in place")
     parser.add_argument("--commit", dest="commit", default="", help="Commit hash for git revision that was tested")
     parser.add_argument("--branch", dest="branch", default="", help="Git branch of revision that was tested")
     args = parser.parse_args()
@@ -157,6 +207,9 @@ if __name__ == "__main__":
     if args.output_xml:
         write_merged_xml(args.output_xml, args.title, properties, tests, counts)
 
+    if args.cost_file:
+        write_cost_file(args.cost_file, args.title, tests)
+
     if args.json_file:
         data = {
             'metadata': {
@@ -182,6 +235,12 @@ if __name__ == "__main__":
         md += "|------:|-------:|-------:|-------:|--------:|---------:|\n"
         md += (f"| {counts['tests']} | {counts['passed']} | {counts['failed']} | {counts['error']} |"
                f" {counts['skipped']} | {counts['time']:.0f} s |\n\n")
+
+        slowest = sorted(tests, key=lambda key: -tests[key]['time'])[:10]
+        if slowest and tests[slowest[0]]['time'] > 0.0:
+            md += f"The {len(slowest)} most expensive runs, which set the lower bound for the"
+            md += " walltime of the whole test run:\n\n"
+            md += ''.join(f"- `{key}`: {tests[key]['time']:.1f} s\n" for key in slowest) + '\n'
 
         failed = [key for key, entry in tests.items() if entry['status'] == 'failed']
         errors = [key for key, entry in tests.items() if entry['status'] == 'error']

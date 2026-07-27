@@ -21,8 +21,9 @@ Some benefits include:
     + separating regression testing from building LAMMPS
     + performing quick and full regression tests
     + keeping track of the testing progress to resume the testing from the last checkpoint (skipping completed runs)
-    + distributing the input list across multiple processes by
-      splitting the list of input scripts into separate runs (there are ~800 input scripts under the top-level examples)
+    + distributing the input list across multiple processes by splitting the list of input scripts
+      into separate runs (there are ~800 input scripts under the top-level examples) taking the
+      estimated cost of the individual runs into account, so that all workers take about the same time
     + generating new reference log files if desirable
 
 Input arguments:
@@ -35,7 +36,8 @@ Input arguments:
 Output:
     + failure.yaml : list of the failed runs and reasons (a subset of progress.yaml)
     + progress.yaml: full testing results of the tested input scripts with the status (completed, failed or skipped)
-                     with error messages (for failed runs), and walltime (in seconds)
+                     with error messages (for failed runs), the walltime reported by LAMMPS and the
+                     measured wall-clock time of the run (both in seconds)
     + output.xml   :    testing results in the JUnit XML format
     + run.log      :       screen output and error of individual runs
 
@@ -82,18 +84,23 @@ Example usage (aka, tests for this script):
     6) Analyze the LAMMPS binary and whole top-level /examples folder in a LAMMPS source tree
        and generate separate input lists for 8 workers:
            python3 run_tests.py --lmp-bin=/path/to/lmp_binary --examples-top-level=/path/to/lammps/examples \
-                --analyze --num-workers=8
+                --analyze --num-workers=8 --cost-file=costs.json
 
        The output of this run is 8 files folder-list-[0-7].txt that lists the subfolders
        and 8 files input-list-[0-7].txt that lists the input scripts under the top-level example folders.
        With these lists, one can launch multiple instances of run_tests.py simultaneously
        each with a list of example subfolders (Case 3), or with a list of input scripts (Case 4).
+       Both lists are split such that all workers are expected to take the same time, using
+       the measured run times of a previous test run from the optional --cost-file, which is
+       written by merge_results.py --cost-file (see the README in this folder).
 '''
 
 from argparse import ArgumentParser
 import datetime
 import fnmatch
 import glob
+import heapq
+import json
 import logging
 import os
 import random
@@ -103,6 +110,7 @@ import signal
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from time import monotonic
 #from multiprocessing import Pool
 
 # need "pip install numpy pyyaml"
@@ -135,7 +143,11 @@ import get_quick_list
              'skipped'   the input script was not run at all
    status  : human readable description of the outcome (stored in the progress file)
    message : additional details (e.g. the individual failed checks)
-   time    : walltime of the run in seconds (-1: failed, -2: skipped)
+   time    : walltime as reported by LAMMPS in seconds (-1: failed, -2: skipped)
+             note that LAMMPS prints this with a resolution of one second only
+   elapsed : wall-clock time in seconds spent on launching the run and waiting
+             for it to finish; this is the actual cost of the test and is
+             recorded also for runs that crash or time out (0.0 if not run)
    checks  : number of performed numerical checks
    timeout : whether the run was killed after exceeding the timeout
    memleak : whether valgrind detected memory leaks
@@ -149,6 +161,7 @@ class TestResult:
     self.status = status
     self.message = message
     self.time = time
+    self.elapsed = 0.0
     self.checks = checks
     self.timeout = False
     self.memleak = False
@@ -200,8 +213,11 @@ def write_junit_xml(output_file, results, suite_name, properties=None):
         else:
             classname = os.path.basename(folder)
         case.set('classname', classname.replace(os.sep, '/'))
-        case.set('time', f"{max(float(result.time), 0.0):.3f}")
-        total_time += max(float(result.time), 0.0)
+        # the measured wall-clock time is the cost of the test also when the run
+        # crashed or timed out, while the walltime reported by LAMMPS is only
+        # available for completed runs and has a resolution of one second
+        case.set('time', f"{max(float(result.elapsed), 0.0):.3f}")
+        total_time += max(float(result.elapsed), 0.0)
 
         if result.category == 'failed':
             elem = ET.SubElement(case, 'failure')
@@ -274,6 +290,7 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         entry['walltime'] = float(result.time)
         if walltime_norm is not None:
             entry['walltime_norm'] = float(walltime_norm)
+        entry['elapsed'] = round(float(result.elapsed), 3)
         value = yaml.safe_dump(entry, default_flow_style=True,
                                sort_keys=False, width=1000000).strip()
         line = f"{result.name}: {value}\n"
@@ -343,31 +360,19 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
 
         # if there are multiple log files for different number of procs, pick the maximum number
         max_np = 1
-        for file in sorted(glob.glob("log.*")):
-            # looks for pattern log.{date}.{basename}.{log_compiler}.{nprocs}: log.[date].min.box.[compiler]].* vs log.[date].min.[compiler].*
-            # skip over log files from previous test runs (log.{basename}.{nprocs}) and log.lammps
-            parts = file.split('.')
-            if len(parts) < 5:
-                continue
-            # get the date from the log files
-            date = parts[1]
-            log_compiler = file.rsplit('.',2)[1]
-            pattern = f'log.{date}.{basename}.{log_compiler}.*'
-            if fnmatch.fnmatch(file, pattern):
-                p = file.rsplit('.', 1)
-                if p[1].isnumeric():
-                    # if using valgrind or running in serial, then use the log file with 1 proc
-                    if use_valgrind == True or config['mpiexec'] == "":
-                        if int(p[1]) == 1:
-                            max_np = int(p[1])
-                            ref_logfile_exist = True
-                            thermo_ref_file = file
-                            break
-                    else:
-                        if max_np <= int(p[1]):
-                            max_np = int(p[1])
-                            ref_logfile_exist = True
-                            thermo_ref_file = file
+        for nprocs_ref, file in find_reference_logs('.', basename):
+            # if using valgrind or running in serial, then use the log file with 1 proc
+            if use_valgrind == True or config['mpiexec'] == "":
+                if nprocs_ref == 1:
+                    max_np = nprocs_ref
+                    ref_logfile_exist = True
+                    thermo_ref_file = file
+                    break
+            else:
+                if max_np <= nprocs_ref:
+                    max_np = nprocs_ref
+                    ref_logfile_exist = True
+                    thermo_ref_file = file
 
         # if there is no ref log file and not running with valgrind
         if ref_logfile_exist == False and use_valgrind == False:
@@ -407,6 +412,7 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         returncode = int(status['returncode'])
         logfilename = status['logfilename']
         result.timeout = status['timedout']
+        result.elapsed = status['elapsed']
 
         # restore the nprocs value in the configuration
         config['nprocs'] = saved_nprocs
@@ -805,6 +811,36 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
 
 # HELPER FUNCTIONS
 '''
+  find the reference log files for an input script in a folder
+
+  The expected name of a reference log file is log.{date}.{basename}.{compiler}.{nprocs}
+  where basename is the input script name without the leading "in.".  Log files written
+  by previous test runs (log.{basename}.{nprocs}) and log.lammps are skipped.
+
+  folder  : folder that contains the input script and its reference log files
+  basename: input script name with the leading "in." removed
+  return  : list of (nprocs, filename) tuples with the bare file names, sorted by
+            file name so that callers can reproduce a deterministic selection
+'''
+def find_reference_logs(folder, basename):
+    logs = []
+    for path in sorted(glob.glob(os.path.join(folder, 'log.*'))):
+        file = os.path.basename(path)
+        # log.[date].min.box.[compiler].* vs log.[date].min.[compiler].*
+        parts = file.split('.')
+        if len(parts) < 5:
+            continue
+        # get the date from the log files
+        date = parts[1]
+        log_compiler = file.rsplit('.', 2)[1]
+        pattern = f'log.{date}.{basename}.{log_compiler}.*'
+        if fnmatch.fnmatch(file, pattern):
+            nprocs = file.rsplit('.', 1)[1]
+            if nprocs.isnumeric():
+                logs.append((int(nprocs), file))
+    return logs
+
+'''
   get the thermo output from a log file with thermo style yaml
 
   yamlFileName: input YAML file with thermo structured
@@ -953,6 +989,8 @@ def get_lammps_build_configuration(lmp_binary):
        - stderr:      stderr of the process
        - returncode:  error code returned by the process
        - timedout:    whether the run was killed after exceeding the timeout
+       - elapsed:     wall-clock time in seconds spent on the run, including the
+                      process startup and (for MPI runs) the mpirun overhead
        - logfilename: the log file name for the given input
                       to avoid duplicate writes to log.lammps if multiple workers execute in the same folder
 '''
@@ -978,6 +1016,7 @@ def execute(lmp_binary, config, input_file_name, generate_ref=False):
     # launch the run in its own process group, so that on a timeout the whole group
     # (the shell, mpirun, and the LAMMPS processes) can be killed; with subprocess.run()
     # only the shell would be killed, leaving orphaned LAMMPS processes behind
+    start = monotonic()
     p = subprocess.Popen(cmd_str, shell=True, text=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, start_new_session=True)
     try:
@@ -988,6 +1027,7 @@ def execute(lmp_binary, config, input_file_name, generate_ref=False):
             'stderr': stderr,
             'returncode': p.returncode,
             'timedout': False,
+            'elapsed': monotonic() - start,
             'logfilename': logfilename,
         }
         return status
@@ -1009,6 +1049,7 @@ def execute(lmp_binary, config, input_file_name, generate_ref=False):
         'stderr': error_str,
         'returncode': -1,
         'timedout': True,
+        'elapsed': monotonic() - start,
         'logfilename': logfilename,
     }
     return status
@@ -1085,33 +1126,197 @@ def get_default_config(lmp_binary):
     defaultConfigFile = regression_tests_folder + "config.yaml"
     return defaultConfigFile
 
+# COST ESTIMATES AND WORK DISTRIBUTION
+#
+# The cost of the individual runs spans several orders of magnitude, so splitting
+# the list of input scripts into equally long chunks leaves most workers idle while
+# a few of them are still running the expensive inputs.  The functions below assign
+# a cost estimate to every input script and distribute the input scripts over the
+# workers so that all of them are expected to finish at about the same time.
+
+# Input scripts without any timing information get the cost of this quantile of the
+# input scripts that do have one.  A pessimistic guess is better than an optimistic
+# one: scheduling a short run as if it were long only shifts it to the front, while
+# a long run that is scheduled last delays the whole test run.
+UNKNOWN_COST_QUANTILE = 0.9
+
+# time in seconds it takes to launch a run and to process its output; added to every
+# cost estimate so that the many very short runs are not considered to be free
+STARTUP_COST = 0.4
+
 '''
-    split a list into a list of N sublists
+    the key under which an input script is stored in the cost file: the path of the
+    input script relative to the top-level examples folder, e.g. PACKAGES/tally/in.pe
+    (using forward slashes, so that cost files can be shared between machines)
 
-    NOTE:
-    To map a function to individual workers with multiprocessing.Pool:
-
-    def func(input1, input2, output_buf):
-        # do smth
-        return result
-
-    # args is a list of num_workers tuples, each tuple contains the arguments passed to the function executed by a worker
-    args = []
-    for i in range(num_workers):
-        args.append((input1, input2, output_buf))
-
-    with Pool(num_workers) as pool:
-        results = pool.starmap(func, args)
+    the same key is used as classname/name in the JUnit XML output, which is what
+    merge_results.py writes the cost file from
 '''
-def divide_into_N(original_list, N):
-    size = np.ceil(len(original_list) / N)
-    b = []
-    for i in range(0, N):
-        start = int(i * size)
-        end = int(start + size)
-        l = original_list[start:end]
-        b.append(l)
-    return b
+def example_key(input_path, example_toplevel):
+    path = os.path.abspath(input_path)
+    if example_toplevel:
+        try:
+            path = os.path.relpath(path, os.path.abspath(example_toplevel))
+        except ValueError:
+            pass
+    marker = os.sep + 'examples' + os.sep
+    if marker in path:
+        path = path.split(marker, 1)[1]
+    return path.replace(os.sep, '/')
+
+'''
+    read a cost file as written by merge_results.py --cost-file
+
+    returns a dictionary that maps the input script keys to the measured wall-clock
+    time in seconds; a missing or unreadable file results in an empty dictionary
+'''
+def load_cost_file(filename):
+    if not filename:
+        return {}
+    try:
+        with open(filename, 'r') as f:
+            data = json.load(f)
+    except (OSError, ValueError) as err:
+        print(f"WARNING: cannot read cost file {filename}: {err}")
+        return {}
+    costs = data.get('costs', data) if isinstance(data, dict) else {}
+    return {key: float(value) for key, value in costs.items()}
+
+'''
+    estimate the cost of an input script from the loop times in its reference log file
+
+    This is only a rough hint: the reference log files were generated on different
+    machines over many years.  The loop times are summed over all runs in the log file
+    and scaled from the number of procs of the log file to the number of procs used for
+    the test, assuming perfect scaling.
+
+    return the estimated time in seconds, or None if there is no usable reference log
+'''
+def reference_log_cost(folder, basename, nprocs):
+    logs = find_reference_logs(folder, basename)
+    if not logs:
+        return None
+
+    # prefer the reference log file for the number of procs used for the test
+    candidates = [entry for entry in logs if entry[0] == nprocs]
+    if not candidates:
+        candidates = [max(logs)]
+    nprocs_ref, filename = candidates[-1]
+
+    looptime = 0.0
+    found = False
+    try:
+        with open(os.path.join(folder, filename), 'r') as f:
+            for line in f:
+                # "Loop time of 1.61045 on 1 procs for 250 steps with 4000 atoms"
+                if line.startswith('Loop time of '):
+                    try:
+                        looptime += float(line.split()[3])
+                        found = True
+                    except (IndexError, ValueError):
+                        pass
+    except OSError:
+        return None
+
+    if not found:
+        return None
+    return looptime * float(nprocs_ref) / float(max(nprocs, 1))
+
+'''
+    assign a cost estimate to every input script in input_list
+
+    costs           : measured wall-clock times from a previous run (see load_cost_file)
+    example_toplevel: top-level examples folder the cost file keys are relative to
+    nprocs          : number of procs the tests are run with
+    timeout         : the runs are killed after this many seconds, so no estimate
+                      taken from a reference log file may be larger than this
+    return a tuple of (dictionary mapping the input script paths to their estimated
+    cost in seconds, dictionary with the number of inputs per source of the estimate)
+'''
+def estimate_costs(input_list, example_toplevel, costs, nprocs, timeout):
+    estimate = {}
+    sources = { 'measured': 0, 'reference log': 0, 'unknown': 0 }
+    for input_path in input_list:
+        key = example_key(input_path, example_toplevel)
+        if key in costs:
+            estimate[input_path] = max(costs[key], 0.0)
+            sources['measured'] += 1
+            continue
+        folder, name = os.path.split(input_path)
+        cost = reference_log_cost(folder, name[3:], nprocs) if name.startswith('in.') else None
+        if cost is None:
+            estimate[input_path] = None
+            sources['unknown'] += 1
+        else:
+            # some reference log files are from much longer production runs than the
+            # ones in the example inputs, so the estimate is capped at the timeout
+            estimate[input_path] = min(cost, float(timeout))
+            sources['reference log'] += 1
+
+    known = sorted(cost for cost in estimate.values() if cost is not None)
+    if known:
+        unknown_cost = known[min(int(UNKNOWN_COST_QUANTILE * len(known)), len(known) - 1)]
+    else:
+        unknown_cost = float(timeout)
+
+    for input_path, cost in estimate.items():
+        estimate[input_path] = (unknown_cost if cost is None else cost) + STARTUP_COST
+    return estimate, sources
+
+'''
+    group the input scripts into units that have to be run by the same worker
+
+    Input scripts in the same folder may write files that another input script in that
+    folder reads, or may overwrite each other's output files.  Those folders are listed
+    in the "keep_together" section of the test configuration as patterns relative to the
+    top-level examples folder, and all their input scripts become a single unit that is
+    run by one worker in the order in which the input scripts are listed.
+
+    return a list of lists of input script paths
+'''
+def make_work_units(input_list, example_toplevel, keep_together):
+    units = []
+    grouped = {}
+    for input_path in input_list:
+        folder = os.path.dirname(example_key(input_path, example_toplevel))
+        if any(fnmatch.fnmatch(folder, pattern) for pattern in keep_together):
+            if folder not in grouped:
+                grouped[folder] = []
+                units.append(grouped[folder])
+            grouped[folder].append(input_path)
+        else:
+            units.append([input_path])
+    return units
+
+'''
+    distribute a list of work units over N workers, most expensive unit first
+
+    This is the "longest processing time first" heuristic, which is also what CTest
+    uses to schedule tests with a COST property: the units are sorted by decreasing
+    cost and each unit is handed to the worker that has the least work assigned so far.
+    The resulting makespan is at worst 4/3 of the optimum minus 1/(3N).
+
+    Each worker's list is ordered by decreasing cost as well, so that a worker that
+    gets behind is behind with a short run and not with the longest one.
+
+    return a tuple of (list of N lists of input script paths, list of N estimated
+    total times in seconds)
+'''
+def distribute_by_cost(units, cost, N):
+    ordered = sorted(units, key=lambda unit: (-sum(cost[i] for i in unit), unit[0]))
+
+    # heap of (accumulated cost, worker id) with the least loaded worker on top
+    workers = [(0.0, idx) for idx in range(N)]
+    heapq.heapify(workers)
+    sublists = [[] for idx in range(N)]
+    loads = [0.0] * N
+    for unit in ordered:
+        load, idx = heapq.heappop(workers)
+        sublists[idx].extend(unit)
+        load += sum(cost[i] for i in unit)
+        loads[idx] = load
+        heapq.heappush(workers, (load, idx))
+    return sublists, loads
 
 '''
     Main entry
@@ -1165,6 +1370,13 @@ if __name__ == "__main__":
                         help="Maximum number of inputs to randomly select")
     parser.add_argument("--quick-reference", dest="quick_reference", default=quick_reference,
                         help="Reference YAML file with progress data from full regression test run")
+    parser.add_argument("--cost-file", dest="cost_file", default="",
+                        help="JSON file with measured run times from a previous run "
+                             "(written by merge_results.py --cost-file) used to distribute "
+                             "the input scripts evenly over the workers")
+    parser.add_argument("--walltime-ref", dest="walltime_ref", default="",
+                        help="Reference walltime in seconds used to normalize the reported run times; "
+                             "if not given, it is measured by running bench/in.lj")
     parser.add_argument("--skip-numerical-check",dest="skip_numerical_check", action='store_true', default=False,
                         help="Skip numerical checks")
     parser.add_argument("--gen-ref",dest="genref", action='store_true', default=False,
@@ -1206,10 +1418,62 @@ if __name__ == "__main__":
     resume = args.resume
     progress_file = args.progress_file
     failure_file = args.failure_file
+    cost_file = args.cost_file
 
     # logging
     logger = logging.getLogger(__name__)
     logging.basicConfig(filename=log_file, level=logging.INFO, filemode="w")
+
+    # read in the configuration of the tests; it is needed for splitting the input
+    # scripts over the workers as well, so it is read before anything else is done
+    try:
+        with open(configFileName, 'r') as f:
+            config = yaml.load(f, Loader=Loader)
+    except OSError as err:
+        print(f"Cannot read the test configuration file: {err}")
+        print("Use --config-file to select one of the config*.yaml files in tools/regression-tests")
+        quit()
+    print(f"\nRegression test configuration file:\n  {os.path.abspath(configFileName)}")
+
+    # number of procs used for the runs, needed to scale the cost estimates taken
+    # from the reference log files; an empty value means "as many as the reference
+    # log file with the most procs", which is 4 for most of the examples
+    nprocs_config = 4 if config['nprocs'] == "" else int(config['nprocs'])
+
+    # the runs are killed after this many seconds (must match the default in execute())
+    timeout_config = int(config['timeout']) if config.get('timeout', "") != "" else 60
+
+    # folders whose input scripts must be run by the same worker in the listed order
+    keep_together = config['keep_together'] if 'keep_together' in config else []
+
+    '''
+        split a list of input scripts over the workers and write one input-list-{idx}.txt
+        file per worker, ordered so that the most expensive runs are started first
+    '''
+    def write_input_lists(input_list):
+        costs = load_cost_file(cost_file)
+        if cost_file:
+            print(f"\nRead {len(costs)} measured run times from {cost_file}")
+        cost, sources = estimate_costs(input_list, example_toplevel, costs, nprocs_config,
+                                       timeout_config)
+        units = make_work_units(input_list, example_toplevel, keep_together)
+        sublists, loads = distribute_by_cost(units, cost, num_workers)
+
+        total = sum(cost.values())
+        msg = (f"\nDistributing {len(input_list)} input scripts in {len(units)} units over "
+               f"{num_workers} workers:\n"
+               f"  Cost estimates: " + ", ".join(f"{num} from {src}" for src, num in sources.items()) + "\n"
+               f"  Estimated total time    : {total:.0f} s\n"
+               f"  Estimated time per worker: {min(loads):.0f} s (min), "
+               f"{total/num_workers:.0f} s (average), {max(loads):.0f} s (max)")
+        print(msg)
+        logger.info(msg)
+
+        for idx, sublist in enumerate(sublists):
+            with open(f"input-list-{idx}.txt", "w") as f:
+                for inp in sublist:
+                    f.write(inp + '\n')
+        return cost
 
     if len(example_subfolders) > 0:
         print("\nExample folders to test:")
@@ -1268,18 +1532,8 @@ if __name__ == "__main__":
             print(msg)
             logger.info(msg)
 
-            # divide the list of input scripts into num_workers chunks
-            sublists = divide_into_N(input_list, num_workers)
-
-            # write each chunk to a file
-            idx = 0
-            for list_input in sublists:
-                filename = f"input-list-{idx}.txt"
-                with open(filename, "w") as f:
-                    for inp in list_input:
-                        f.write(inp + '\n')
-                    f.close()
-                idx = idx + 1
+            # distribute the input scripts over the workers by their estimated cost
+            write_input_lists(input_list)
         else:
             msg = f"\nThere are no input scripts with changed styles relative to branch {quick_branch}."
             print(msg)
@@ -1320,52 +1574,39 @@ if __name__ == "__main__":
             # getting the list of all the input files because there are subfolders (e.g. PACKAGES) under the top level
             cmd_str = f"find {example_toplevel} -name \"in.*\" "
             p = subprocess.run(cmd_str, shell=True, text=True, capture_output=True)
-            input_list = p.stdout.split('\n')
-            input_list.remove("")
+            # sort the list, since find returns the input scripts in file system order
+            input_list = sorted(inp for inp in p.stdout.split('\n') if inp)
             msg = f"\nThere are {len(input_list)} input scripts in total under the {example_toplevel} folder."
             print(msg)
             logger.info(msg)
 
-            # get the input file list
-            # TODO: generate a list of tuples, each tuple contains a folder list for a worker,
-            #       then use multiprocessing.Pool starmap()
+            # get the list of folders that contain the input scripts
             folder_list = []
+            inputs_per_folder = {}
             for input in input_list:
                 folder = input.rsplit('/', 1)[0]
                 # unique folders in the list
-                if folder not in folder_list:
+                if folder not in inputs_per_folder:
+                    inputs_per_folder[folder] = []
                     folder_list.append(folder)
+                inputs_per_folder[folder].append(input)
 
-            # divide the list of folders into num_workers chunks
-            sublists = divide_into_N(folder_list, num_workers)
+            # distribute the input scripts over the workers by their estimated cost
+            cost = write_input_lists(input_list)
 
-            # write each chunk to a file
-            idx = 0
-            for list_input in sublists:
-                filename = f"folder-list-{idx}.txt"
-                with open(filename, "w") as f:
-                    for folder in list_input:
-                        # count the number of input scripts in each folder
-                        num_input = len(glob.glob(f"{folder}/in.*"))
-                        f.write(f"{folder} {num_input}\n")
-                    f.close()
-                idx = idx + 1
+            # distribute the folders over the workers by the summed cost of their inputs
+            folder_cost = { folder: sum(cost[inp] for inp in inputs)
+                            for folder, inputs in inputs_per_folder.items() }
+            sublists, loads = distribute_by_cost([[folder] for folder in folder_list],
+                                                 folder_cost, num_workers)
+            for idx, sublist in enumerate(sublists):
+                with open(f"folder-list-{idx}.txt", "w") as f:
+                    for folder in sublist:
+                        # each line lists a folder and its number of input scripts
+                        f.write(f"{folder} {len(inputs_per_folder[folder])}\n")
 
             # working on all the folders for now
             example_subfolders = folder_list
-
-            # divide the list of input scripts into num_workers chunks
-            sublists = divide_into_N(input_list, num_workers)
-
-            # write each chunk to a file
-            idx = 0
-            for list_input in sublists:
-                filename = f"input-list-{idx}.txt"
-                with open(filename, "w") as f:
-                    for inp in list_input:
-                        f.write(inp + '\n')
-                    f.close()
-                idx = idx + 1
 
         # if a list of subfolders is provided from a text file (list_subfolders from the command-line argument)
         elif len(list_subfolders) != 0:
@@ -1418,19 +1659,21 @@ if __name__ == "__main__":
             print(msg)
             logger.info(msg)
 
+            # the top-level examples folder is needed to locate bench/in.lj for the
+            # reference walltime; derive it from the listed input scripts if it was
+            # not given on the command line
+            if example_toplevel == "" and len(example_inputs) > 0:
+                marker = '/examples/'
+                path = os.path.abspath(example_inputs[0])
+                if marker in path:
+                    example_toplevel = path.split(marker, 1)[0] + '/examples'
+
         else:
             inplace_input = False
 
     # if analyze the example folders (and split into separate lists for top-level examples), not running any test
     if analyze == True:
         quit()
-
-    # read in the configuration of the tests
-    with open(configFileName, 'r') as f:
-        config = yaml.load(f, Loader=Loader)
-        absolute_path = os.path.abspath(configFileName)
-        print(f"\nRegression test configuration file:\n  {absolute_path}")
-        f.close()
 
     # check if lmp_binary is specified in the config yaml
     if lmp_binary == "":
@@ -1485,8 +1728,14 @@ if __name__ == "__main__":
         except Exception:
             print(f"    Cannot open progress file {progress_file_abs} to resume, rerun all the tests")
 
-    # get a reference walltime
-    walltime_ref = get_reference_walltime(lmp_binary, config, example_toplevel)
+    # get a reference walltime; when many workers run concurrently, it should be
+    # measured once and passed in with --walltime-ref instead, since the workers
+    # would otherwise all benchmark against each other at the same time
+    if args.walltime_ref:
+        walltime_ref = float(args.walltime_ref)
+        print(f"\nReference walltime, sec = {walltime_ref}")
+    else:
+        walltime_ref = get_reference_walltime(lmp_binary, config, example_toplevel)
 
     # record all the failure cases (overwrite if the file exists)
     failure_file_abs = pwd + "/" + failure_file
@@ -1518,7 +1767,25 @@ if __name__ == "__main__":
             results = pool.starmap(func, args)
         '''
 
-        for directory in example_subfolders:
+        # build the list of work units, each of them a folder and the input scripts
+        # to be tested in it.  If a list of input scripts was given, its order is
+        # preserved, so that the most expensive runs are started first when the list
+        # was written by a run with --analyze; consecutive input scripts from the same
+        # folder are collected into one work unit.  Otherwise all input scripts in a
+        # folder are tested in alphabetical order.
+        work_units = []
+        if len(example_inputs) > 0:
+            for input in example_inputs:
+                folder, name = input.rsplit('/', 1)
+                if work_units and work_units[-1][0] == folder:
+                    work_units[-1][1].append(name)
+                else:
+                    work_units.append((folder, [name]))
+        else:
+            for directory in example_subfolders:
+                work_units.append((directory, None))
+
+        for directory, input_list in work_units:
 
             if os.path.exists(directory) is False:
                 continue
@@ -1529,18 +1796,11 @@ if __name__ == "__main__":
             logger.info("Entering " + directory)
             os.chdir(directory)
 
-            all_input_list = sorted(glob.glob("in.*"))
-
-            # if the list of example input scripts is provided
-            #   if an input script is not in the list, then remove it from input_list
-            input_list = []
-            if len(example_inputs) > 0:
-                for inp in all_input_list:
-                    full_path = directory + "/" + inp
-                    if full_path in example_inputs:
-                        input_list.append(inp)
+            # test all input scripts in the folder if none were selected explicitly
+            if input_list is None:
+                input_list = sorted(glob.glob("in.*"))
             else:
-                input_list = all_input_list
+                input_list = [inp for inp in input_list if os.path.isfile(inp)]
 
             print(f"{len(input_list)} input script(s) to be tested: {input_list}")
             total_tests += len(input_list)
