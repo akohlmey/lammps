@@ -113,13 +113,24 @@ are the legacy inputs that were never trimmed for testing.  They dominate the ma
 of a full test run, and the ones that hit the timeout produce no result at all.  The fix is
 to reduce the number of steps in the input and recreate its reference log files.
 
-The parenthesis appears when the input has no reference log file and `run_tests.py` could
-not shorten it automatically: it runs such inputs with their `run` commands reduced to
+Inputs without a reference log file are run with their `run` commands reduced to
 `smoke_steps` steps (see the config file), since without a reference there is nothing to
-compare and the only thing left to check is that the input does not crash.  That fails for
-inputs where a variable refers to a fix whose output is only produced after more steps than
-the shortened run has, for example `fix ave/correlate` with a long correlation length; the
-input is then run unchanged, and this is the group that needs manual attention.
+compare and the only thing left to check is that the input does not crash.  Two things can
+go wrong with that, and each adds a parenthesis that says what kind of work is needed:
+
+    ... (shortening its run commands makes it fail, so it has to be done by hand)
+
+The shortened input stops with an error, which happens when a variable refers to a fix
+whose output is only produced after more steps than the shortened run has, for example
+`fix ave/correlate` with a long correlation length.  The input is run unchanged instead, so
+it costs what it always did, and shortening it needs a look at what the input actually does.
+
+    ... (it does not even finish with its run commands shortened to 100 steps, so the
+    cost is in the setup)
+
+The shortened input still hits the timeout, so the cost is not in the number of steps at
+all but in the system size, the potential, or a minimization.  Shortening the runs will not
+help; the example needs a smaller system.
 
 ## Statuses that are not verdicts
 

@@ -501,8 +501,11 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         # Shortening the runs can break an input script, for example when a variable
         # refers to a fix that only produces output after more steps than the shortened
         # run has.  There is no way to tell such an artifact from a real problem, so the
-        # input script is run unchanged in that case, as it was before.
-        if smoke_input and (("ERROR" in status['stdout']) or (status['returncode'] != 0)):
+        # input script is run unchanged in that case, as it was before.  A shortened run
+        # that hits the timeout is not such a case: its cost is in the setup rather than
+        # in the run commands, and running it unchanged would only waste the timeout twice.
+        if smoke_input and not status['timedout'] \
+                and (("ERROR" in status['stdout']) or (status['returncode'] != 0)):
             logger.info(f"     {input_test} does not work with shortened runs, running it unchanged")
             elapsed = status['elapsed']
             try:
@@ -531,6 +534,9 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                     + ": a production sized run that should be shortened in the repository")
             if smoke_failed:
                 note += " (shortening its run commands makes it fail, so it has to be done by hand)"
+            elif smoke_input:
+                note += (f" (it does not even finish with its run commands shortened to"
+                         f" {smoke_steps} steps, so the cost is in the setup)")
             result.attention = f"{result.attention}; {note}" if result.attention else note
             logger.info(f"     {note}")
 
