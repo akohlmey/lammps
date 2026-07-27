@@ -70,6 +70,34 @@ the reference log file is missing). The test case classname is the example folde
 relative to the examples top-level folder, so results from distributed runs can be
 merged and compared across machines.
 
+Where a run starts to deviate from the reference
+------------------------------------------------
+
+All rows of thermo output are compared against the reference log file, not only the
+last one of each run, since where a deviation starts says a lot about what causes it:
+
+    + a run that does not agree with the reference log file from its first thermo
+      output cannot have diverged yet, so it is a difference in the model or in the
+      setup until proven otherwise
+    + a run that agrees at first and drifts apart towards the end is what chaotic
+      amplification of rounding differences looks like: shortening the run or widening
+      the tolerance is usually the right answer, and tightening the tolerance of the
+      early steps keeps the test meaningful
+    + a deviation that appears at one specific step is worth a closer look: a neighbor
+      list rebuild, a fix that starts to act, or reading or writing a file
+
+For every quantity that leaves its tolerance somewhere in the run, the run log and the
+test report record the first deviating step, the largest deviation and the step where
+it occurs, and the deviation at the end of the run. The progress file and the JUnit XML
+file record how many quantities deviate ("diverged") and the earliest deviation as a
+fraction of the run ("diverged_from"/"diverged-from"): a value near zero means that the
+run differs from the start, a value near one that only its end diverges. The Markdown
+summary of merge_results.py groups the failed runs by those two cases.
+
+The verdict of a test is still decided by the last row of thermo output of each run, so
+this does not by itself turn passing tests into failing ones. A test that passes but
+deviates in between says so in its status.
+
 The JUnit XML files from multiple (distributed) runs can be merged and summarized
 with the merge_results.py script in this folder (which only needs the Python
 standard library):
@@ -84,6 +112,10 @@ suitable for $GITHUB_STEP_SUMMARY. With --compare previous-run.json, the summary
 also reports the changes relative to an earlier run: new failures, fixed tests,
 new tests, and removed tests. With --cost-file, the measured run times are recorded
 for the next test run as described in the next section.
+
+The detailed report of each failed test is always kept in the merged JUnit XML file.
+It is left out of the JSON file, which is meant to be archived, unless a maximum
+length is requested with --max-details.
 
 Distributing the tests over multiple workers
 --------------------------------------------

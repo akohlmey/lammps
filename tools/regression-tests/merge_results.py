@@ -25,6 +25,11 @@ Output (all optional, selected via command line flags):
 With --compare previous-run.json, the Markdown summary also reports the changes
 relative to a previous run: new failures, fixed tests, new tests, removed tests.
 
+The Markdown summary also groups the failed runs by where their output starts to
+deviate from the reference log file: runs that already differ at the start of the run
+point at a difference in the model or in the setup, while runs that only differ towards
+the end of the run look like chaotic amplification of rounding differences.
+
 Since the cost of a test depends on how it is run, each test configuration (serial,
 4 MPI tasks, ...) needs its own cost file.
 
@@ -43,6 +48,11 @@ import xml.etree.ElementTree as ET
 
 # statuses that count as broken for the comparison with a previous run
 BAD = ('failed', 'error')
+
+# a run whose output deviates from the reference within the first / after the last of
+# these fractions of its thermo output is reported as diverging early / late
+EARLY = 0.05
+LATE = 0.5
 
 '''
     parse a single JUnit XML file as written by run_tests.py (a single <testsuite>
@@ -72,7 +82,13 @@ def parse_junit_xml(filename):
                 if elem is not None:
                     entry['status'] = 'failed' if tag == 'failure' else tag
                     entry['message'] = elem.get('message', '')
+                    if elem.text:
+                        entry['details'] = elem.text.strip()
                     break
+            # how far into the run the output starts to deviate from the reference
+            if case.get('diverged'):
+                entry['diverged'] = int(case.get('diverged'))
+                entry['diverged_from'] = float(case.get('diverged-from', 0.0))
             tests[key] = entry
     return properties, tests
 
@@ -103,10 +119,15 @@ def write_merged_xml(filename, title, properties, tests, counts):
         case.set('name', name)
         case.set('classname', classname)
         case.set('time', f"{entry['time']:.3f}")
+        if 'diverged' in entry:
+            case.set('diverged', str(entry['diverged']))
+            case.set('diverged-from', f"{entry['diverged_from']:.3f}")
         if entry['status'] != 'passed':
             tag = 'failure' if entry['status'] == 'failed' else entry['status']
             elem = ET.SubElement(case, tag)
             elem.set('message', entry['message'])
+            if entry.get('details'):
+                elem.text = entry['details']
 
     tree = ET.ElementTree(testsuite)
     ET.indent(tree)
@@ -176,6 +197,10 @@ if __name__ == "__main__":
     parser.add_argument("--compare", dest="compare", default="", help="JSON file from a previous run to compare against")
     parser.add_argument("--cost-file", dest="cost_file", default="",
                         help="JSON file with the measured run times, updated in place")
+    parser.add_argument("--max-details", dest="max_details", type=int, default=0,
+                        help="Number of characters of the detailed report of each failed "
+                             "test to keep in the JSON output (0: none, the reports are "
+                             "always kept in the merged JUnit XML file)")
     parser.add_argument("--commit", dest="commit", default="", help="Commit hash for git revision that was tested")
     parser.add_argument("--branch", dest="branch", default="", help="Git branch of revision that was tested")
     args = parser.parse_args()
@@ -211,6 +236,13 @@ if __name__ == "__main__":
         write_cost_file(args.cost_file, args.title, tests)
 
     if args.json_file:
+        # the detailed reports of all failed tests make the archived JSON files several
+        # times larger, so they are only included when asked for and then truncated
+        entries = {}
+        for key, entry in tests.items():
+            entries[key] = { name: value for name, value in entry.items() if name != 'details' }
+            if args.max_details > 0 and 'details' in entry:
+                entries[key]['details'] = entry['details'][:args.max_details]
         data = {
             'metadata': {
                 'title': args.title,
@@ -218,7 +250,7 @@ if __name__ == "__main__":
                 'properties': properties,
                 'counts': counts,
             },
-            'tests': tests,
+            'tests': entries,
         }
         if args.commit:
             data['metadata']['commit'] = args.commit
@@ -244,6 +276,26 @@ if __name__ == "__main__":
 
         failed = [key for key, entry in tests.items() if entry['status'] == 'failed']
         errors = [key for key, entry in tests.items() if entry['status'] == 'error']
+
+        # sort the failed runs by where their output starts to deviate from the
+        # reference log file, which says what to do about them
+        early = [key for key in failed if tests[key].get('diverged_from', 1.0) <= EARLY]
+        late = [key for key in failed if tests[key].get('diverged_from', -1.0) >= LATE]
+        if early or late:
+            md += "### Where the failed runs start to deviate\n\n"
+            if early:
+                md += (f"**Deviating from the start of the run ({len(early)}):** these do not"
+                       " agree with the reference log file before the trajectory can diverge,"
+                       " so they are a difference in the model or in the setup until proven"
+                       " otherwise.\n\n")
+                md += markdown_list(early, tests) + '\n'
+            if late:
+                md += (f"**Deviating only in the last half of the run ({len(late)}):** these"
+                       " agree at first and drift apart later, which is what chaotic"
+                       " amplification of rounding differences looks like. Consider a shorter"
+                       " run or a wider tolerance for these.\n\n")
+                md += markdown_list(late, tests) + '\n'
+
         if failed:
             md += f"### Failed numerical checks ({len(failed)})\n\n"
             md += markdown_list(failed, tests) + '\n'

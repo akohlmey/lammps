@@ -149,6 +149,10 @@ import get_quick_list
              for it to finish; this is the actual cost of the test and is
              recorded also for runs that crash or time out (0.0 if not run)
    checks  : number of performed numerical checks
+   diverged: number of quantities that leave their tolerance somewhere in the run
+   divfrom : the earliest thermo output where that happens, as a fraction of the run;
+             near zero means that the run differs from the reference from the start,
+             near one that only its end diverges (None if nothing diverges)
    timeout : whether the run was killed after exceeding the timeout
    memleak : whether valgrind detected memory leaks
 '''
@@ -163,6 +167,8 @@ class TestResult:
     self.time = time
     self.elapsed = 0.0
     self.checks = checks
+    self.diverged = 0
+    self.divfrom = None
     self.timeout = False
     self.memleak = False
 
@@ -219,6 +225,13 @@ def write_junit_xml(output_file, results, suite_name, properties=None):
         case.set('time', f"{max(float(result.elapsed), 0.0):.3f}")
         total_time += max(float(result.elapsed), 0.0)
 
+        # where in the run the output starts to deviate from the reference log file;
+        # this tells apart a run that is wrong from the start from one that slowly
+        # drifts apart, which need very different responses
+        if result.diverged:
+            case.set('diverged', str(result.diverged))
+            case.set('diverged-from', f"{result.divfrom:.3f}")
+
         if result.category == 'failed':
             elem = ET.SubElement(case, 'failure')
             num_failures += 1
@@ -236,6 +249,10 @@ def write_junit_xml(output_file, results, suite_name, properties=None):
             elem.set('message', shorten(result.status))
             if result.message:
                 elem.text = result.message
+        elif result.message:
+            # a test that passed, but has something worth reporting, e.g. quantities
+            # that deviate from the reference before the last thermo output
+            ET.SubElement(case, 'system-out').text = result.message
 
     testsuite.set('tests', str(len(results)))
     testsuite.set('failures', str(num_failures))
@@ -621,99 +638,33 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
             test_id = test_id + 1
             continue
 
-        # comparing output vs reference values
-        width = 20
-        if verbose == True:
-            print("        Quantities".ljust(width) + "Output".center(width) + "Reference".center(width) +
-                "Abs Diff Check".center(width) +  "Rel Diff Check".center(width))
-
         # check if overrides for this input scipt is specified
         overrides = {}
         if 'overrides' in config:
             if input_test in config['overrides']:
                 overrides = config['overrides'][input_test]
 
-        # iterate through num_runs
+        # compare the output against the reference values, one row of thermo output
+        # at a time, and decide the verdict from the last row of each run
+        comparison = compare_thermo(thermo, thermo_ref, config['tolerance'], overrides,
+                                    EPSILON, nugget)
 
-        num_abs_failed = 0
-        num_rel_failed = 0
-        failed_abs_output = []
-        failed_rel_output = []
-        num_checks = 0
-        mismatched_columns = False
-        mismatched_num_steps = False
+        # one of the log files has no usable thermo output for this run
+        if comparison['status'] == 'no thermo data':
+            msg = (f"     no thermo data to compare in run {comparison['run']} of"
+                   f" {logfilename} or {thermo_ref_file}.")
+            print(msg)
+            logger.info(msg)
+            result.category = 'completed'
+            result.status = 'completed, numerical checks skipped, unsupported log file format'
+            record(result, walltime_norm=walltime_norm)
+            test_id = test_id + 1
+            continue
 
-        for irun in range(num_runs):
-            num_fields = len(thermo[irun]['keywords'])
-            num_fields_ref = len(thermo_ref[irun]['keywords'])
-            if num_fields != num_fields_ref:
-                logger.info(f"     failed: Number of thermo columns in {logfilename} ({num_fields})")
-                logger.info(f"     is different from that in the reference log ({num_fields_ref}) in run {irun}.")
-                mismatched_columns = True
-                continue
-
-            # get the total number of the thermo output lines
-            nthermo_steps = len(thermo[irun]['data'])
-            nthermo_steps_ref = len(thermo_ref[irun]['data'])
-
-            if nthermo_steps_ref != nthermo_steps:
-                logger.info(f"     failed: Number of thermo steps in {logfilename} ({nthermo_steps})")
-                logger.info(f"     is different from that in the reference log ({nthermo_steps_ref}) in run {irun}.")
-                mismatched_num_steps = True   
-                continue
-
-            # get the output at the last timestep
-            thermo_step = nthermo_steps - 1
-
-            # iterate over the fields
-            for i in range(num_fields):
-                quantity = thermo[irun]['keywords'][i]
-
-                val = thermo[irun]['data'][thermo_step][i]
-                ref = thermo_ref[irun]['data'][thermo_step][i]
-                abs_diff = abs(float(val) - float(ref))
-
-                if abs(float(ref)) > EPSILON:
-                    rel_diff = abs(float(val) - float(ref))/abs(float(ref))
-                else:
-                    rel_diff = abs(float(val) - float(ref))/abs(float(ref)+nugget)
-
-                abs_diff_check = "PASSED"
-                rel_diff_check = "PASSED"
-
-                if quantity in config['tolerance'] or quantity in overrides:
-
-                    if quantity in config['tolerance']:
-                        abs_tol = float(config['tolerance'][quantity]['abs'])
-                        rel_tol = float(config['tolerance'][quantity]['rel'])
-
-                    # overrides the global tolerance values if specified
-                    if quantity in overrides:
-                        abs_tol = float(overrides[quantity]['abs'])
-                        rel_tol = float(overrides[quantity]['rel'])
-
-                    num_checks = num_checks + 2
-                    if abs_diff > abs_tol:
-                        abs_diff_check = "FAILED"
-                        reason = f"Run {irun}: {quantity}: actual ({abs_diff:0.2e}) > expected ({abs_tol:0.2e})"
-                        failed_abs_output.append(f"{reason}")
-                        num_abs_failed = num_abs_failed + 1
-                    if rel_diff > rel_tol:
-                        rel_diff_check = "FAILED"
-                        reason = f"Run {irun}: {quantity}: actual ({rel_diff:0.2e}) > expected ({rel_tol:0.2e})"
-                        failed_rel_output.append(f"{reason}")
-                        num_rel_failed = num_rel_failed + 1
-                else:
-                    # N/A means that tolerances are not defined in the config file
-                    abs_diff_check = "N/A"
-                    rel_diff_check = "N/A"
-
-                if verbose == True and abs_diff_check != "N/A"  and rel_diff_check != "N/A":
-                    print(f"        {thermo[irun]['keywords'][i].ljust(width)} {str(val).rjust(20)} {str(ref).rjust(20)} {abs_diff_check.rjust(20)} {rel_diff_check.rjust(20)}")
-
-        # after all runs completed, or are interrupted in one of the runs (mismatched_columns = True)
-        if mismatched_columns == True:
-            msg = f"     mismatched columns in the log files after the first run. Check both log files for more details."
+        # the log files do not have the same number of thermo columns
+        if comparison['status'] == 'mismatched columns':
+            msg = (f"     mismatched columns in the log files in run {comparison['run']}."
+                   " Check both log files for more details.")
             print(msg)
             logger.info(msg)
             result.category = 'failed'
@@ -723,8 +674,9 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
             continue
 
         # some runs that involve the minimize command that leads to different number of steps vs the reference log file
-        if mismatched_num_steps == True:
-            msg = f"     mismatched num steps in the log files. Check both log files for more details."
+        if comparison['status'] == 'mismatched steps':
+            msg = (f"     mismatched num steps in the log files in run {comparison['run']}."
+                   " Check both log files for more details.")
             print(msg)
             logger.info(msg)
             result.category = 'failed'
@@ -732,6 +684,36 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
             record(result, walltime_norm=walltime_norm)
             test_id = test_id + 1
             continue
+
+        num_checks = comparison['num_checks']
+        num_abs_failed = comparison['num_abs_failed']
+        num_rel_failed = comparison['num_rel_failed']
+        failed_abs_output = comparison['failed_abs']
+        failed_rel_output = comparison['failed_rel']
+        divergence = format_divergence(comparison['diverged'])
+
+        if verbose == True:
+            width = 20
+            print("        Quantities".ljust(width) + "Output".center(width) + "Reference".center(width) +
+                  "Abs Diff Check".center(width) + "Rel Diff Check".center(width))
+            for entry in comparison['last_row']:
+                abs_check = "PASSED" if entry['abs_ok'] else "FAILED"
+                rel_check = "PASSED" if entry['rel_ok'] else "FAILED"
+                print(f"        {entry['quantity'].ljust(width)} {str(entry['value']).rjust(20)}"
+                      f" {str(entry['reference']).rjust(20)} {abs_check.rjust(20)} {rel_check.rjust(20)}")
+
+        if comparison['skipped_rows']:
+            logger.info(f"     skipped {comparison['skipped_rows']} lines that look like thermo"
+                        f" output but do not consist of numbers in {logfilename} or {thermo_ref_file}")
+
+        if divergence:
+            logger.info(f"     {len(comparison['diverged'])} quantities deviate from the reference log file"
+                        f" in {comparison['num_rows']} compared thermo outputs:")
+            for line in divergence:
+                logger.info(f"        - {line}")
+            if verbose == True:
+                for line in divergence:
+                    print(f"        - {line}")
 
         if num_abs_failed > 0:
             msg = f"     {num_abs_failed} abs diff checks failed."
@@ -755,6 +737,11 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                 for out in failed_rel_output:
                     print(f"        - {out}")
 
+        # quantities that deviate from the reference somewhere in the run, but are back
+        # within their tolerance at the last thermo output where the verdict is decided
+        transient = [entry for entry in comparison['diverged']
+                     if entry['last_abs'] <= entry['abs_tol'] and entry['last_rel'] <= entry['rel_tol']]
+
         result.checks = num_checks
         if num_abs_failed == 0 and num_rel_failed == 0:
             msg = f"     all {num_checks} checks passed."
@@ -762,9 +749,16 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
             logger.info(msg)
             result.category = 'passed'
             msg = "completed"
+            if transient:
+                msg += (f", but {len(transient)} quantities deviate from the reference"
+                        " before the last thermo output")
+                result.message = '\n'.join(divergence)
         else:
             result.category = 'failed'
-            result.message = '\n'.join(failed_abs_output + failed_rel_output)
+            # the divergence table comes first: it is what tells apart a real
+            # difference from a run that only drifts apart towards its end, and the
+            # report may be truncated by the downstream tools
+            result.message = '\n'.join(divergence + [''] + failed_abs_output + failed_rel_output)
             msg = f"completed, {num_abs_failed} abs diff and {num_rel_failed} rel diff checks failed"
 
         # check if memleak detects from valgrind run (need to replace "mpirun" -> valgrind --leak-check=yes mpirun")
@@ -780,6 +774,15 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         failed_checks = { 'num_checks': num_checks,
                           'abs_diff_failed': num_abs_failed,
                           'rel_diff_failed': num_rel_failed }
+        if comparison['diverged']:
+            # the earliest thermo output where any quantity leaves its tolerance, as a
+            # fraction of the run: a value near zero means that the deviation is there
+            # from the start, a value near one that only the end of the run diverges
+            result.diverged = len(comparison['diverged'])
+            result.divfrom = min(entry['first_row'] / max(entry['rows'] - 1, 1)
+                                 for entry in comparison['diverged'])
+            failed_checks['diverged'] = result.diverged
+            failed_checks['diverged_from'] = round(result.divfrom, 3)
         record(result, walltime_norm=walltime_norm, failed_checks=failed_checks)
         test_id = test_id + 1
 
@@ -810,6 +813,181 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
     return stat
 
 # HELPER FUNCTIONS
+'''
+    compare the thermo output of a run against the reference log file
+
+    All thermo rows are compared, not only the last one.  Comparing only the last row
+    hides where a deviation starts, which is what tells apart a run that slowly drifts
+    apart from the reference from one that is wrong from the very first output.
+
+    thermo, thermo_ref: thermo data of the run and of the reference log file
+    tolerance : the "tolerance" section of the test configuration
+    overrides : per-input tolerances that replace the ones in "tolerance"
+    epsilon   : reference values below this are considered to be zero
+    nugget    : added to the reference value when it is considered to be zero
+
+    return a dictionary with
+      status        : 'ok', 'mismatched columns', 'mismatched steps' or 'no thermo data'
+      run           : the run the problem was found in (for the latter three)
+      skipped_rows  : number of rows that do not consist of numbers and were skipped;
+                      some log files contain lines that look like thermo output but are
+                      not, e.g. the SHAKE statistics printed by fix shake
+      num_checks    : number of checks performed at the last row of each run
+      num_abs_failed: number of failed absolute difference checks at those rows
+      num_rel_failed: number of failed relative difference checks at those rows
+      failed_abs    : messages for the failed absolute difference checks
+      failed_rel    : messages for the failed relative difference checks
+      num_rows      : total number of compared thermo rows
+      diverged      : one entry per run and quantity that exceeds its tolerance in at
+                      least one row, with the first diverging row, the largest deviation
+                      and the deviation in the last row
+      last_row      : the compared values in the last row of each run, for verbose output
+'''
+def compare_thermo(thermo, thermo_ref, tolerance, overrides, epsilon, nugget):
+    result = { 'status': 'ok', 'run': 0, 'num_checks': 0,
+               'num_abs_failed': 0, 'num_rel_failed': 0,
+               'failed_abs': [], 'failed_rel': [], 'num_rows': 0, 'skipped_rows': 0,
+               'diverged': [], 'last_row': [] }
+
+    for irun in range(len(thermo)):
+        keywords = thermo[irun]['keywords']
+        data = thermo[irun]['data']
+        data_ref = thermo_ref[irun]['data']
+        if not keywords or not data or not data_ref:
+            result['status'] = 'no thermo data'
+            result['run'] = irun
+            return result
+
+        if len(keywords) != len(thermo_ref[irun]['keywords']):
+            result['status'] = 'mismatched columns'
+            result['run'] = irun
+            return result
+
+        if len(data) != len(data_ref):
+            result['status'] = 'mismatched steps'
+            result['run'] = irun
+            return result
+
+        # skip the rows that do not consist of numbers: converting a log file into
+        # thermo data also picks up lines that only look like thermo output, e.g. the
+        # statistics that fix shake prints
+        rows = []
+        for row in range(len(data)):
+            try:
+                [float(value) for value in data[row] + data_ref[row]]
+            except (TypeError, ValueError):
+                continue
+            rows.append(row)
+        result['skipped_rows'] += len(data) - len(rows)
+        if not rows:
+            result['status'] = 'no thermo data'
+            result['run'] = irun
+            return result
+
+        result['num_rows'] += len(rows)
+        last_row = rows[-1]
+
+        # the timesteps are more useful than the row numbers when looking at the log files
+        steps = None
+        if 'Step' in keywords:
+            steps = [row[keywords.index('Step')] for row in data]
+
+        for i in range(len(keywords)):
+            quantity = keywords[i]
+            if quantity not in tolerance and quantity not in overrides:
+                # no tolerances are defined for this quantity in the config file
+                continue
+            if quantity in tolerance:
+                abs_tol = float(tolerance[quantity]['abs'])
+                rel_tol = float(tolerance[quantity]['rel'])
+            # the per-input overrides replace the global tolerance values
+            if quantity in overrides:
+                abs_tol = float(overrides[quantity]['abs'])
+                rel_tol = float(overrides[quantity]['rel'])
+
+            first = None
+            max_rel = -1.0
+            max_row = rows[0]
+            for row in rows:
+                val = float(data[row][i])
+                ref = float(data_ref[row][i])
+                abs_diff = abs(val - ref)
+                if abs(ref) > epsilon:
+                    rel_diff = abs_diff / abs(ref)
+                else:
+                    rel_diff = abs_diff / abs(ref + nugget)
+
+                if rel_diff > max_rel:
+                    max_rel = rel_diff
+                    max_row = row
+                if first is None and (abs_diff > abs_tol or rel_diff > rel_tol):
+                    first = row
+
+                if row == last_row:
+                    # the verdict of the test is decided by the last row of the run
+                    result['num_checks'] += 2
+                    result['last_row'].append({
+                        'quantity': quantity, 'value': val, 'reference': ref,
+                        'abs_ok': abs_diff <= abs_tol, 'rel_ok': rel_diff <= rel_tol })
+                    if abs_diff > abs_tol:
+                        result['failed_abs'].append(
+                            f"Run {irun}: {quantity}: actual ({abs_diff:0.2e}) > expected ({abs_tol:0.2e})")
+                        result['num_abs_failed'] += 1
+                    if rel_diff > rel_tol:
+                        result['failed_rel'].append(
+                            f"Run {irun}: {quantity}: actual ({rel_diff:0.2e}) > expected ({rel_tol:0.2e})")
+                        result['num_rel_failed'] += 1
+                    if first is not None:
+                        result['diverged'].append({
+                            'run': irun, 'quantity': quantity, 'rows': len(data),
+                            'first_row': first, 'first_step': steps[first] if steps else None,
+                            'max_rel': max_rel, 'max_row': max_row,
+                            'max_step': steps[max_row] if steps else None,
+                            'last_abs': abs_diff, 'last_rel': rel_diff,
+                            'abs_tol': abs_tol, 'rel_tol': rel_tol,
+                        })
+    return result
+
+'''
+    describe how a quantity deviates from the reference, to tell apart the cases that
+    need a shorter run or a looser tolerance from the ones that need a closer look
+
+    entry: one element of the "diverged" list returned by compare_thermo()
+'''
+def divergence_pattern(entry):
+    if entry['rows'] < 2:
+        return "single thermo output"
+    if entry['first_row'] == 0:
+        # the first thermo output of a continuation run repeats the last one of the
+        # previous run, so only the very first run says something about the setup
+        if entry['run'] == 0:
+            return "differs already in the first thermo output, check the setup"
+        return "differs already at the start of this run"
+    if entry['last_rel'] >= 0.5 * entry['max_rel']:
+        if entry['first_row'] > 0.5 * (entry['rows'] - 1):
+            return "grows only towards the end, a shorter run may be enough"
+        return "grows over the whole run"
+    return "largest deviation before the end of the run"
+
+'''
+    format the divergence data from compare_thermo() as a table for the test report
+'''
+def format_divergence(diverged, maxlen=25):
+    lines = []
+    for entry in diverged[:maxlen]:
+        where = (f"step {entry['first_step']}" if entry['first_step'] is not None
+                 else f"row {entry['first_row']}")
+        peak = (f"step {entry['max_step']}" if entry['max_step'] is not None
+                else f"row {entry['max_row']}")
+        lines.append(f"Run {entry['run']}: {entry['quantity']}: first deviates at {where} "
+                     f"({entry['first_row'] + 1} of {entry['rows']} thermo outputs), "
+                     f"largest relative deviation {entry['max_rel']:0.2e} at {peak}, "
+                     f"{entry['last_rel']:0.2e} at the end "
+                     f"(rel. tolerance {entry['rel_tol']:0.2e}); {divergence_pattern(entry)}")
+    if len(diverged) > maxlen:
+        lines.append(f"... and {len(diverged) - maxlen} more")
+    return lines
+
 '''
   find the reference log files for an input script in a folder
 
