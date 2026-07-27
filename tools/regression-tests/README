@@ -119,7 +119,7 @@ Since the cost of a test depends on how it is run, each test configuration (seri
         python3 run_tests.py --lmp-bin=build/lmp --config-file=config_serial.yaml \
                 --list-input=input-list-$n.txt --output-file=output-$n.xml \
                 --progress-file=progress-$n.yaml --failure-file=failure-$n.yaml \
-                --log-file=run-$n.log --walltime-ref=1.5 &
+                --log-file=run-$n.log --walltime-ref=$(cat walltime-ref.txt) &
     done
     wait
 
@@ -131,8 +131,8 @@ where the file does not exist yet, and for all later ones. Tests that did not ru
 their previously measured time.
 
 Passing --walltime-ref avoids that all workers benchmark the LAMMPS binary against
-each other at the same time; the value can be taken from the "Reference walltime"
-line of an earlier run.
+each other at the same time. The --analyze run measures the reference walltime once
+and writes it to walltime-ref.txt for this purpose.
 
 Input scripts in the same folder are run by different workers unless their folder is
 listed in the "keep_together" section of the test configuration file. That section is

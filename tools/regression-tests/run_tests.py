@@ -1673,6 +1673,14 @@ if __name__ == "__main__":
 
     # if analyze the example folders (and split into separate lists for top-level examples), not running any test
     if analyze == True:
+        # measure the reference walltime once and store it, so that the workers can be
+        # started with --walltime-ref instead of all benchmarking the LAMMPS binary
+        # against each other at the same time
+        if os.path.isfile(lmp_binary) and example_toplevel != "":
+            walltime_ref = get_reference_walltime(lmp_binary, config, example_toplevel)
+            with open("walltime-ref.txt", "w") as f:
+                f.write(f"{walltime_ref}\n")
+            print(f"\nReference walltime, sec = {walltime_ref} (written to walltime-ref.txt)")
         quit()
 
     # check if lmp_binary is specified in the config yaml
