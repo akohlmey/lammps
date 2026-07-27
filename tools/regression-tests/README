@@ -117,9 +117,15 @@ means anything. Those cases are recognized and reported rather than counted as f
     + input scripts whose initial velocities depend on the number of MPI processes
       (a "velocity create" command without "loop geom" on a system built with
       create_atoms) cannot match a reference log file that was written with a different
-      number of processes; they are flagged for a fix in the repository
+      number of processes; they are flagged for a fix in the repository. The number of
+      MPI processes of a reference log file is read from the log file itself, since the
+      number in its name counts the OpenMP threads as well
     + input scripts that need a good part of the timeout are production sized runs that
       should be shortened in the repository; they are flagged as well
+    + input scripts that name a style which exists in no package at all, which is a typo
+      or an outdated name rather than a package that is not installed
+    + reference log files that belong to no input script in their folder, which is
+      usually a typo in one of the two names and silently leaves the input unchecked
 
 The last two are reported in an "attention" field of the progress file and as an
 attribute of the JUnit test case, independently of whether the test passed or failed.

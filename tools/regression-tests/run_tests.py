@@ -296,6 +296,13 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
     num_results_initial = len(results)
     test_id = 0
 
+    # reference log files in this folder that belong to none of its input scripts, so
+    # that an input without a reference log file can point at the likely reason
+    orphan_logs = orphaned_reference_logs('.')
+    if orphan_logs:
+        logger.info(f"     {len(orphan_logs)} reference log file(s) in {input_folder} belong to"
+                    f" no input script: {' '.join(orphan_logs)}")
+
     EPSILON = np.float64(config['epsilon'])
     nugget = float(config['nugget'])
     genref = config['genref']
@@ -454,13 +461,18 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
         # The initial velocities of some inputs depend on the domain decomposition, so
         # their output can never match a reference log file that was written with a
         # different number of MPI processes.  This has to be corrected in the input
-        # script, after which its reference log files have to be recreated.
-        if ref_logfile_exist and nprocs != max_np:
-            reason = velocity_decomposition_dependent(input_test)
-            if reason:
-                result.attention = (f"{reason}: cannot match the reference log file, which"
-                                    f" was written with {max_np} MPI processes instead of {nprocs}")
-                logger.info(f"     {result.attention}")
+        # script, after which its reference log files have to be recreated.  The number
+        # of MPI processes of the reference log file is read from the log file itself:
+        # the number in its name counts the OpenMP threads as well.
+        if ref_logfile_exist:
+            ref_nprocs, ref_nthreads = reference_log_decomposition(thermo_ref_file)
+            if ref_nprocs is not None and ref_nprocs != nprocs:
+                reason = velocity_decomposition_dependent(input_test)
+                if reason:
+                    result.attention = (f"{reason}: cannot match {thermo_ref_file}, which was"
+                                        f" written with {ref_nprocs} MPI processes instead of"
+                                        f" {nprocs}")
+                    logger.info(f"     {result.attention}")
 
         # walltime =   -2: skipped tests
         #              -1: failed tests
@@ -560,9 +572,19 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                     break
             logger.info(f"     The run terminated with {input_test} gives the following output:")
             logger.info(f"       {error_line}")
-            if "Unrecognized" in output:
-                result.status = f"failed, unrecognized command, package not installed, {shorten(error_line)}"
-            elif "Unknown" in output:
+            # utils::check_packages_for_style() names the package a style belongs to, so
+            # "Unrecognized ... style" without that part means that the style does not
+            # exist in LAMMPS at all and the input script uses an outdated name
+            if "package which is not enabled" in error_line:
+                result.status = f"failed, package not installed, {shorten(error_line)}"
+            elif "missing because of a dependency" in error_line:
+                result.status = f"failed, style missing from this build, {shorten(error_line)}"
+            elif "Unrecognized" in error_line and " style " in error_line:
+                result.status = f"failed, no such style in this LAMMPS version, {shorten(error_line)}"
+                result.attention = ("names a style that does not exist in any package, so this is"
+                                    " a typo or an outdated name that has to be fixed in the input")
+            elif "Unknown command" in error_line:
+                # a command of a package that is not installed, or not a LAMMPS input at all
                 result.status = f"failed, unknown command, package not installed, {shorten(error_line)}"
             else:
                 result.status = f"failed, {shorten(error_line)}"
@@ -727,6 +749,14 @@ def iterate(lmp_binary, input_folder, input_list, config, results, progress_file
                                      f" shortened to {smoke_steps} steps does not crash")
                 else:
                     result.status = 'completed, numerical checks skipped due to missing the reference log file'
+                # a reference log file in this folder that belongs to no input script is
+                # the likely reason: one of the two names has a typo or was not renamed
+                if orphan_logs:
+                    note = ("no reference log file matches this input, while "
+                            + ", ".join(orphan_logs[:3])
+                            + (", ..." if len(orphan_logs) > 3 else "")
+                            + " in this folder match no input script at all: check the names")
+                    result.attention = f"{result.attention}; {note}" if result.attention else note
                 record(result, walltime_norm=walltime_norm)
                 test_id = test_id + 1
                 continue
@@ -977,6 +1007,69 @@ def needs_partitions(input_file):
     except OSError:
         pass
     return ""
+
+'''
+    find the reference log files in a folder that belong to none of its input scripts
+
+    A reference log file is only found when its name follows log.{date}.{basename}.
+    {compiler}.{nprocs} with the basename of an input script in the same folder.  A
+    typo in either name, or renaming one without the other, silently turns the input
+    into one that cannot be checked against anything.
+
+    return the list of those file names, without the log files of multi-partition runs
+'''
+def orphaned_reference_logs(folder):
+    claimed = set()
+    for path in sorted(glob.glob(os.path.join(folder, 'in.*'))):
+        for nprocs, log in find_reference_logs(folder, os.path.basename(path)[3:]):
+            claimed.add(log)
+
+    orphans = []
+    for path in sorted(glob.glob(os.path.join(folder, 'log.*'))):
+        log = os.path.basename(path)
+        parts = log.split('.')
+        if len(parts) < 5 or not parts[-1].isdigit() or log in claimed:
+            continue
+        # log.{date}.{basename}.{compiler}.{nprocs}.{partition} of a multi-partition run
+        if parts[-2].isdigit():
+            continue
+        orphans.append(log)
+    return orphans
+
+'''
+    read the domain decomposition from the header of a log file
+
+    The number at the end of the name of a reference log file is the number of MPI
+    processes times the number of OpenMP threads per process, which is what LAMMPS
+    reports in its "Loop time of ... on N procs" line.  A run with 2 MPI processes and
+    2 threads each therefore has the same reference log file as one with 4 MPI
+    processes, although the two decompose the simulation box differently.  What matters
+    for the reproducibility of atom IDs and initial velocities is the number of MPI
+    processes alone, so that is read from the log file itself.
+
+    return a tuple of (number of MPI processes, number of threads per process), with
+    either of them None if the log file does not report it
+'''
+def reference_log_decomposition(filename):
+    grid = re.compile(r'^\s*(\d+) by (\d+) by (\d+) MPI processor grid')
+    omp = re.compile(r'^\s*using (\d+) OpenMP thread')
+    nprocs = None
+    nthreads = None
+    try:
+        with open(filename, 'r', errors='ignore') as f:
+            for line in f:
+                match = grid.match(line)
+                if match and nprocs is None:
+                    nprocs = int(match.group(1)) * int(match.group(2)) * int(match.group(3))
+                match = omp.match(line)
+                if match and nthreads is None:
+                    nthreads = int(match.group(1))
+                # both are printed in the header, no need to read the whole log file
+                if nprocs is not None and nthreads is not None:
+                    break
+    except OSError:
+        pass
+    return nprocs, nthreads
 
 '''
     check whether the initial velocities of an input script depend on the number of
@@ -1658,6 +1751,21 @@ def load_cost_file(filename):
     return {key: float(value) for key, value in costs.items()}
 
 '''
+    the number of MPI processes times the number of OpenMP threads per process that a
+    test configuration uses, which is what the reference log files are named after and
+    what the "Loop time of ... on N procs" line of a log file reports
+
+    nprocs: number of MPI processes from the test configuration
+    args  : the command line arguments from the test configuration
+'''
+def config_ntasks(nprocs, args):
+    # "-pk omp 2" for the OPENMP package, "-k on t 2" for the KOKKOS package
+    match = re.search(r'-pk\s+omp\s+(\d+)|-k\s+on\s+t\s+(\d+)', args)
+    if match:
+        return nprocs * int(match.group(1) or match.group(2))
+    return nprocs
+
+'''
     estimate the cost of an input script from the loop times in its reference log file
 
     This is only a rough hint: the reference log files were generated on different
@@ -1913,7 +2021,10 @@ if __name__ == "__main__":
     # number of procs used for the runs, needed to scale the cost estimates taken
     # from the reference log files; an empty value means "as many as the reference
     # log file with the most procs", which is 4 for most of the examples
-    nprocs_config = 4 if config['nprocs'] == "" else int(config['nprocs'])
+    # the reference log files are named after the number of MPI processes times the
+    # number of OpenMP threads, so the cost estimates are scaled with that as well
+    nprocs_config = config_ntasks(4 if config['nprocs'] == "" else int(config['nprocs']),
+                                  config['args'])
 
     # the runs are killed after this many seconds (must match the default in execute())
     timeout_config = int(config['timeout']) if config.get('timeout', "") != "" else 60

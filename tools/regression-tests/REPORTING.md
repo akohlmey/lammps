@@ -90,8 +90,8 @@ applies, and the dashboard can spot it as `diverged_row <= 1` with a large `dive
 ## The `attention` field: what a developer has to fix
 
 This is the field to build a work list from.  It is set independently of the verdict, so a
-test that passes can still carry one.  There are currently two kinds, and an entry can
-carry both, separated by `; `.
+test that passes can still carry one.  There are currently four kinds, and an entry can
+carry more than one, separated by `; `.
 
 **Initial velocities that depend on the number of MPI processes.**
 
@@ -137,6 +137,30 @@ it costs what it always did, and shortening it needs a look at what the input ac
 The shortened input still hits the timeout, so the cost is not in the number of steps at
 all but in the system size, the potential, or a minimization.  Shortening the runs will not
 help; the example needs a smaller system.
+
+**A style that exists in no package.**
+
+    names a style that does not exist in any package, so this is a typo or an outdated
+    name that has to be fixed in the input
+
+When a style is not found, LAMMPS names the package it belongs to
+(`utils::check_packages_for_style()`), so `Unrecognized fix style 'qeqr/reaxff'` without
+that part means no package provides it under that name at all.  That is a typo or a name
+that was changed, not a build that is missing something, and the earlier reporting hid it
+by calling every unrecognized style a missing package.
+
+**A reference log file that belongs to no input script.**
+
+    no reference log file matches this input, while log.29Aug24.tracker.g++.1 in this
+    folder match no input script at all: check the names
+
+A reference log file is only found when its name follows
+`log.{date}.{basename}.{compiler}.{nprocs}` with the basename of an input script in the
+same folder.  A typo in either name, or renaming one of the two without the other, turns
+the input into one that cannot be checked against anything -- silently, because a missing
+reference log file is not an error.  When an input has no usable reference log file and
+its folder contains log files that belong to no input at all, the two facts are almost
+always the same problem, and the message names the candidates.
 
 ## Statuses that are not verdicts
 
