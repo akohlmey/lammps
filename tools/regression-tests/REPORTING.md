@@ -70,11 +70,17 @@ Otherwise `diverged_at` says after how many steps the deviation appears:
 
 | condition | reading | what to do |
 |---|---|---|
+| `attention` is set | the input cannot match its reference | fix the example; check this first, it explains an early deviation on its own |
 | `diverged_row == 0` | differs before the trajectory can diverge | a difference in the setup or in the computation; investigate |
 | `diverged_at <= 200` | too early for a rounding difference to have grown | a difference in what is computed until proven otherwise; investigate |
 | `200 < diverged_at <= 1000` | early, but not impossible | look at it when nothing more urgent is open |
 | `diverged_at > 1000` | consistent with chaotic divergence | expected; shorten the run or widen the tolerance |
-| `attention` is set | the input cannot match its reference | fix the example, the result means nothing until then |
+
+Check `attention` first: an input whose initial velocities depend on the number of MPI
+processes deviates at the second line of output for a reason that has nothing to do with
+the code, and in a configuration that uses fewer MPI processes than the reference log
+files there are enough of those to bury everything else.  The Markdown summary therefore
+leaves them out of the "worth investigating" group and lists them separately.
 
 One caveat the dashboard should carry: a deviation cannot be seen before the first thermo
 output after it starts.  An input with thermo output every 5000 steps cannot distinguish a

@@ -304,11 +304,14 @@ if __name__ == "__main__":
                 md += f"- ... and {len(attention) - 50} more\n"
             md += '\n'
 
-        # sort the failed runs by where their output starts to deviate from the reference
-        # log file: that is what says whether a failure is worth investigating
+        # Sort the failed runs by where their output starts to deviate from the reference
+        # log file: that is what says whether a failure is worth investigating.  Inputs
+        # that are known not to be able to match their reference log file are left out,
+        # since their early deviation is already explained and would bury the rest.
         early = [key for key in failed
-                 if tests[key].get('diverged_row') == 0
-                 or tests[key].get('diverged_at', CHAOS_STEPS + 1) <= SUSPICIOUS_STEPS]
+                 if not tests[key].get('attention')
+                 and (tests[key].get('diverged_row') == 0
+                      or tests[key].get('diverged_at', CHAOS_STEPS + 1) <= SUSPICIOUS_STEPS)]
         late = [key for key in failed if tests[key].get('diverged_at', 0) > CHAOS_STEPS]
         if early or late:
             md += "### Where the failed runs start to deviate\n\n"
