@@ -217,62 +217,62 @@ void FixRigidSmallKokkos<DeviceType>::pre_exchange()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
 {
-  atomKK->sync(Host, datamask_read);
+  // setup_bodies_static() rebuilds the bodies from the unwrapped atom
+  // positions, so it also reads atom->image and atom->mask (and rmass for
+  // finite-size particles), which are not in this fix's per-step datamask.
+  atomKK->sync(Host, datamask_read | IMAGE_MASK | MASK_MASK | RMASS_MASK);
 
-  // Keep the exchange and the sort on the same side.  A coexisting fix that grows
-  // per-atom arrays but has no device exchange (e.g. fix property/atom for per-atom
-  // rmass) forces CommKokkos onto a host exchange (sets kokkos->exchange_comm_legacy);
-  // follow it onto the host for sorting too (sort_device=0 makes AtomKokkos::sort()
-  // use the legacy host sort) so the setup-time sort in neighbor->build (right after
-  // this) can't permute the body arrays out from under the host exchange.  No-op in
-  // the normal all-device case.
-  if (std::is_same<DeviceType,LMPDeviceType>::value)
-    sort_device = (exchange_comm_device && !lmp->kokkos->exchange_comm_legacy) ? 1 : 0;
+  // On a second (or later) run the base re-derives the bodies on the host
+  // (reinitflag defaults to 1), reading bodytag/bodyown/atom2body/xcmimage and
+  // rewriting body[].  After a preceding run that state is live on the device,
+  // so flush it down first or the host rebuilds from stale bookkeeping.
+  // Note the base sets setupflag = 1 before returning, so latch it here: on the
+  // first run the device views do not exist yet and must not be touched.
+  const int rebuild_on_host = setupflag;
+  if (rebuild_on_host) {
+    copy_body_host();
+    k_bodytag.sync_host();
+    k_bodyown.sync_host();
+    k_atom2body.sync_host();
+    k_xcmimage.sync_host();
+    k_displace.sync_host();
+    if (extended) {
+      k_eflags.sync_host();
+      if (orientflag) k_orient.sync_host();
+      if (dorientflag) k_dorient.sync_host();
+    }
+  }
 
-  // On the 2nd and later runs reinitflag re-runs the host body build
-  // (setup_bodies_static/dynamic -> pre_neighbor/reset_atom2body/image_shift plus
-  // non-FORCE_TORQUE forward/reverse comms).  Run 1's setup_device_push() left
-  // *_comm_device=1 and setupflag=1, which would route all of that to the device
-  // packers (FORCE_TORQUE/body-sendlist only) and abort.  Restore the run-1
-  // conditions around the base call: force the host fallback in the overrides
-  // (setup_host_rebuild) and the host comm path; setup_device_push() re-enables
-  // device comm for the run.
-  const int saved_forward_comm_device = forward_comm_device;
-  const int saved_reverse_comm_device = reverse_comm_device;
-  forward_comm_device = 0;
-  reverse_comm_device = 0;
-  setup_host_rebuild = true;
+  // the base setup owns the data for the duration of this call: make the
+  // pre_neighbor() it invokes internally run on the host (see pre_neighbor)
+  host_body_setup = 1;
   FixRigidSmall::setup_pre_neighbor();
-  setup_host_rebuild = false;
-  forward_comm_device = saved_forward_comm_device;
-  reverse_comm_device = saved_reverse_comm_device;
+  host_body_setup = 0;
 
-  atomKK->modified(Host, datamask_modify);
-  atomKK->sync(execution_space, datamask_read);
-
-  // The host body arrays just (re)written above are authoritative until setup()
-  // pushes them to the device, but the ctor's setup-time exchange left these
-  // DualViews device-modified with placeholder data.  ModifyKokkos::setup() runs
-  // compute temp -> dof() (which sync_host()s them) BEFORE the fix setup() loop;
-  // without clearing that stale flag dof() pulls the placeholder over the good
-  // host arrays and segfaults.  Clear it and re-mark host-modified now (no-op when
-  // host space == device space; setup_device_push() repeats this and pushes).
-  k_bodyown.clear_sync_state();
-  k_bodytag.clear_sync_state();
-  k_atom2body.clear_sync_state();
-  k_xcmimage.clear_sync_state();
-  k_displace.clear_sync_state();
+  // the host rebuild rewrote body[] and the per-atom body arrays; push them
+  // back to the device (setup() -> setup_device_push() does the rest)
+  if (rebuild_on_host) {
+    const int nbody_all = nlocal_body + nghost_body;
+    if (k_body.view_device().extent_int(0) < nbody_all) {
+      k_body.sync_host();
+      k_body.resize(nbody_all > nmax_body ? nbody_all : nmax_body);
+      k_body.modify_host();
+    }
+    copy_body_device();
+    k_bodytag.modify_host();
   k_bodyown.modify_host();
-  k_bodytag.modify_host();
   k_atom2body.modify_host();
   k_xcmimage.modify_host();
   k_displace.modify_host();
-  if (extended) {
-    k_eflags.clear_sync_state();
-    k_eflags.modify_host();
-    if (orientflag) { k_orient.clear_sync_state(); k_orient.modify_host(); }
-    if (dorientflag) { k_dorient.clear_sync_state(); k_dorient.modify_host(); }
+    k_bodytag.template sync<DeviceType>();
+    k_bodyown.template sync<DeviceType>();
+    k_atom2body.template sync<DeviceType>();
+    k_xcmimage.template sync<DeviceType>();
+    k_displace.template sync<DeviceType>();
+    refresh_atom_views();
   }
+  atomKK->modified(Host, datamask_modify);
+  atomKK->sync(execution_space, datamask_read);
 }
 
 /* ----------------------------------------------------------------------
@@ -423,18 +423,23 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
   // the constructor) so CommKokkos doesn't fall back to the legacy path.
   if (std::is_same<DeviceType,LMPDeviceType>::value) {
     forward_comm_device = 1;
+    sort_device = 1;
     reverse_comm_device = 1;
 
-    // Keep the per-reneighbor exchange and sort on the same side: a device sort
-    // reordering the body owners a device exchange produced (or vice versa) would
-    // permute the per-atom arrays out from under the other, corrupting the
-    // body<->atom bookkeeping.  CommKokkos may have been forced onto a host
-    // exchange (kokkos->exchange_comm_legacy set) by a coexisting fix that grows
-    // per-atom arrays without device exchange (e.g. fix property/atom for per-atom
-    // rmass); follow it onto the host sort then, rather than erroring.
-    // setup_pre_neighbor() already set this before the setup-time sort; repeat it
-    // here so the run stays consistent.
-    sort_device = (exchange_comm_device && !lmp->kokkos->exchange_comm_legacy) ? 1 : 0;
+    // The per-reneighbor migration pipeline (exchange -> sort) must run entirely
+    // on one side: device sort reorders the body owners that device exchange
+    // produced, and vice versa.  A mixed configuration (e.g. "comm device" while
+    // sorting stays on the legacy host path) lets a host sort permute the per-atom
+    // arrays out from under the device exchange, silently corrupting the
+    // body<->atom bookkeeping.  Require the two to match.  Both default to host on
+    // CPU/OpenMP and to device on GPU, so this only triggers for an explicit,
+    // inconsistent override such as "-pk kokkos comm device" without "sort device".
+    bool exchange_on_device = exchange_comm_device && !lmp->kokkos->exchange_comm_legacy;
+    bool sort_on_device = !lmp->kokkos->sort_legacy;
+    if (exchange_on_device != sort_on_device)
+      error->all(FLERR, "fix rigid/small/kk requires Kokkos atom exchange and sorting "
+                 "to run on the same side; use matching settings, e.g. "
+                 "'-pk kokkos comm device sort device' or the defaults");
   }
 
   // The setup-time atom sort permutes the per-atom arrays (bodyown/bodytag) to
@@ -472,7 +477,16 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
 
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::pre_neighbor(){
-  if (!setupflag || setup_host_rebuild) {
+  // host_body_setup: setup_bodies_static() calls pre_neighbor() (virtually) in
+  // the middle of re-deriving the bodies on the host, to remap each xcm into
+  // the box and reset the atom xcmimage flags -- and then unwraps the atom
+  // coordinates with those host xcmimage values to build the inertia tensor.
+  // The device path below updates only d_xcmimage, so taking it here would
+  // leave the host flags stale and the unwrap would place the atoms of any
+  // body straddling a periodic boundary a full box length away, producing a
+  // garbage inertia tensor ("Bad principal moments") on the second and later
+  // runs.  Use the host path while the host setup owns the data.
+  if (!setupflag || host_body_setup) {
     FixRigidSmall::pre_neighbor();
     return;
   }
@@ -2227,7 +2241,7 @@ void FixRigidSmallKokkos<DeviceType>::grow_body()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::reset_atom2body()
 {
-  if (!setupflag || setup_host_rebuild) {
+  if (!setupflag) {
     // called during setup_bodies
     FixRigidSmall::reset_atom2body();
     return;
@@ -2285,7 +2299,7 @@ void FixRigidSmallKokkos<DeviceType>::reset_atom2body()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::image_shift()
 {
-  if (!setupflag || setup_host_rebuild) {
+  if (!setupflag) {
     // called during setup_bodies
     FixRigidSmall::image_shift();
     return;
@@ -2332,28 +2346,6 @@ void FixRigidSmallKokkos<DeviceType>::sort_kokkos(Kokkos::BinSort<KeyViewType, B
 {
   Kokkos::Profiling::pushRegion("rigid/small sort");
 
-  // At setup (setupflag still 0) this sort fires after create_bodies() wrote the
-  // host body arrays -- those host copies are authoritative, but the ctor's
-  // setup-time exchange left the DualViews device-modified with placeholder data,
-  // so the sync<DeviceType>() below would be a no-op and we would sort the stale
-  // device copy and permute it out of alignment with the atoms the sort reorders.
-  // The host bookkeeping then no longer matches the atom order: reset_atom2body
-  // leaves bodyown[map(bodytag)] < 0 and set_v() skips those atoms, leaving their
-  // velocities unprojected.  Make the device copies match the authoritative host
-  // data before sorting.
-  if (!setupflag) {
-    k_bodytag.clear_sync_state();   k_bodytag.modify_host();
-    k_bodyown.clear_sync_state();   k_bodyown.modify_host();
-    k_atom2body.clear_sync_state(); k_atom2body.modify_host();
-    k_xcmimage.clear_sync_state();  k_xcmimage.modify_host();
-    k_displace.clear_sync_state();  k_displace.modify_host();
-    k_vatom.clear_sync_state();     k_vatom.modify_host();
-    if (extended) {
-      k_eflags.clear_sync_state();  k_eflags.modify_host();
-      if (orientflag)  { k_orient.clear_sync_state();  k_orient.modify_host(); }
-      if (dorientflag) { k_dorient.clear_sync_state(); k_dorient.modify_host(); }
-    }
-  }
 
   // sort the device side of each tied DualView in place
   auto space = LMPDeviceType();
@@ -2398,24 +2390,12 @@ void FixRigidSmallKokkos<DeviceType>::sort_kokkos(Kokkos::BinSort<KeyViewType, B
     }
   }
 
-  // At setup the host setup path (setup_bodies_static -> reset_atom2body / set_v)
-  // reads these right after, so pull the freshly sorted device copies back to the
-  // host -- they now follow the same permutation as the reordered atoms.  No
-  // body.ilocal re-link yet: bodies are not fully wired until setup() completes.
-  // During a run setupflag is 1 and the device copies stay authoritative (the
-  // host is synced on demand).
+  // Before setup_bodies_static() has run there are no bodies yet (all atoms
+  // carry bodytag=0 / bodyown=-1 placeholders that setup() will overwrite), so
+  // there is nothing to re-link.  This guard lets the setup-time atom->sort()
+  // (Verlet::setup() calls it before modify->setup()) proceed on device instead
+  // of forcing AtomKokkos::sort() permanently onto the legacy host path.
   if (!setupflag) {
-    k_bodytag.sync_host();
-    k_bodyown.sync_host();
-    k_atom2body.sync_host();
-    k_xcmimage.sync_host();
-    k_displace.sync_host();
-    k_vatom.sync_host();
-    if (extended) {
-      k_eflags.sync_host();
-      if (orientflag)  k_orient.sync_host();
-      if (dorientflag) k_dorient.sync_host();
-    }
     Kokkos::Profiling::popRegion();
     return;
   }
