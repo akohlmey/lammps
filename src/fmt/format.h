@@ -66,6 +66,7 @@ namespace fmt
   using std::make_format_args;
   using std::string_view;
   using std::vformat;
+  using std::vformat_to;
 }
 
 #else
