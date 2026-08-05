@@ -1203,7 +1203,7 @@ void _noopt LAMMPS::help()
   print_styles(fp, Force::kspace_styles(), width);
   fprintf(fp,"\n\n");
 
-  fprintf(fp,"* Fix styles\n");
+  fprintf(fp,"* Fix styles:\n");
   print_styles(fp, Modify::fix_styles(), width);
   fprintf(fp,"\n\n");
 
