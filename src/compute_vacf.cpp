@@ -20,19 +20,35 @@
 #include "modify.h"
 #include "update.h"
 
+#include <cstring>
+
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
 ComputeVACF::ComputeVACF(LAMMPS *lmp, int narg, char **arg) :
-    Compute(lmp, narg, arg), id_fix(nullptr)
+    Compute(lmp, narg, arg), id_fix(nullptr), fix(nullptr)
 {
-  if (narg > 3) error->all(FLERR, 3, "Compute vacf does not accept any arguments");
+  if (narg < 3) utils::missing_cmd_args(FLERR, "compute vacf", error);
 
   vector_flag = 1;
   size_vector = 4;
   extvector = 0;
   create_attribute = 1;
+
+  // parse optional arguments
+  nreset = 0;
+  int iarg = 3;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "reset") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute vacf reset", error);
+      nreset = utils::bnumeric(FLERR, arg[iarg + 1], false, lmp);
+      if (nreset < 0) error->all(FLERR, iarg, "Illegal vacf reset value {}", nreset);
+      iarg += 2;
+    } else {
+      error->all(FLERR, iarg, "Unknown compute vacf keyword {}", arg[iarg]);
+    }
+  }
 
   // create a new fix STORE style
   // id = compute-ID + COMPUTE_STORE, fix group = compute group
@@ -47,19 +63,7 @@ ComputeVACF::ComputeVACF(LAMMPS *lmp, int narg, char **arg) :
   if (fix->restart_reset)
     fix->restart_reset = 0;
   else {
-    double **voriginal = fix->astore;
-
-    double **v = atom->v;
-    int *mask = atom->mask;
-    int nlocal = atom->nlocal;
-
-    for (int i = 0; i < nlocal; i++)
-      if (mask[i] & groupbit) {
-        voriginal[i][0] = v[i][0];
-        voriginal[i][1] = v[i][1];
-        voriginal[i][2] = v[i][2];
-      } else
-        voriginal[i][0] = voriginal[i][1] = voriginal[i][2] = 0.0;
+    ComputeVACF::reset_original();
   }
 
   // displacement vector
@@ -127,6 +131,8 @@ void ComputeVACF::compute_vector()
     vector[2] /= nvacf;
     vector[3] /= nvacf;
   }
+  // reset the origin for the next round
+  if ((nreset > 0) && ((update->ntimestep % nreset) == 0)) reset_original();
 }
 
 /* ----------------------------------------------------------------------
@@ -140,4 +146,25 @@ void ComputeVACF::set_arrays(int i)
   voriginal[i][0] = v[i][0];
   voriginal[i][1] = v[i][1];
   voriginal[i][2] = v[i][2];
+}
+
+/* ----------------------------------------------------------------------
+   reset the reference velocities
+------------------------------------------------------------------------- */
+
+void ComputeVACF::reset_original() noexcept
+{
+  double **voriginal = fix->astore;
+
+  double **v = atom->v;
+  int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+
+  for (int i = 0; i < nlocal; i++)
+    if (mask[i] & groupbit) {
+      voriginal[i][0] = v[i][0];
+      voriginal[i][1] = v[i][1];
+      voriginal[i][2] = v[i][2];
+    } else
+      voriginal[i][0] = voriginal[i][1] = voriginal[i][2] = 0.0;
 }

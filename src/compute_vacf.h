@@ -33,9 +33,11 @@ class ComputeVACF : public Compute {
   void set_arrays(int) override;
 
  protected:
-  bigint nvacf;
+  bigint nvacf, nreset;
   char *id_fix;
   class FixStoreAtom *fix;
+
+  void reset_original() noexcept;
 };
 
 }    // namespace LAMMPS_NS
