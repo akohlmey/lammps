@@ -229,10 +229,13 @@ void FixVector::init()
   ncountmax = (finalstep - initialstep) / nevery + 1;
   if (ncountmax <= 0) ncountmax = 1;
   if (ncountmax > nmaxval) ncountmax = nmaxval;
-  if (values.size() == 1)
+  if (values.size() == 1) {
     memory->grow(vector, ncountmax, "vector:vector");
-  else
+    memset(vector, 0, ncountmax*sizeof(double));
+  } else {
     memory->grow(array, ncountmax, values.size(), "vector:array");
+    memset(array, 0, ncountmax*values.size()*sizeof(double));
+  }
 }
 
 /* ----------------------------------------------------------------------

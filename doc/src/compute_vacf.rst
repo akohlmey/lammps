@@ -8,10 +8,16 @@ Syntax
 
 .. code-block:: LAMMPS
 
-   compute ID group-ID vacf
+   compute ID group-ID vacf ... keyword args ...
 
 * ID, group-ID are documented in :doc:`compute <compute>` command
 * vacf = style name of this compute command
+* zero or more keyword/args pairs may be appended
+* keyword = *reset*
+
+  .. parsed-literal::
+
+     *reset* N = set the number of time steps N until the reference is reset
 
 Examples
 """"""""
@@ -58,6 +64,14 @@ following manner, using the :doc:`variable trap() <variable>` function:
    quantities will also have the same ID, and thus be initialized
    correctly with time=0 atom velocities from the restart file.
 
+.. versionadded:: TBD
+
+The optional *reset* keywords enables resetting the reference velocities
+on timesteps that are multiples of the argument value N.  This effectively
+resets the VACF calculation and should be used in combination with the
+*nmax* keyword of :doc:`fix vector <fix_vector>` so that the stored vector
+will be one full VACF chunk every N steps.
+
 Output info
 """""""""""
 
@@ -76,9 +90,11 @@ none
 Related commands
 """"""""""""""""
 
-:doc:`compute msd <compute_msd>`, :doc:`compute vacf/chunk <compute_vacf_chunk>`
+:doc:`fix vector <fix_vector>`,
+:doc:`compute msd <compute_msd>`,
+:doc:`compute vacf/chunk <compute_vacf_chunk>`
 
 Default
 """""""
 
-none
+*reset* = 0
