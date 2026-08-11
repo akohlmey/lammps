@@ -226,15 +226,21 @@ void FixVector::init()
 
   bigint finalstep = update->endstep / nevery * nevery;
   if (finalstep > update->endstep) finalstep -= nevery;
+  const bigint oldmax = (vector || array) ? ncountmax : 0;
   ncountmax = (finalstep - initialstep) / nevery + 1;
   if (ncountmax <= 0) ncountmax = 1;
   if (ncountmax > nmaxval) ncountmax = nmaxval;
+
+  // zero out only newly added storage: init() runs before every run and
+  // values stored in previous runs must be kept
+
   if (values.size() == 1) {
     memory->grow(vector, ncountmax, "vector:vector");
-    memset(vector, 0, ncountmax*sizeof(double));
+    if (ncountmax > oldmax) memset(&vector[oldmax], 0, (ncountmax-oldmax)*sizeof(double));
   } else {
     memory->grow(array, ncountmax, values.size(), "vector:array");
-    memset(array, 0, ncountmax*values.size()*sizeof(double));
+    if (ncountmax > oldmax)
+      memset(&array[oldmax][0], 0, (ncountmax-oldmax)*values.size()*sizeof(double));
   }
 }
 
