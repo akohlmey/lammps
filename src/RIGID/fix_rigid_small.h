@@ -62,8 +62,8 @@ class FixRigidSmall : public Fix {
   void zero_rotation() override;
   int modify_param(int, char **) override;
   void *extract(const char *, int &) override;
-  double extract_ke();
-  double extract_erotational();
+  virtual double extract_ke();
+  virtual double extract_erotational();
   double compute_scalar() override;
   double memory_usage() override;
 
