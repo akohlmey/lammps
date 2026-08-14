@@ -1095,6 +1095,7 @@ electronegativities
 electronegativity
 electroneutral
 electroneutrality
+electrostatically
 Eleftheriou
 ElementN
 elementset
@@ -1461,6 +1462,7 @@ Gezelter
 gfile
 gflag
 Gflop
+GFN
 gfortran
 ghostneigh
 ghostwhite
@@ -2202,6 +2204,7 @@ libqmmm
 librar
 libreax
 libs
+libxtb
 Lifshitz
 ligand
 lightblue
@@ -2416,6 +2419,7 @@ mc
 mcmoves
 McLachlan
 mcmoves
+mctc
 md
 mdf
 mdi
@@ -4623,6 +4627,8 @@ xs
 xsc
 xstk
 xsu
+xtb
+xTB
 xtc
 xu
 Xu
