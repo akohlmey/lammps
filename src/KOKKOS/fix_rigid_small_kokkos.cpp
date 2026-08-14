@@ -366,10 +366,10 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
     }
     copy_body_device();
     k_bodytag.modify_host();
-  k_bodyown.modify_host();
-  k_atom2body.modify_host();
-  k_xcmimage.modify_host();
-  k_displace.modify_host();
+    k_bodyown.modify_host();
+    k_atom2body.modify_host();
+    k_xcmimage.modify_host();
+    k_displace.modify_host();
     k_bodytag.template sync<DeviceType>();
     k_bodyown.template sync<DeviceType>();
     k_atom2body.template sync<DeviceType>();
