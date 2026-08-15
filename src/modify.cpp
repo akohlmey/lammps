@@ -1108,7 +1108,7 @@ Fix *Modify::get_fix_by_id(const std::string &id) const
    return vector of matching pointers
 ------------------------------------------------------------------------- */
 
-const std::vector<Fix *> Modify::get_fix_by_style(const std::string &style) const
+std::vector<Fix *> Modify::get_fix_by_style(const std::string &style) const
 {
   std::vector<Fix *> matches;
   if (style.empty()) return matches;
@@ -1389,7 +1389,7 @@ Compute *Modify::get_compute_by_id(const std::string &id) const
    return vector with matching pointers
 ------------------------------------------------------------------------- */
 
-const std::vector<Compute *> Modify::get_compute_by_style(const std::string &style) const
+std::vector<Compute *> Modify::get_compute_by_style(const std::string &style) const
 {
   std::vector<Compute *> matches;
   if (style.empty()) return matches;
