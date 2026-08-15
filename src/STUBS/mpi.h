@@ -31,7 +31,7 @@
 #define MPI_COMM_WORLD 0
 
 #define MPI_SUCCESS 0
-#define MPI_ERR_ARG -1
+#define MPI_ERR_ARG (-1)
 
 #define MPI_INT 1
 #define MPI_FLOAT 2
@@ -51,14 +51,14 @@
 #define MPI_PROD 7
 #define MPI_BOR 8
 
-#define MPI_UNDEFINED -1
-#define MPI_COMM_NULL -1
-#define MPI_GROUP_EMPTY -1
-#define MPI_GROUP_NULL -1
-#define MPI_PROC_NULL -2
+#define MPI_UNDEFINED (-1)
+#define MPI_COMM_NULL (-1)
+#define MPI_GROUP_EMPTY (-1)
+#define MPI_GROUP_NULL (-1)
+#define MPI_PROC_NULL (-2)
 #define MPI_REQUEST_NULL 0
 
-#define MPI_ANY_SOURCE -1
+#define MPI_ANY_SOURCE (-1)
 #define MPI_STATUS_IGNORE NULL
 #define MPI_STATUSES_IGNORE NULL
 

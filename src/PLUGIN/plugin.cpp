@@ -468,7 +468,7 @@ void plugin_clear(LAMMPS *lmp)
   std::lock_guard<std::mutex> guard(plugin_mutex);
   bool oldverbose = verbose;
   verbose = true;
-  while (pluginlist.size() > 0) {
+  while (!pluginlist.empty()) {
     auto p = pluginlist.begin();
     plugin_unload_locked(p->style, p->name, lmp);
   }
@@ -484,7 +484,7 @@ void plugin_finalize()
 {
 #if defined(LMP_PLUGIN)
   std::lock_guard<std::mutex> guard(plugin_mutex);
-  while (pluginlist.size() > 0) {
+  while (!pluginlist.empty()) {
     auto p = pluginlist.begin();
 
     void *handle = p->handle;
