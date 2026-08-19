@@ -542,6 +542,13 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
     if (atom->omega_flag)  extended_datamask |= OMEGA_MASK;
     if (atom->angmom_flag) extended_datamask |= ANGMOM_MASK;
     if (atom->mu_flag)     extended_datamask |= MU_MASK;
+
+    // The host setup (FixRigidSmall::setup -> set_xv/set_v) already wrote the
+    // per-atom omega/angmom/mu on the host; push them to the device so the first
+    // device kernel does not see a stale host claim and trip the concurrent-
+    // modification guard.
+    atomKK->modified(Host, extended_datamask);
+    atomKK->sync(execution_space, extended_datamask);
   }
 
   // size the body DualView and push host body[] to device
@@ -661,6 +668,13 @@ void FixRigidSmallKokkos<DeviceType>::pre_neighbor(){
       k_eflags.template sync<DeviceType>();
       if (orientflag) { k_orient.modify_host(); k_orient.template sync<DeviceType>(); }
       if (dorientflag) { k_dorient.modify_host(); k_dorient.template sync<DeviceType>(); }
+      // The legacy exchange/sort/borders left the atom-style extended-particle
+      // arrays (omega, angmom, mu) host-modified.  Retire that host claim now by
+      // pushing them to the device.  On a build with strict host/device memory
+      // separation (e.g. HIP without UVM), a subsequent modify_device() call for
+      // any of these arrays would trip the concurrent-modification guard if the
+      // host-modified flag is still set at that point.
+      if (extended_datamask) atomKK->sync(execution_space, extended_datamask);
     }
     refresh_atom_views();
     copy_body_device();  // push host body[] → d_body
@@ -1241,6 +1255,7 @@ void FixRigidSmallKokkos<DeviceType>::set_xv_kokkos(int setxflag)
   this->yz = domain->yz;
 
   atomKK->sync(execution_space, datamask_read);
+  if (extended) atomKK->sync(execution_space, extended_datamask);
   d_x = atomKK->k_x.view<DeviceType>();
   d_v = atomKK->k_v.view<DeviceType>();
   d_f = atomKK->k_f.view<DeviceType>();
