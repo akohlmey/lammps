@@ -1847,6 +1847,12 @@ void CommKokkos::grow_send_kokkos(int n, int flag, ExecutionSpace space)
                         atomKK->avecKK->size_border + atomKK->avecKK->size_velocity);
     else
       k_buf_send.resize(maxsend_border,atomKK->avecKK->size_border);
+
+    // the claim above only steers the resize to the side whose contents have
+    // to survive; after it this is a scratch buffer again, filled through raw
+    // pointers on whichever side does the packing, so drop the claim rather
+    // than leave it standing forever
+    k_buf_send.clear_sync_state();
   } else {
     if (ghost_velocity)
       MemoryKokkos::realloc_kokkos(k_buf_send,"comm:k_buf_send",maxsend_border,
