@@ -156,7 +156,12 @@ void FixRigidSmallKokkos<DeviceType>::init()
   // paired with a host sort with no warning; extended-particle rigid bodies hit
   // the bonus-data case routinely.  Follow the sort onto the host when that is
   // going to happen, and equally follow a forced host exchange onto the host
-  // sort.  The all-host combination is a supported path: the tied DualViews are
+  // sort.  exchange_comm_on_host ("comm host") also routes through the
+  // exchange_device<LMPHostType> Kokkos path, which leaves atom-vec arrays
+  // host-modified; if the device sort then runs on a stale snapshot the
+  // resulting atom ordering differs from what a true device exchange would give,
+  // producing a trajectory that deviates from the correct physics.
+  // The all-host combination is a supported path: the tied DualViews are
   // flushed in pre_exchange() and pushed back in pre_neighbor().
   if (std::is_same<DeviceType,LMPDeviceType>::value) {
     bool sort_on_host = lmp->kokkos->sort_legacy || atomKK->hybrid_flag ||
@@ -164,7 +169,8 @@ void FixRigidSmallKokkos<DeviceType>::init()
     for (int i = 0; i < atom->nextra_grow; i++)
       if (!modify->fix[atom->extra_grow[i]]->sort_device) sort_on_host = true;
 
-    if (sort_on_host || lmp->kokkos->exchange_comm_legacy) {
+    if (sort_on_host || lmp->kokkos->exchange_comm_legacy ||
+        lmp->kokkos->exchange_comm_on_host) {
       exchange_comm_device = 0;
       sort_device = 0;
     }
@@ -283,7 +289,8 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
   // cannot protect the setup-time sort, which Verlet::setup() has already run by
   // the time we get here; that is why the decision is made in init().
   if (std::is_same<DeviceType,LMPDeviceType>::value) {
-    if (lmp->kokkos->exchange_comm_legacy || lmp->kokkos->sort_legacy) {
+    if (lmp->kokkos->exchange_comm_legacy || lmp->kokkos->exchange_comm_on_host ||
+        lmp->kokkos->sort_legacy) {
       exchange_comm_device = 0;
       sort_device = 0;
     }
@@ -584,7 +591,8 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
     // both on the same side for the run, following whichever one has been forced
     // onto the host.  forward/reverse comm above are dispatched per call and are
     // unaffected by this.
-    if (lmp->kokkos->exchange_comm_legacy || lmp->kokkos->sort_legacy) {
+    if (lmp->kokkos->exchange_comm_legacy || lmp->kokkos->exchange_comm_on_host ||
+        lmp->kokkos->sort_legacy) {
       exchange_comm_device = 0;
       sort_device = 0;
     }
