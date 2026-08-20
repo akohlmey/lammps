@@ -221,9 +221,14 @@ void NPairKokkos<DeviceType,HALF,NEWTON,GHOST,TRI,SIZE>::build(NeighList *list_)
     else
       atomKK->sync(Device,X_MASK|RADIUS_MASK|TYPE_MASK|TAG_MASK|SPECIAL_MASK);
   } else {
-    if (exclude)
-      atomKK->sync(Device,X_MASK|RADIUS_MASK|TYPE_MASK|MASK_MASK);
-    else
+    if (exclude) {
+      uint64_t mask = X_MASK|RADIUS_MASK|TYPE_MASK|MASK_MASK;
+      if (nex_mol) {
+        atomKK->k_molecule.modify_host();
+        mask |= MOLECULE_MASK;
+      }
+      atomKK->sync(Device,mask);
+    } else
       atomKK->sync(Device,X_MASK|RADIUS_MASK|TYPE_MASK);
   }
 
