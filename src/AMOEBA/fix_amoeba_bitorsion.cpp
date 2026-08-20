@@ -30,6 +30,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <memory>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -730,7 +731,7 @@ double FixAmoebaBiTorsion::compute_scalar()
 void FixAmoebaBiTorsion::read_grid_data(char *bitorsion_file)
 {
   SafeFilePtr fp;
-  TextFileReader *reader = nullptr;
+  std::unique_ptr<TextFileReader> reader;
 
   if (me == 0) {
     fp = utils::open_potential(bitorsion_file, lmp, nullptr);
@@ -740,7 +741,7 @@ void FixAmoebaBiTorsion::read_grid_data(char *bitorsion_file)
 
     // skip title line, then read number of types from "N bitorsion types" line
 
-    reader = new TextFileReader(fp, "fix amoeba/bitorsion");
+    reader = std::make_unique<TextFileReader>(fp, "fix amoeba/bitorsion");
     try {
       reader->skip_line();
       nbitypes = reader->next_values(1).next_int();
@@ -812,8 +813,6 @@ void FixAmoebaBiTorsion::read_grid_data(char *bitorsion_file)
     MPI_Bcast(tty[itype],ny,MPI_DOUBLE,0,world);
     MPI_Bcast(tbf[itype],nx*ny,MPI_DOUBLE,0,world);
   }
-
-  delete reader;
 }
 
 /* ----------------------------------------------------------------------
