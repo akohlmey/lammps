@@ -1076,6 +1076,9 @@ void Modify::modify_fix(int narg, char **arg)
 
 void Modify::delete_fix(const std::string &id)
 {
+  // no more fixes, nothing to do
+  if (!nfix) return;
+
   int ifix = find_fix(id);
   if (ifix < 0) error->all(FLERR, Error::NOLASTLINE, "Could not find fix ID {} to delete", id);
   delete_fix(ifix);
@@ -1083,7 +1086,8 @@ void Modify::delete_fix(const std::string &id)
 
 void Modify::delete_fix(int ifix)
 {
-  if ((ifix < 0) || (ifix >= nfix)) return;
+  // don't do anything if out of range or no fixes left
+  if (!nfix || (ifix < 0) || (ifix >= nfix)) return;
 
   // delete instance and move other Fixes and fmask down in list one slot
 
@@ -1127,7 +1131,7 @@ Fix *Modify::get_fix_by_id(const std::string &id) const
    return vector of matching pointers
 ------------------------------------------------------------------------- */
 
-const std::vector<Fix *> Modify::get_fix_by_style(const std::string &style) const
+std::vector<Fix *> Modify::get_fix_by_style(const std::string &style) const
 {
   std::vector<Fix *> matches;
   if (style.empty()) return matches;
@@ -1359,6 +1363,9 @@ void Modify::modify_compute(int narg, char **arg)
 
 void Modify::delete_compute(const std::string &id)
 {
+  // no more computes, nothing to do
+  if (!ncompute) return;
+
   int icompute = find_compute(id);
   if (icompute < 0)
     error->all(FLERR, Error::NOLASTLINE, "Could not find compute ID {} to delete", id);
@@ -1367,7 +1374,8 @@ void Modify::delete_compute(const std::string &id)
 
 void Modify::delete_compute(int icompute)
 {
-  if ((icompute < 0) || (icompute >= ncompute)) return;
+  // don't do anything if out of range or no computes left
+  if (!ncompute || (icompute < 0) || (icompute >= ncompute)) return;
 
   // delete and move other Computes down in list one slot
 
@@ -1408,7 +1416,7 @@ Compute *Modify::get_compute_by_id(const std::string &id) const
    return vector with matching pointers
 ------------------------------------------------------------------------- */
 
-const std::vector<Compute *> Modify::get_compute_by_style(const std::string &style) const
+std::vector<Compute *> Modify::get_compute_by_style(const std::string &style) const
 {
   std::vector<Compute *> matches;
   if (style.empty()) return matches;

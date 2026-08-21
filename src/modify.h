@@ -116,7 +116,7 @@ class Modify : protected Pointers {
   // new API
   [[nodiscard]] Fix *get_fix_by_id(const std::string &) const;
   [[nodiscard]] Fix *get_fix_by_index(int idx) const { return ((idx >= 0) && (idx < nfix)) ? fix[idx] : nullptr; }
-  [[nodiscard]] const std::vector<Fix *> get_fix_by_style(const std::string &) const;
+  [[nodiscard]] std::vector<Fix *> get_fix_by_style(const std::string &) const;
   const std::vector<Fix *> &get_fix_list();
   int get_fix_mask(Fix *ifix) const
   {
@@ -124,6 +124,18 @@ class Modify : protected Pointers {
       if (fix[i] == ifix) return fmask[i];
     }
     return 0;
+  }
+  void set_fix_mask(Fix *ifix, int flags)
+  {
+    for (int i = 0; i < nfix; ++i) {
+      if (fix[i] == ifix) fmask[i] |= flags;
+    }
+  }
+  void clear_fix_mask(Fix *ifix, int flags)
+  {
+    for (int i = 0; i < nfix; ++i) {
+      if (fix[i] == ifix) fmask[i] &= ~flags;
+    }
   }
 
   Compute *add_compute(int, char **, int trysuffix = 1);
@@ -140,7 +152,7 @@ class Modify : protected Pointers {
   {
     return ((idx >= 0) && (idx < ncompute)) ? compute[idx] : nullptr;
   }
-  [[nodiscard]] const std::vector<Compute *> get_compute_by_style(const std::string &) const;
+  [[nodiscard]] std::vector<Compute *> get_compute_by_style(const std::string &) const;
   const std::vector<Compute *> &get_compute_list();
 
   void clearstep_compute();
