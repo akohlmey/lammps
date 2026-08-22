@@ -1204,6 +1204,20 @@ def compute_missing_styles(build_config, universe):
             or ('nve' not in available.get('fix', set())):
         print("WARNING: cannot parse the style lists from the help output of the binary, "
               "not screening the input scripts for missing styles")
+        # report why the "-h" run failed or what was found, to make the cause diagnosable
+        returncode = build_config.get('help_returncode')
+        if returncode is not None and returncode != 0:
+            print(f"         the \"-h\" run exited with status {returncode}")
+        stderr = (build_config.get('help_stderr') or '').strip()
+        if stderr:
+            print("         stderr of the \"-h\" run (first lines):")
+            for line in stderr.split('\n')[:5]:
+                print("           " + line)
+        if available:
+            found = ', '.join(f"{cat}: {len(names)}" for cat, names in sorted(available.items()))
+            print(f"         style categories found: {found}")
+        else:
+            print("         no style lists found in the help output (format changed?)")
         return {}
     missing = {}
     for category, names in universe.items():
@@ -1905,6 +1919,9 @@ def get_lammps_build_configuration(lmp_binary):
     cmd_str = lmp_binary + " -h"
     p = subprocess.run(cmd_str, shell=True, text=True, capture_output=True)
     output = p.stdout.split('\n')
+    # the header that starts the style lists; older versions print "List of individual
+    # style options included in ...", newer ones "Lists of individual styles included in ..."
+    style_header = re.compile(r'^Lists? of individual styles?\b.*included in this LAMMPS executable')
     packages = ""
     reading = False
     operating_system = ""
@@ -1917,7 +1934,7 @@ def get_lammps_build_configuration(lmp_binary):
             if line == "Installed packages:":
                 reading = True
                 n = row
-            if "List of individual style options" in line:
+            if style_header.match(line):
                 reading = False
             if reading == True and row > n:
                 packages += line.strip() + " "
@@ -1947,13 +1964,14 @@ def get_lammps_build_configuration(lmp_binary):
 
     # the styles included in the binary, as listed in the "List of individual style
     # options" part of the help output, e.g. styles['pair'] = {'lj/cut', 'eam', ...};
-    # section headers look like "* Pair styles:" ("* Command styles" has no colon)
+    # section headers look like "* Pair styles:" ("* Command styles" has no colon);
+    # a trailing "*" marks a style provided by a plugin and is not part of the name
     styles = {}
     category = None
     reading = False
     section = re.compile(r'^\* (\S+) styles:?\s*$')
     for line in output:
-        if "List of individual style options" in line:
+        if style_header.match(line):
             reading = True
             continue
         if not reading:
@@ -1963,7 +1981,7 @@ def get_lammps_build_configuration(lmp_binary):
             category = match.group(1).lower()
             styles[category] = set()
         elif category is not None:
-            styles[category].update(line.split())
+            styles[category].update(name.rstrip('*') for name in line.split())
 
     installed_packages = packages.split(" ")
     build_config = {
@@ -1974,6 +1992,8 @@ def get_lammps_build_configuration(lmp_binary):
         'compiler_full': compiler_full,
         'compile_flags': compile_flags,
         'styles': styles,
+        'help_returncode': p.returncode,
+        'help_stderr': p.stderr,
     }
 
     return build_config
