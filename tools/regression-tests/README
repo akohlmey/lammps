@@ -367,3 +367,12 @@ An example of the list of input scripts in a text file `input_list.txt`
     /home/codes/lammps/examples/PACKAGES/tally/in.pe
     /home/codes/lammps/examples/PACKAGES/tally/in.force
 
+
+Creating compatible log files
+-----------------------------
+
+The script `create_example_logs.sh` can be used to create or
+recreate compatible example logs from all files in the current
+folder that start with `in.` or from a list given on the
+command line. The first argument is the LAMMPS executable
+which is being launced using 1 and 4 MPI tasks.
