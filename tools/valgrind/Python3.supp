@@ -417,3 +417,18 @@
    ...
    obj:*
 }
+
+# ---------------------------------------------------------------------------
+# CPython keeps the locks of buffered file objects (io.BufferedReader/-Writer)
+# in a small free list that is not returned to the OS at interpreter shutdown,
+# so PyThread_allocate_lock blocks show up as "possibly lost".  Internal to
+# CPython, outside of LAMMPS.
+# ---------------------------------------------------------------------------
+{
+   CPython_bufferedio_lock
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   fun:PyThread_allocate_lock
+   ...
+}
