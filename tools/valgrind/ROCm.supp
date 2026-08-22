@@ -1,0 +1,22 @@
+{
+   ROCm_device_init0
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   fun:add_device_ids_to_mapped_array
+   ...
+   fun:init
+   ...
+   obj:*
+}
+{
+   ROCm_device_init1
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   fun:add_device_ids_to_mapped_array
+   ...
+   fun:alloc
+   ...
+   obj:*
+}

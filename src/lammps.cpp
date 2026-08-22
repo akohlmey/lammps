@@ -17,6 +17,7 @@
 #include "accelerator_kokkos.h"
 #include "accelerator_omp.h"
 #include "atom.h"
+#include "atom_vec_body.h"
 #include "citeme.h"
 #include "comm.h"
 #include "comm_brick.h"
@@ -1169,6 +1170,10 @@ void _noopt LAMMPS::help()
 
   fprintf(fp,"* Atom styles:\n");
   print_styles(fp, Atom::avec_styles(), width);
+  fprintf(fp,"\n\n");
+
+  fprintf(fp,"* Body styles:\n");
+  print_styles(fp, AtomVecBody::body_styles(), width);
   fprintf(fp,"\n\n");
 
   fprintf(fp,"* Integrate styles:\n");
