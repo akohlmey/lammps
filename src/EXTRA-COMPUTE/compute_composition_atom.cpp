@@ -147,6 +147,10 @@ void ComputeCompositionAtom::compute_peratom()
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
 
+  // zero the accumulators; atoms not in the group report only zeros
+
+  memset(&result[0][0], 0, (size_t) nmax * size_peratom_cols * sizeof(double));
+
   // compute properties for each atom in group
   // use full neighbor list to count atoms less than cutoff
 
@@ -198,7 +202,7 @@ void ComputeCompositionAtom::compute_peratom()
       // local comp fractions per element
 
       double lfac = 1.0 / count;
-      for (int n = 1; n < size_peratom_cols; n++) result[i][n + 1] *= lfac;
+      for (int n = 1; n < size_peratom_cols; n++) result[i][n] *= lfac;
     }
   }
 }
@@ -209,6 +213,6 @@ void ComputeCompositionAtom::compute_peratom()
 
 double ComputeCompositionAtom::memory_usage()
 {
-  double bytes = (double) 2 * nmax * sizeof(double);
+  double bytes = (double) nmax * size_peratom_cols * sizeof(double);
   return bytes;
 }

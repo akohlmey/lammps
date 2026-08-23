@@ -1090,11 +1090,12 @@ void Output::create_thermo(int narg, char **arg)
   if (thermo->modified && comm->me == 0)
     error->warning(FLERR,"New thermo_style command, previous thermo_modify settings will be lost");
 
-  // set thermo = nullptr in case new Thermo throws an error
+  // create the new instance first, so that the previous one stays valid
+  // when the Thermo constructor throws an error (e.g. in library mode)
 
+  auto *newthermo = new Thermo(lmp,narg,arg);
   delete thermo;
-  thermo = nullptr;
-  thermo = new Thermo(lmp,narg,arg);
+  thermo = newthermo;
 }
 
 /* ----------------------------------------------------------------------

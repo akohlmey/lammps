@@ -155,6 +155,10 @@ void ComputeAveSphereAtom::compute_peratom()
 
   neighbor->build_one(list);
 
+  // zero the result array; atoms not in the group report only zeros
+
+  memset(&result[0][0], 0, (size_t) nmax * 2 * sizeof(double));
+
   inum = list->inum;
   ilist = list->ilist;
   numneigh = list->numneigh;
