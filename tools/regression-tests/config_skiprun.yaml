@@ -37,7 +37,7 @@
   # - serial only (in.pod.compute)
   skip:
     [
-      in.*pod.Inp,
+      in.*pod.InP,
       in.disp,
       in.disp2,
       in.dos,

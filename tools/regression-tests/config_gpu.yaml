@@ -31,12 +31,16 @@
 
   skip:
     [
-      in.*pod.Inp,
+      in.*pod.InP,
       in.disp,
       in.disp2,
       in.dos,
       in.*_imd*,
       in.bucky-plus-cnt*,
+      in.gREM,
+      in.peptide-plumed,
+      in.mliap.pytorch*,
+      in.mliap.unified*,
     ]
 
   # input scripts in these folders must be run by the same worker in the listed

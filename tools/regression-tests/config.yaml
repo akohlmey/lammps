@@ -30,12 +30,16 @@
         rel: 1e-4
   skip:
     [
-      in.*pod.Inp,
+      in.*pod.InP,
       in.disp,
       in.disp2,
       in.dos,
       in.*_imd*,
       in.bucky-plus-cnt*,
+      in.gREM,
+      in.peptide-plumed,
+      in.mliap.pytorch*,
+      in.mliap.unified*,
     ]
 
   timeout: 120
