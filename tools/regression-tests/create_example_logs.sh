@@ -16,6 +16,8 @@ inputs=''
 if [ "$#" -lt 1 ]
 then \
     n=0
+    # remove backup files
+    rm -vf ${pattern}~
     for arg in ${pattern}
     do \
         [ "${arg}" = "${pattern}" ] && break

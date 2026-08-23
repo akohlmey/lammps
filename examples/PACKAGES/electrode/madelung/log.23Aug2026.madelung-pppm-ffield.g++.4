@@ -1,12 +1,14 @@
-LAMMPS (3 Nov 2022)
+LAMMPS (4 Jul 2026 - Development - patch_4Jul2026-854-g51def89584-modified)
+  using 1 OpenMP thread(s) per MPI task
 boundary p p p
-kspace_style ewald/electrode 1.0e-8
+kspace_style pppm/electrode 1.0e-10
 
 include "settings.mod" # styles, computes, groups and fixes
 # set boundary in main script because ffield is periodic
 units real
 # distribute electrode atoms among all processors:
 if "$(extract_setting(world_size) % 2) == 0" then "processors * * 2"
+processors * * 2
 
 atom_style full
 pair_style lj/cut/coul/long 12
@@ -14,7 +16,7 @@ pair_style lj/cut/coul/long 12
 read_data "data.au-elyt"
 Reading data file ...
   orthogonal box = (0 0 -10) to (1 1 10)
-  1 by 1 by 1 MPI processor grid
+  2 by 1 by 2 MPI processor grid
   reading atoms ...
   4 atoms
 Finding 1-2 1-3 1-4 neighbors ...
@@ -24,8 +26,8 @@ Finding 1-2 1-3 1-4 neighbors ...
      0 = max # of 1-3 neighbors
      0 = max # of 1-4 neighbors
      1 = max # of special neighbors
-  special bonds CPU = 0.001 seconds
-  read_data CPU = 0.002 seconds
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.003 seconds
 
 group bot type 1
 1 atoms in group bot
@@ -40,7 +42,11 @@ compute qtop top reduce sum v_q
 compute compute_pe all pe
 variable vpe equal c_compute_pe
 variable charge equal c_qtop
-fix fxprint all print 1 "${vpe}, ${charge}" file "out.csv"
+compute press all pressure NULL virial
+variable p3 equal c_press[3]
+fix fxprint all print 1 "${vpe}, ${charge}, ${p3}" file "out.csv"
+
+dump dump_forces all custom 1 forces.lammpstrj id fx fy fz
 
 thermo_style custom step pe c_qbot c_qtop
 fix conp bot electrode/conp 0 2 couple top 1 symm on ffield yes write_inv inv.csv write_vec vec.csv
@@ -52,6 +58,17 @@ CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
 
 Your simulation uses code contributions which should be cited:
 
+- kspace_style pppm/electrode command:
+
+@article{Ahrens2021,
+author = {Ahrens-Iwers, Ludwig J.V. and Mei{\ss}ner, Robert H.},
+doi = {10.1063/5.0063381},
+title = {{Constant potential simulations on a mesh}},
+journal = {Journal of Chemical Physics},
+year = {2021}
+volume = {155},
+pages = {104104},
+}
 - fix electrode command:
 
 @article{Ahrens2022
@@ -65,15 +82,18 @@ pages = {084801},
 }
 CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
 
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
-Ewald/electrode initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-WARNING: For better accuracy use 'pair_modify table 0' (src/kspace.cpp:365)
-  G vector (1/distance) = 0.32261103
-  estimated absolute RMS force accuracy = 9.9990544e-06
-  estimated relative force accuracy = 3.0111855e-08
-  KSpace vectors: actual max1d max3d = 10 8 2456
-                  kxmax kymax kzmax  = 1 1 8
+WARNING: No fixes with time integration, atoms won't move
+For more information see https://docs.lammps.org/err0028 (src/verlet.cpp:60)
+PPPM/electrode initialization ...
+  using 12-bit tables for long-range coulomb
+WARNING: For better accuracy use 'pair_modify table 0' (src/kspace.cpp:368)
+  G vector (1/distance) = 0.37297537
+  grid = 12 12 90
+  stencil order = 5
+  estimated absolute RMS force accuracy = 9.4312758e-06
+  estimated relative force accuracy = 2.8402007e-08
+  using double precision FFTW3
+  3d grid and FFT values/proc = 84665 3312
 Generated 3 of 3 mixed pair_coeff terms from geometric mixing rule
 Neighbor list info ...
   update: every = 1 steps, delay = 0 steps, check = yes
@@ -92,14 +112,14 @@ Neighbor list info ...
       pair build: copy
       stencil: none
       bin: none
-WARNING: Proc sub-domain size < neighbor skin, could lead to lost atoms (src/domain.cpp:966)
-138.299024320284, 0.287160231879378
-Per MPI rank memory allocation (min/avg/max) = 21.19 | 21.19 | 21.19 Mbytes
+WARNING: Proc sub-domain size < neighbor skin, could lead to lost atoms (src/domain.cpp:1205)
+138.298985613078, 0.287160247352283, -1820887.29165084
+Per MPI rank memory allocation (min/avg/max) = 11.48 | 11.48 | 11.49 Mbytes
    Step         PotEng         c_qbot         c_qtop    
-         0   138.29902     -0.28716023     0.28716023   
-Loop time of 1.804e-06 on 1 procs for 0 steps with 4 atoms
+         0   138.29899     -0.28716025     0.28716025   
+Loop time of 1.83875e-06 on 4 procs for 0 steps with 4 atoms
 
-55.4% CPU use with 1 MPI tasks x no OpenMP threads
+27.2% CPU use with 4 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
@@ -111,14 +131,14 @@ Neigh   | 0          | 0          | 0          |   0.0 |  0.00
 Comm    | 0          | 0          | 0          |   0.0 |  0.00
 Output  | 0          | 0          | 0          |   0.0 |  0.00
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Other   |            | 1.804e-06  |            |       |100.00
+Other   |            | 1.839e-06  |            |       |100.00
 
-Nlocal:              4 ave           4 max           4 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Nghost:          10796 ave       10796 max       10796 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Neighs:           4790 ave        4790 max        4790 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Nlocal:              1 ave           2 max           0 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Nghost:           6959 ave        6960 max        6958 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Neighs:         1197.5 ave        3569 max           0 min
+Histogram: 2 0 0 1 0 0 0 0 0 1
 
 Total # of neighbors = 4790
 Ave neighs/atom = 1197.5

@@ -60,7 +60,6 @@
       in.compute,
       in.mliap.*.compute,
       in.reaxff.tatb*,
-      in.bpm.peri.*,
       in.elastic,
       in.ljcov,
       in.pod.compute,

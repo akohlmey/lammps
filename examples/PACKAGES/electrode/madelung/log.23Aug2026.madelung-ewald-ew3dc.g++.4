@@ -1,13 +1,21 @@
-LAMMPS (3 Nov 2022)
+LAMMPS (4 Jul 2026 - Development - patch_4Jul2026-854-g51def89584-modified)
+  using 1 OpenMP thread(s) per MPI task
 boundary p p f
 kspace_style ewald/electrode 1.0e-8
 kspace_modify slab 8.0 # ew3dc
+Updated KSpace settings:
+  KSpace computation is turned:    ON
+  Use MPI collective operations:   OFF
+  Use MPI non-blocking operations: OFF
+  Gewald is determined automatically
+  Slab volfactor manually set to:    8
 
 include "settings.mod" # styles, computes, groups and fixes
 # set boundary in main script because ffield is periodic
 units real
 # distribute electrode atoms among all processors:
 if "$(extract_setting(world_size) % 2) == 0" then "processors * * 2"
+processors * * 2
 
 atom_style full
 pair_style lj/cut/coul/long 12
@@ -15,7 +23,7 @@ pair_style lj/cut/coul/long 12
 read_data "data.au-elyt"
 Reading data file ...
   orthogonal box = (0 0 -10) to (1 1 10)
-  1 by 1 by 1 MPI processor grid
+  2 by 1 by 2 MPI processor grid
   reading atoms ...
   4 atoms
 Finding 1-2 1-3 1-4 neighbors ...
@@ -25,8 +33,8 @@ Finding 1-2 1-3 1-4 neighbors ...
      0 = max # of 1-3 neighbors
      0 = max # of 1-4 neighbors
      1 = max # of special neighbors
-  special bonds CPU = 0.001 seconds
-  read_data CPU = 0.003 seconds
+  special bonds CPU = 0.000 seconds
+  read_data CPU = 0.002 seconds
 
 group bot type 1
 1 atoms in group bot
@@ -41,10 +49,14 @@ compute qtop top reduce sum v_q
 compute compute_pe all pe
 variable vpe equal c_compute_pe
 variable charge equal c_qtop
-fix fxprint all print 1 "${vpe}, ${charge}" file "out.csv"
+compute press all pressure NULL virial
+variable p3 equal c_press[3]
+fix fxprint all print 1 "${vpe}, ${charge}, ${p3}" file "out.csv"
+
+dump dump_forces all custom 1 forces.lammpstrj id fx fy fz
 
 thermo_style custom step pe c_qbot c_qtop
-fix conp bot electrode/conp 0 2 couple top 1 symm on algo cg 1e-6
+fix conp bot electrode/conp 0 2 couple top 1 symm on write_inv inv.csv write_vec vec.csv
 2 atoms in group conp_group
 
 run 0
@@ -66,10 +78,11 @@ pages = {084801},
 }
 CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
 
-WARNING: No fixes with time integration, atoms won't move (src/verlet.cpp:60)
+WARNING: No fixes with time integration, atoms won't move
+For more information see https://docs.lammps.org/err0028 (src/verlet.cpp:60)
 Ewald/electrode initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
-WARNING: For better accuracy use 'pair_modify table 0' (src/kspace.cpp:365)
+  using 12-bit tables for long-range coulomb
+WARNING: For better accuracy use 'pair_modify table 0' (src/kspace.cpp:368)
   G vector (1/distance) = 0.32261103
   estimated absolute RMS force accuracy = 3.8272011e-06
   estimated relative force accuracy = 1.1525502e-08
@@ -93,14 +106,14 @@ Neighbor list info ...
       pair build: copy
       stencil: none
       bin: none
-WARNING: Proc sub-domain size < neighbor skin, could lead to lost atoms (src/domain.cpp:966)
-139.943964815502, 0.279214485147241
-Per MPI rank memory allocation (min/avg/max) = 144.1 | 144.1 | 144.1 Mbytes
+WARNING: Proc sub-domain size < neighbor skin, could lead to lost atoms (src/domain.cpp:1205)
+139.94395235744, 0.279214485147224, -1812901.5428048
+Per MPI rank memory allocation (min/avg/max) = 144.3 | 144.3 | 144.3 Mbytes
    Step         PotEng         c_qbot         c_qtop    
-         0   139.94396     -0.27921449     0.27921449   
-Loop time of 1.092e-06 on 1 procs for 0 steps with 4 atoms
+         0   139.94395     -0.27921449     0.27921449   
+Loop time of 1.32525e-06 on 4 procs for 0 steps with 4 atoms
 
-91.6% CPU use with 1 MPI tasks x no OpenMP threads
+37.7% CPU use with 4 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
@@ -112,14 +125,14 @@ Neigh   | 0          | 0          | 0          |   0.0 |  0.00
 Comm    | 0          | 0          | 0          |   0.0 |  0.00
 Output  | 0          | 0          | 0          |   0.0 |  0.00
 Modify  | 0          | 0          | 0          |   0.0 |  0.00
-Other   |            | 1.092e-06  |            |       |100.00
+Other   |            | 1.325e-06  |            |       |100.00
 
-Nlocal:              4 ave           4 max           4 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Nghost:           3596 ave        3596 max        3596 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
-Neighs:           4790 ave        4790 max        4790 min
-Histogram: 1 0 0 0 0 0 0 0 0 0
+Nlocal:              1 ave           2 max           0 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Nghost:           3479 ave        3480 max        3478 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Neighs:         1197.5 ave        3569 max           0 min
+Histogram: 2 0 0 1 0 0 0 0 0 1
 
 Total # of neighbors = 4790
 Ave neighs/atom = 1197.5
@@ -127,5 +140,4 @@ Ave special neighs/atom = 0
 Neighbor list builds = 0
 Dangerous builds = 0
 
-Average conjugate gradient steps: 1
 Total wall time: 0:00:00
