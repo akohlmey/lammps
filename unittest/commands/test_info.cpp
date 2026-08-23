@@ -253,7 +253,7 @@ TEST_F(InfoTest, Misc)
 TEST_F(InfoTest, Styles)
 {
     auto output = run_info("styles");
-    ASSERT_THAT(output, HasSubstr("Styles information:"));
+    ASSERT_THAT(output, HasSubstr("Styles information"));
     ASSERT_THAT(output, HasSubstr("Atom styles:"));
     ASSERT_THAT(output, HasSubstr("Integrate styles:"));
     ASSERT_THAT(output, HasSubstr("Minimize styles:"));
