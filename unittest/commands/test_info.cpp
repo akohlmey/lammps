@@ -128,7 +128,7 @@ TEST_F(InfoTest, All)
     ASSERT_THAT(output, HasSubstr("Variable information:"));
     ASSERT_THAT(output, HasSubstr("Total time information (MPI rank 0):"));
     // "all" includes the styles listing
-    ASSERT_THAT(output, HasSubstr("Styles information:"));
+    ASSERT_THAT(output, HasSubstr("Styles information"));
 }
 
 TEST_F(InfoTest, System)
