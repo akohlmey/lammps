@@ -462,6 +462,8 @@ double ModifyKokkos::energy_couple()
 {
   double energy = 0.0;
   for (int i = 0; i < n_energy_couple; i++) {
+    atomKK->sync(fix[list_energy_couple[i]]->execution_space,
+                 fix[list_energy_couple[i]]->datamask_read);
     int prev_auto_sync = lmp->kokkos->auto_sync;
     if (!fix[list_energy_couple[i]]->kokkosable) lmp->kokkos->auto_sync = 1;
     energy += fix[list_energy_couple[i]]->compute_scalar();
@@ -482,6 +484,8 @@ double ModifyKokkos::energy_global()
 {
   double energy = 0.0;
   for (int i = 0; i < n_energy_global; i++) {
+    atomKK->sync(fix[list_energy_global[i]]->execution_space,
+                 fix[list_energy_global[i]]->datamask_read);
     int prev_auto_sync = lmp->kokkos->auto_sync;
     if (!fix[list_energy_global[i]]->kokkosable) lmp->kokkos->auto_sync = 1;
     energy += fix[list_energy_global[i]]->compute_scalar();

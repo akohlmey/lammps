@@ -152,6 +152,15 @@ FixShakeKokkos<DeviceType>::~FixShakeKokkos()
 template<class DeviceType>
 void FixShakeKokkos<DeviceType>::init()
 {
+  // FixShake::init() reads shake_flag/shake_atom/shake_type through the
+  // plain host pointers to recompute angle_distance[]; comm->exchange()
+  // updates the device copies only, so the host side must be brought
+  // current before FixShake::init() can see this run's cluster data
+
+  k_shake_flag.sync_host();
+  k_shake_atom.sync_host();
+  k_shake_type.sync_host();
+
   FixShake::init();
 
   if (utils::strmatch(update->integrate_style,"^respa"))
@@ -1992,6 +2001,13 @@ int FixShakeKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_int_1
                                                          DAT::tdual_double_1d &k_buf,
                                                          int pbc_flag, int* pbc)
 {
+  // the host variant below syncs before it reads and claims after it writes;
+  // this one has to do the same, or the buffer is packed from whichever side
+  // the device copy last held and the ghosts it unpacks are discarded by the
+  // next sync
+
+  k_xshake.sync<DeviceType>();
+
   d_sendlist = k_sendlist.view<DeviceType>();
   d_buf = k_buf.view<DeviceType>();
 
@@ -2053,6 +2069,8 @@ void FixShakeKokkos<DeviceType>::unpack_forward_comm_kokkos(int n, int first_in,
   first = first_in;
   d_buf = buf.view<DeviceType>();
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixShakeUnpackForwardComm>(0,n),*this);
+
+  k_xshake.modify<DeviceType>();
 }
 
 template<class DeviceType>
