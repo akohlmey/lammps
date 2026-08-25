@@ -150,11 +150,13 @@ void FixEfieldKokkos<DeviceType>::post_force(int vflag)
 
   } else {
 
-    atomKK->sync(Host,ALL_MASK); // this can be removed when variable class is ported to Kokkos
-
     FixEfield::update_efield_variables();
 
-    if (varflag == ATOM) {  // this can be removed when variable class is ported to Kokkos
+    // atom-style variables are evaluated on the host, so the result has to be
+    // copied to the device for the kernel below.  this is a real copy, not a
+    // stale flag: it can only go away if variables are evaluated on the device.
+
+    if (varflag == ATOM) {
       k_efield.modify_host();
       k_efield.sync<DeviceType>();
     }

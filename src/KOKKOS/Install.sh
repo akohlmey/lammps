@@ -610,6 +610,8 @@ action sna_kokkos.h sna.h
 action third_order_kokkos.cpp dynamical_matrix.cpp
 action third_order_kokkos.h dynamical_matrix.h
 action transpose_helper_kokkos.h
+action variable_kokkos.cpp
+action variable_kokkos.h
 action verlet_kokkos.cpp
 action verlet_kokkos.h
 

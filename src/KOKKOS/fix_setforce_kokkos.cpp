@@ -114,8 +114,6 @@ void FixSetForceKokkos<DeviceType>::post_force(int /*vflag*/)
 
   } else {
 
-    atomKK->sync(Host,ALL_MASK); // this can be removed when variable class is ported to Kokkos
-
     modify->clearstep_compute();
 
     if (xstyle == EQUAL) xvalue = input->variable->compute_equal(xvar);
@@ -130,7 +128,11 @@ void FixSetForceKokkos<DeviceType>::post_force(int /*vflag*/)
 
     modify->addstep_compute(update->ntimestep + 1);
 
-    if (varflag == ATOM) {  // this can be removed when variable class is ported to Kokkos
+    // atom-style variables are evaluated on the host, so the result has to be
+    // copied to the device for the kernel below.  this is a real copy, not a
+    // stale flag: it can only go away if variables are evaluated on the device.
+
+    if (varflag == ATOM) {
       k_sforce.modify_host();
       k_sforce.sync<DeviceType>();
     }
