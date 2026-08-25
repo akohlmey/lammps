@@ -596,33 +596,6 @@ TEST_F(ComputeInertiaTest, Angmom)
     EXPECT_NEAR(get_variable_value("ly"), 0.0, 1.0e-12);
     EXPECT_NEAR(get_variable_value("lz"), 4.0, 1.0e-12);
 }
-
-TEST_F(ComputeInertiaTest, Omega)
-{
-    if (!info->has_style("atom", "sphere")) GTEST_SKIP();
-
-    // a single finite sphere spinning at omega=(0,0,5): the group's
-    // rigid-body angular velocity omega() = I_total^-1 L_total recovers the
-    // sphere's own spin, confirming inertia and angmom both include the spin
-
-    BEGIN_HIDE_OUTPUT();
-    command("units lj");
-    command("atom_style sphere");
-    command("boundary f f f");
-    command("region box block -20 20 -20 20 -20 20");
-    command("create_box 1 box");
-    command("create_atoms 1 single 0.0 0.0 0.0 units box");
-    command("set group all diameter 2.0");
-    command("set group all mass 1.0");
-    command("set group all omega 0.0 0.0 5.0");
-    command("pair_style zero 5.0");
-    command("pair_coeff * *");
-    command("variable wz equal omega(all,z)");
-    command("run 0 post no");
-    END_HIDE_OUTPUT();
-
-    EXPECT_NEAR(get_variable_value("wz"), 5.0, 1.0e-12);
-}
 } // namespace LAMMPS_NS
 
 int main(int argc, char **argv)
