@@ -286,7 +286,7 @@ template<class DeviceType>
 void FixRigidNHSmallKokkos<DeviceType>::setup(int vflag)
 {
   // host setup populates body[] and the per-atom arrays
-  atomKK->sync(Host, datamask_read);
+  atomKK->sync(Host, this->host_rebuild_datamask);
 
   // FixRigidSmall::setup() is host code throughout: compute_forces_and_torques()
   // does a FORCE_TORQUE reverse comm and then reads the host body[], and a FINAL

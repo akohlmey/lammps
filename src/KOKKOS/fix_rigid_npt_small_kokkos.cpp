@@ -74,12 +74,14 @@ FixRigidNPTSmallKokkos<DeviceType>::FixRigidNPTSmallKokkos(LAMMPS *lmp, int narg
   // host<->device transfer every step (see the KOKKOS package instructions,
   // "Internal helper computes/fixes must be KOKKOS too").  compute pressure has
   // no /kk variant, so only the temperature is promoted.
+  delete[] this->id_temp;
   this->id_temp = utils::strdup(std::string(this->id)+"_temp");
   this->modify->add_compute(fmt::format("{} all temp/kk",this->id_temp));
   this->tcomputeflag = 1;
 
   // create a new compute pressure style (group all), pass id_temp as 4th arg
 
+  delete[] this->id_press;
   this->id_press = utils::strdup(std::string(this->id)+"_press");
   this->modify->add_compute(fmt::format("{} all pressure {}",this->id_press,this->id_temp));
   this->pcomputeflag = 1;

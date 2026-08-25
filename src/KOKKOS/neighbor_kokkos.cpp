@@ -208,9 +208,9 @@ template<class DeviceType>
 // NOLINTNEXTLINE
 KOKKOS_INLINE_FUNCTION
 void NeighborKokkos::operator()(TagNeighborCheckDistance<DeviceType>, const int &i, int &flag) const {
-  const double delx = x.view<DeviceType>()(i,0) - xhold.view<DeviceType>()(i,0);
-  const double dely = x.view<DeviceType>()(i,1) - xhold.view<DeviceType>()(i,1);
-  const double delz = x.view<DeviceType>()(i,2) - xhold.view<DeviceType>()(i,2);
+  const double delx = static_cast<double>(x.view<DeviceType>()(i,0) - xhold.view<DeviceType>()(i,0));
+  const double dely = static_cast<double>(x.view<DeviceType>()(i,1) - xhold.view<DeviceType>()(i,1));
+  const double delz = static_cast<double>(x.view<DeviceType>()(i,2) - xhold.view<DeviceType>()(i,2));
   const double rsq = delx*delx + dely*dely + delz*delz;
   if (rsq > deltasq) flag = 1;
 }

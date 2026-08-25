@@ -225,7 +225,7 @@ KOKKOS_INLINE_FUNCTION
 void NBinSSAKokkos<DeviceType>::binIDAtomsItem(const int &i, int &update) const
 {
   int loc[3];
-  const int ibin = coord2bin(x(i, 0), x(i, 1), x(i, 2), &(loc[0]));
+  const int ibin = coord2bin(static_cast<double>(x(i, 0)), static_cast<double>(x(i, 1)), static_cast<double>(x(i, 2)), &(loc[0]));
   binID(i) = ibin;
 
   // Find the bounding box of the local atoms in the bins
@@ -245,7 +245,7 @@ template<class DeviceType>
 KOKKOS_INLINE_FUNCTION
 void NBinSSAKokkos<DeviceType>::binIDGhostsItem(const int &i, int &update) const
 {
-  const int iAIR = coord2ssaAIR(x(i, 0), x(i, 1), x(i, 2));
+  const int iAIR = coord2ssaAIR(static_cast<double>(x(i, 0)), static_cast<double>(x(i, 1)), static_cast<double>(x(i, 2)));
   binID(i) = iAIR;
   if (iAIR > 0) { // include only ghost atoms in an AIR
     const int ac = Kokkos::atomic_fetch_add(&gbincount[iAIR], (int)1);

@@ -23,6 +23,7 @@ FixStyle(rigid/small/kk/host,FixRigidSmallKokkos<LMPHostType>);
 #define LMP_FIX_RIGID_SMALL_KOKKOS_H
 
 #include "Kokkos_Random.hpp"
+#include "atom_masks.h"
 #include "atom_vec_ellipsoid_kokkos.h"
 #include "comm_kokkos.h"
 #include "fix_rigid_small.h"
@@ -30,11 +31,9 @@ FixStyle(rigid/small/kk/host,FixRigidSmallKokkos<LMPHostType>);
 #ifdef LMP_KOKKOS_DEBUG_RNG
 #include "rand_pool_wrap_kokkos.h"
 #endif
-#include <map>
+#include <vector>
 
 struct TagInitialIntegrate {};
-struct TagPackForwardInitial {};
-struct TagUnpackForwardInitial {};
 template <int SETXFLAG> struct TagSetXV {};
 struct TagUpdateXGC {};
 
@@ -88,6 +87,7 @@ template <class DeviceType> class FixRigidSmallKokkos : public FixRigidSmall, pu
   void grow_arrays(int) override;
   void grow_body() override;
   void set_molecule(int, tagint, int, double *, double *, double *) override;
+  void resample_momenta(int, int, class RanPark *, double) override;
 
   int pack_exchange_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
                            DAT::tdual_int_1d k_sendlist, DAT::tdual_int_1d k_copylist,
@@ -124,11 +124,6 @@ template <class DeviceType> class FixRigidSmallKokkos : public FixRigidSmall, pu
   KOKKOS_INLINE_FUNCTION
   void operator()(TagInitialIntegrate, const int) const;
 
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagPackForwardInitial, const int) const;
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagUnpackForwardInitial, const int) const;
-
   template <int SETXFLAG>
   KOKKOS_INLINE_FUNCTION void operator()(TagSetXV<SETXFLAG>, const int, EV_FLOAT &ev) const;
   KOKKOS_INLINE_FUNCTION
@@ -151,6 +146,19 @@ template <class DeviceType> class FixRigidSmallKokkos : public FixRigidSmall, pu
 
   using Range1D = Kokkos::RangePolicy<DeviceType>;
 
+  // Everything the host FixRigidSmall code reads when it rebuilds the bodies or
+  // runs its setup: setup_bodies_static() reads radius/rmass/mass/type/image/
+  // mask and the extended orientation arrays, compute_forces_and_torques() reads
+  // f and (for extended bodies) torque, and set_xv/set_v read v and rmass.  The
+  // per-step datamask_read is deliberately narrower than this, so the host-path
+  // entry points have to ask for the difference explicitly.  Masks for arrays a
+  // given atom style does not have are ignored by the atom-vec sync.
+  static constexpr uint64_t host_rebuild_datamask =
+      X_MASK | V_MASK | F_MASK | VIRIAL_MASK | TYPE_MASK | TAG_MASK | MASK_MASK |
+      IMAGE_MASK | RMASS_MASK | RADIUS_MASK | TORQUE_MASK | OMEGA_MASK |
+      ANGMOM_MASK | MU_MASK;
+
+  void resize_body_views();
   void copy_body_host();
   void copy_body_device();
   void refresh_atom_views();
@@ -207,10 +215,66 @@ template <class DeviceType> class FixRigidSmallKokkos : public FixRigidSmall, pu
   // take their host fallback even though setupflag is already 1 by then
   bool setup_host_rebuild = false;
 
-  int max_body_sent = 0;
-  std::map<int, int> n_body_recv, first_body;
-  std::map<int *, int> n_body_sent;
-  std::map<int *, IntView1D> d_body_sendlists;
+  // scratch reused across calls: allocating a device View (and, for the counter,
+  // a fenced readback) inside every pack_exchange_kokkos / reset_atom2body call
+  // costs an allocation per dimension per reneighbor
+  Kokkos::View<int, DeviceType> d_exchange_count;
+  IntView1D d_from_indices;
+
+  // Per-swap ghost-body bookkeeping, rebuilt every reneighbor by the
+  // BODY_SENDLIST comm and read by the INITIAL/FINAL/FULL_BODY packers on every
+  // timestep.  Flat vectors scanned linearly rather than std::map: nswap is
+  // small, and this keeps the per-step lookups out of a red-black tree (and off
+  // its node allocations).  The send side is still keyed by the k_sendlist row
+  // pointer because the packer signature carries no swap index; both vectors are
+  // cleared wherever the swaps are rebuilt, so a stale key cannot survive.
+  struct BodySend {
+    int *key;
+    int n;
+    IntView1D list;
+  };
+  struct BodyRecv {
+    int first;
+    int n;
+    int start;
+    bool n_set;   // n and start are registered independently, as the two maps
+  };              // this replaced were
+  std::vector<BodySend> body_sends;
+  std::vector<BodyRecv> body_recvs;
+
+  BodySend &body_send(int *key) {
+    for (auto &e : body_sends)
+      if (e.key == key) return e;
+    // reuse a retired slot: its list View is already allocated, and the whole
+    // point of caching these is to avoid a device allocation per swap per
+    // reneighbor
+    for (auto &e : body_sends)
+      if (e.key == nullptr) {
+        e.key = key;
+        e.n = 0;
+        return e;
+      }
+    body_sends.push_back(BodySend{key, 0, IntView1D()});
+    return body_sends.back();
+  }
+  // retire the keys at a reneighbor without freeing the cached list Views
+  void retire_body_sends() {
+    for (auto &e : body_sends) {
+      e.key = nullptr;
+      e.n = 0;
+    }
+  }
+  BodyRecv &body_recv(int first) {
+    for (auto &e : body_recvs)
+      if (e.first == first) return e;
+    body_recvs.push_back(BodyRecv{first, 0, 0, false});
+    return body_recvs.back();
+  }
+  bool has_body_recv(int first) const {
+    for (const auto &e : body_recvs)
+      if (e.first == first) return e.n_set;
+    return false;
+  }
 
   IntView1D d_sendlist;
   typename AT::t_double_1d_um d_buf;

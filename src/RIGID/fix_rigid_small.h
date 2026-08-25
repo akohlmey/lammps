@@ -44,7 +44,7 @@ class FixRigidSmall : public Fix {
   void copy_arrays(int, int, int) override;
   void set_arrays(int) override;
   void set_molecule(int, tagint, int, double *, double *, double *) override;
-  void resample_momenta(int, int, class RanPark *, double);
+  virtual void resample_momenta(int, int, class RanPark *, double);
 
   int pack_exchange(int, double *) override;
   int unpack_exchange(int, double *) override;

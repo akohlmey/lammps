@@ -131,7 +131,7 @@ template<class DeviceType>
 KOKKOS_INLINE_FUNCTION
 void NBinKokkos<DeviceType>::binatomsItem(const int &i) const
 {
-  const int ibin = coord2bin(x(i, 0), x(i, 1), x(i, 2));
+  const int ibin = coord2bin(static_cast<double>(x(i, 0)), static_cast<double>(x(i, 1)), static_cast<double>(x(i, 2)));
 
   atom2bin(i) = ibin;
   const int ac = Kokkos::atomic_fetch_add(&bincount[ibin], (int)1);

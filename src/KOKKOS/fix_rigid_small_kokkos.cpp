@@ -37,8 +37,6 @@
 
 #include <cmath>
 #include <cstring>
-#include <map>
-#include <utility>
 #include <vector>
 
 using namespace LAMMPS_NS;
@@ -105,7 +103,13 @@ FixRigidSmallKokkos<DeviceType>::~FixRigidSmallKokkos()
 {
   if (copymode) return;
 
-  atomKK->sync(Host, ALL_MASK);
+  // No atomKK->sync() here.  Modify::delete_fix() deletes the fix before it
+  // compacts modify->fix[], and AtomKokkos::sync() walks that list for the
+  // property/atom fixes -- so a sync from this destructor reads a fix that has
+  // already been freed, which AddressSanitizer reports as a heap-use-after-free
+  // at the end of any run whose input has a fix property/atom.  Nothing reads
+  // the atom arrays after this point, and no other KOKKOS fix syncs from its
+  // destructor.
 
   // free the Kokkos-owned buffers and null the base pointers so the
   // FixRigidSmall destructor's memory->destroy() calls become no-ops
@@ -270,7 +274,7 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
   // setup_bodies_static() rebuilds the bodies from the unwrapped atom
   // positions, so it also reads atom->image and atom->mask (and rmass for
   // finite-size particles), which are not in this fix's per-step datamask.
-  atomKK->sync(Host, datamask_read | IMAGE_MASK | MASK_MASK | RMASS_MASK | extended_datamask);
+  atomKK->sync(Host, host_rebuild_datamask);
 
   // On the 2nd and later runs the host rebuild below (setup_bodies_static/
   // _dynamic) also re-derives the extended-particle state from the per-atom
@@ -365,7 +369,6 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
   setup_host_rebuild = false;
   forward_comm_device = saved_forward_comm_device;
   reverse_comm_device = saved_reverse_comm_device;
-
   // the host rebuild rewrote body[] and the per-atom body arrays; push them
   // back to the device (setup() -> setup_device_push() does the rest)
   if (rebuild_on_host) {
@@ -373,12 +376,9 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
     if (k_body.view_device().extent_int(0) < nbody_all) {
       k_body.sync_host();
       k_body.resize(nbody_all > nmax_body ? nbody_all : nmax_body);
-      // DualView::resize() takes its resize_on_device branch here (both modify
-      // flags are 0 after the sync) and marks the device side modified; clear that
-      // before claiming the host copy, or modify_host() sees both flags set and
-      // Kokkos::abort()s on a build where the two memory spaces differ.
-      k_body.clear_sync_state();
-      k_body.modify_host();
+      // refill the host mirror resize() re-created empty, and clear the device
+      // claim it left, before the host rebuild below writes body[] (see grow_body)
+      k_body.sync_host();
     }
     copy_body_device();
     k_bodytag.modify_host();
@@ -425,7 +425,7 @@ void FixRigidSmallKokkos<DeviceType>::setup_pre_neighbor()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::setup(int vflag)
 {
-  atomKK->sync(Host, datamask_read);
+  atomKK->sync(Host, host_rebuild_datamask);
 
   // FixRigidSmall::setup() is host code throughout: compute_forces_and_torques()
   // does a commflag=FORCE_TORQUE reverse comm and then reads the host body[],
@@ -567,7 +567,7 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
   if (langflag) {
     k_langextra.sync_host();
     k_langextra.resize(nmax_body, 6);
-    k_langextra.clear_sync_state();   // resize marked the device side (see grow_body)
+    k_langextra.sync_host();          // refill the mirror resize() re-created (see grow_body)
     k_langextra.modify_host();
     k_langextra.template sync<DeviceType>();
     d_langextra = k_langextra.template view<DeviceType>();
@@ -620,10 +620,9 @@ void FixRigidSmallKokkos<DeviceType>::setup_device_push()
   // pre_neighbor isn't called again until necessary during the run,
   // need to set up the body sendlist and send the ghost bodies now
   nghost_body = 0;
-  max_body_sent = 0;
-  n_body_recv.clear();
-  n_body_sent.clear();
-  first_body.clear();
+  body_recvs.clear();
+  retire_body_sends();
+
   commflag = BODY_SENDLIST;
   commKK->forward_comm_device<DeviceType>(this, 1);
   commflag = FULL_BODY;
@@ -771,10 +770,8 @@ void FixRigidSmallKokkos<DeviceType>::pre_neighbor(){
     }
   );
 
-  max_body_sent = 0;
-  n_body_recv.clear();
-  n_body_sent.clear();
-  first_body.clear();
+  body_recvs.clear();
+  retire_body_sends();
   commflag = BODY_SENDLIST;
   commKK->forward_comm_device<DeviceType>(this, 1);
   commflag = FULL_BODY;
@@ -931,6 +928,12 @@ void FixRigidSmallKokkos<DeviceType>::apply_langevin_thermostat_kokkos()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::enforce2d()
 {
+  // NOTE: the langextra columns zeroed below follow FixRigid::enforce2d();
+  // FixRigidSmall::enforce2d() deliberately leaves langextra alone.  The
+  // divergence is currently unreachable -- init() rejects 2d systems -- but it
+  // has to be reconciled with the CPU style before that restriction is lifted,
+  // or the Langevin buffer will differ between the two.
+
   auto d_body = this->d_body;
   auto langflag = this->langflag && (langextra!=nullptr);
   auto d_langextra = this->d_langextra;
@@ -1166,8 +1169,10 @@ bigint FixRigidSmallKokkos<DeviceType>::dof(int tgroup)
   // on the host, and does a DOF reverse_comm.  On the device path a reneighbor
   // may have left those host mirrors stale, so flush them when they are actually
   // read (setupflag true); sync_host() is a no-op when the host copy is current.
-  // dof() does not read body[], so no copy_body_host() is needed.
+  // It also reads body[ibody].inertia to detect linear bodies, so the body
+  // array has to come down from the device as well.
   if (setupflag) {
+    copy_body_host();
     k_atom2body.sync_host();
     k_bodyown.sync_host();
     k_bodytag.sync_host();
@@ -1493,6 +1498,46 @@ void FixRigidSmallKokkos<DeviceType>::operator()(TagUpdateXGC, const int ibody) 
 
 
 /* ----------------------------------------------------------------------
+   resample body momenta (fix hmc); the base implementation is host code that
+   rewrites body[], does a host FINAL forward comm and calls the host set_v()
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+void FixRigidSmallKokkos<DeviceType>::resample_momenta(int groupbit_in, int mom_flag,
+                                                       class RanPark *random_in, double KT)
+{
+  if (!setupflag) {
+    FixRigidSmall::resample_momenta(groupbit_in, mom_flag, random_in, KT);
+    return;
+  }
+
+  // bring the bodies and the atom arrays the base reads down to the host, and
+  // put the comm back on the host for the duration, exactly as setup() and
+  // dof() do -- otherwise the FINAL forward comm goes to the device packers
+  // while the host body[] this reads and writes stays stale, and the resampled
+  // momenta never reach the device at all
+  atomKK->sync(Host, host_rebuild_datamask);
+  copy_body_host();
+
+  const int saved_forward_comm_device = forward_comm_device;
+  const int saved_reverse_comm_device = reverse_comm_device;
+  forward_comm_device = 0;
+  reverse_comm_device = 0;
+  setup_host_rebuild = true;
+
+  FixRigidSmall::resample_momenta(groupbit_in, mom_flag, random_in, KT);
+
+  setup_host_rebuild = false;
+  forward_comm_device = saved_forward_comm_device;
+  reverse_comm_device = saved_reverse_comm_device;
+
+  // push the new body momenta and the per-atom velocities set_v() wrote back
+  copy_body_device();
+  atomKK->modified(Host, V_MASK);
+  atomKK->sync(execution_space, V_MASK);
+}
+
+/* ----------------------------------------------------------------------
    write out restart info for mass, COM, inertia tensor to file
    identical format to inpfile option, so info can be read in when restarting
    each proc contributes info for rigid bodies it owns
@@ -1501,7 +1546,9 @@ void FixRigidSmallKokkos<DeviceType>::operator()(TagUpdateXGC, const int ibody) 
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::write_restart_file(const char *file)
 {
-  copy_body_host();
+  // k_body is not sized until setup_device_push(); the base method returns
+  // early before setup, so guard the flush the same way (cf. compute_scalar)
+  if (setupflag) copy_body_host();
   FixRigidSmall::write_restart_file(file);
 }
 
@@ -1540,6 +1587,21 @@ void FixRigidSmallKokkos<DeviceType>::grow_arrays(int nmax)
   std::vector<double> save_displace;
   int nsave = 0;
 
+  // The grow below keeps the device copy of each array and refills the host
+  // mirror from it (see the sync_host() calls further down).  That is right
+  // during a run, when the device copy is the current one -- and wrong while
+  // the host setup still owns this bookkeeping.  create_bodies() fills bodytag,
+  // bodyown, atom2body, xcmimage and displace on the host through the base
+  // class' raw pointers without touching the modify flags, and nothing pushes
+  // them to the device until setup_device_push().  setup_bodies_static() calls
+  // grow_arrays() in the middle of that -- but only for bodies of finite-size
+  // particles, which is why this was invisible for point particles -- and the
+  // refill then replaced all five arrays with the empty device allocation:
+  // every bodytag went to zero, no atom was left assigned to a body, and every
+  // body came out with zero mass, zero inertia and, through a zero degree-of-
+  // freedom count, a nan temperature.  Carry the host side across the grow
+  // whenever the host side is the one holding the values.
+  const bool host_holds_bookkeeping = (!setupflag || setup_host_rebuild);
   if (!tied_initialized) {
     // the base ctor's virtual grow_arrays() allocated these as plain
     // memory->grow pointers before the Kokkos views existed; free them so the
@@ -1565,6 +1627,15 @@ void FixRigidSmallKokkos<DeviceType>::grow_arrays(int nmax)
     maxvatom = 0;
     tied_initialized = true;
     prev_size = nsave;
+  } else if (host_holds_bookkeeping && (bodyown != nullptr)) {
+    nsave = MIN(prev_size, nmax);
+    save_bodyown.assign(bodyown, bodyown+nsave);
+    save_bodytag.assign(bodytag, bodytag+nsave);
+    save_atom2body.assign(atom2body, atom2body+nsave);
+    save_xcmimage.assign(xcmimage, xcmimage+nsave);
+    save_displace.resize((size_t)nsave*3);
+    for (int i = 0; i < nsave; i++)
+      for (int k = 0; k < 3; k++) save_displace[(size_t)i*3+k] = displace[i][k];
   }
 
   // extended-particle per-atom arrays: tied DualViews so the host setup writes
@@ -1592,23 +1663,23 @@ void FixRigidSmallKokkos<DeviceType>::grow_arrays(int nmax)
 
   refresh_atom_views();
 
-  // grow_kokkos() resizes the DualView, and DualView::resize() takes its
-  // resize_on_device branch and marks the device side modified.  Retire that
-  // claim on every array grown above, or the next modify_host() on one of them
-  // -- from here, setup_device_push(), pre_neighbor() or sort_kokkos() -- sees
-  // both flags set and Kokkos::abort()s.  The sync_host() calls do this for the
-  // five arrays whose contents are restored below; k_vatom and the extended
-  // arrays only need the claim dropped.
+  // grow_kokkos() resizes the DualView.  DualView::resize() resizes the device
+  // view in place, replaces the host mirror with a fresh empty allocation, and
+  // marks the device modified -- so after a grow the data is on the device and
+  // the mirror is empty.  Every array grown above therefore needs sync_host():
+  // it refills the mirror and clears the claim, which is also what keeps the
+  // next modify_host() -- from here, setup_device_push(), pre_neighbor() or
+  // sort_kokkos() -- from seeing both flags set and aborting.
   k_bodyown.sync_host();
   k_atom2body.sync_host();
   k_bodytag.sync_host();
   k_xcmimage.sync_host();
   k_displace.sync_host();
-  k_vatom.clear_sync_state();
+  k_vatom.sync_host();
   if (extended) {
-    k_eflags.clear_sync_state();
-    if (orientflag) k_orient.clear_sync_state();
-    if (dorientflag) k_dorient.clear_sync_state();
+    k_eflags.sync_host();
+    if (orientflag) k_orient.sync_host();
+    if (dorientflag) k_dorient.sync_host();
   }
 
   // restore the preserved contents into the new host mirrors
@@ -1679,8 +1750,9 @@ void FixRigidSmallKokkos<DeviceType>::set_molecule(int nlocalprev, tagint tagpre
 
   // add new bodies on host
   FixRigidSmall::set_molecule(nlocalprev, tagprev, imol, xgeom, vcm, quat);
-  // update device body list to same size and copy
-  grow_body();
+  // the base call already grew the capacity through the virtual grow_body() if
+  // the body list was full; only match the device views to it here
+  resize_body_views();
   copy_body_device();
 
   // base set_molecule wrote new atoms' bodytag/bodyown/displace/xcmimage (and,
@@ -1766,7 +1838,9 @@ int FixRigidSmallKokkos<DeviceType>::pack_exchange_kokkos (
   // followed by the densely packed payloads.  A non-body atom costs 1 double, a
   // body member 12, and a body owner 12 + bodysize -- versus the old fixed
   // maxexchange stride for every atom.  d_count holds the total doubles written.
-  Kokkos::View<int, DeviceType> d_count("rigid/small:exchange_count");
+  if (!d_exchange_count.data())
+    d_exchange_count = Kokkos::View<int, DeviceType>("rigid/small:exchange_count");
+  auto d_count = d_exchange_count;
   Kokkos::deep_copy(d_count, 0);
 
   // count bodies whose owner is being sent (their slots are freed below); read
@@ -1845,7 +1919,9 @@ int FixRigidSmallKokkos<DeviceType>::pack_exchange_kokkos (
 
   // Need to pack remaining bodies densely
   int new_nlocal_body = nlocal_body - n_deleted_bodies;
-  IntView1D from_indices("from idx", n_deleted_bodies);
+  if (d_from_indices.extent_int(0) < n_deleted_bodies)
+    d_from_indices = IntView1D("rigid/small:from_idx", n_deleted_bodies);
+  auto from_indices = d_from_indices;
 
   // count bodies that need to be moved
   // and do cumulative sum to determine
@@ -2074,8 +2150,9 @@ int FixRigidSmallKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_
   auto d_bodyown = this->d_bodyown;
 
   if (commflag == INITIAL) {
-    int n_body = n_body_sent[iswap];
-    auto d_body_sendlist = d_body_sendlists[iswap];
+    const auto &send = body_send(iswap);
+    int n_body = send.n;
+    auto d_body_sendlist = send.list;
     Kokkos::parallel_for("fix rigid/small pack forward comm initial",
       Range1D(0, n_body),
       KOKKOS_LAMBDA (const int ibodysend) {
@@ -2117,8 +2194,9 @@ int FixRigidSmallKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_
     return 29*n_body;
   }
   if (commflag == FINAL) {
-    int n_body = n_body_sent[iswap];
-    auto d_body_sendlist = d_body_sendlists[iswap];
+    const auto &send = body_send(iswap);
+    int n_body = send.n;
+    auto d_body_sendlist = send.list;
     Kokkos::parallel_for("fix rigid/small pack forward comm final",
       Range1D(0, n_body),
       KOKKOS_LAMBDA (const int ibodysend) {
@@ -2141,8 +2219,9 @@ int FixRigidSmallKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_
     return 10*n_body;
   } else if (commflag == FULL_BODY) {
     auto bodysize = this->bodysize;
-    int n_body = n_body_sent[iswap];
-    auto d_body_sendlist = d_body_sendlists[iswap];
+    const auto &send = body_send(iswap);
+    int n_body = send.n;
+    auto d_body_sendlist = send.list;
     Kokkos::parallel_for(
       "fix rigid/small full body pack forward",
       Range1D(0, n_body),
@@ -2171,13 +2250,11 @@ int FixRigidSmallKokkos<DeviceType>::pack_forward_comm_kokkos(int n, DAT::tdual_
       },
       n_sent
     );
-    n_body_sent[iswap] = n_sent;
-    if (n_sent > max_body_sent) max_body_sent = n_sent;
+    auto &send = body_send(iswap);
+    send.n = n_sent;
 
-    if (d_body_sendlists.count(iswap)==0 || d_body_sendlists[iswap].extent_int(0)<n_sent) {
-      d_body_sendlists[iswap] = IntView1D("body sendlist", n_sent);
-    }
-    auto d_body_sendlist = d_body_sendlists[iswap];
+    if (send.list.extent_int(0) < n_sent) send.list = IntView1D("body sendlist", n_sent);
+    auto d_body_sendlist = send.list;
 
     Kokkos::parallel_scan(
       "fix rigid/small create body sendlist",
@@ -2217,8 +2294,9 @@ void FixRigidSmallKokkos<DeviceType>::unpack_forward_comm_kokkos(int n, int firs
   auto d_body = this->d_body;
 
   if (commflag == INITIAL) {
-    int n_incoming_bodies = n_body_recv[first];
-    int start_body = first_body[first];
+    const auto &recv = body_recv(first);
+    int n_incoming_bodies = recv.n;
+    int start_body = recv.start;
     Kokkos::parallel_for("fix rigid/small unpack forward comm initial",
       Range1D(0, n_incoming_bodies),
       KOKKOS_LAMBDA(const int ibodyrecv) {
@@ -2257,8 +2335,9 @@ void FixRigidSmallKokkos<DeviceType>::unpack_forward_comm_kokkos(int n, int firs
       }
     );
   } else if (commflag == FINAL) {
-    int n_incoming_bodies = n_body_recv[first];
-    int start_body = first_body[first];
+    const auto &recv = body_recv(first);
+    int n_incoming_bodies = recv.n;
+    int start_body = recv.start;
     Kokkos::parallel_for("fix rigid/small/kk unpack forward comm final",
       Range1D(0, n_incoming_bodies),
       KOKKOS_LAMBDA(const int ibodyrecv) {
@@ -2280,8 +2359,9 @@ void FixRigidSmallKokkos<DeviceType>::unpack_forward_comm_kokkos(int n, int firs
   } else if (commflag == FULL_BODY) {
     Kokkos::Profiling::pushRegion("unpack forward full body");
     auto bodysize = this->bodysize;
-    int n_incoming_bodies = n_body_recv[first];
-    int start_body = first_body[first];
+    const auto &recv = body_recv(first);
+    int n_incoming_bodies = recv.n;
+    int start_body = recv.start;
 
     Kokkos::parallel_for(
       "fix rigid/small pack incoming ghost bodies",
@@ -2295,7 +2375,7 @@ void FixRigidSmallKokkos<DeviceType>::unpack_forward_comm_kokkos(int n, int firs
   } else if (commflag == BODY_SENDLIST) {
     Kokkos::Profiling::pushRegion("unpack forward body sendlist");
     int n_curr_bodies = this->nlocal_body + this->nghost_body;
-    first_body[first] = n_curr_bodies;
+    body_recv(first).start = n_curr_bodies;
     int n_incoming_bodies = 0;
     Kokkos::parallel_scan(
       "fix rigid/small count incoming bodies",
@@ -2313,14 +2393,15 @@ void FixRigidSmallKokkos<DeviceType>::unpack_forward_comm_kokkos(int n, int firs
       },
       n_incoming_bodies
     );
-    if (n_body_recv.count(first))
+    if (has_body_recv(first))
       error->one(FLERR, "Internal error in fix rigid/small/kk: receive buffer offset {} "
                  "is already registered", first);
-    n_body_recv[first] = n_incoming_bodies;
+    auto &recv_entry = body_recv(first);
+    recv_entry.n = n_incoming_bodies;
+    recv_entry.n_set = true;
     while (n_curr_bodies+n_incoming_bodies > nmax_body) {
       grow_body();
     }
-    d_body = this->d_body;
 
     this->nghost_body += n_incoming_bodies;
     k_bodyown.template modify<DeviceType>();
@@ -2342,8 +2423,9 @@ int FixRigidSmallKokkos<DeviceType>::pack_reverse_comm_kokkos(int n, int first, 
   auto d_bodyown = this->d_bodyown;
   auto d_body = this->d_body;
 
-  int n_body = n_body_recv[first];
-  int start_body = first_body[first];
+  const auto &recv = body_recv(first);
+  int n_body = recv.n;
+  int start_body = recv.start;
 
   Kokkos::parallel_for(
     "fix rigid/small pack reverse comm",
@@ -2380,8 +2462,9 @@ void FixRigidSmallKokkos<DeviceType>::unpack_reverse_comm_kokkos(int n, DAT::tdu
   auto d_sendlist = k_sendlist.view<DeviceType>();
   int *iswap = d_sendlist.data();
 
-  int n_body = n_body_sent[iswap];
-  auto d_body_sendlist = d_body_sendlists[iswap];
+  const auto &send = body_send(iswap);
+  int n_body = send.n;
+  auto d_body_sendlist = send.list;
   Kokkos::parallel_for(
     "fix rigid/small unpack reverse comm",
     Range1D(0, n_body),
@@ -2405,33 +2488,47 @@ void FixRigidSmallKokkos<DeviceType>::unpack_reverse_comm_kokkos(int n, DAT::tdu
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
+void FixRigidSmallKokkos<DeviceType>::resize_body_views()
+{
+  // Match the device views to nmax_body without changing the capacity itself.
+  //
+  // DualView::resize() takes its resize_on_device branch (both modify flags are
+  // 0 after the sync above it), which resizes the device view -- preserving its
+  // contents -- and then replaces the host mirror with a fresh, empty
+  // allocation, marking the device modified.  That device claim is real: the
+  // data is on the device and the mirror is empty.  sync_host() refills the
+  // mirror and clears the claim; clear_sync_state() would instead leave the
+  // empty mirror standing as authoritative and the next modify_host()/
+  // sync<DeviceType>() would push zeros back over the live device data.
+  if (k_body.view_device().extent_int(0) != nmax_body) {
+    k_body.sync_host();
+    k_body.resize(nmax_body);
+    k_body.sync_host();
+  }
+  d_body = k_body.view_device();
+
+  if (langflag && k_langextra.view_device().extent_int(0) != nmax_body) {
+    k_langextra.sync_host();
+    k_langextra.resize(nmax_body,6);
+    k_langextra.sync_host();
+    d_langextra = k_langextra.template view<DeviceType>();
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::grow_body()
 {
   Kokkos::Profiling::pushRegion("rigid/small grow body");
 
-  // In set_molecule, CPU code calls grow_body first
-  // Want to not double grow
-  // Still need to do it during initial FULL_BODY unpack forward comm
-  if (nmax_body == k_body.view_device().extent_int(0) || k_body.view_device().extent_int(0) == 0) {
-    FixRigidSmall::grow_body();
-  }
-  // DualView::resize() takes its resize_on_device branch here -- both modify flags
-  // are 0 after the sync, so it picks the device side -- and marks the device
-  // modified.  Clear that before claiming the host copy: otherwise modify_host()
-  // sees both flags set and Kokkos::abort()s ("Concurrent modification of host and
-  // device views") on any build where host and device memory spaces differ.
-  k_body.sync_host();
-  k_body.resize(nmax_body);
-  k_body.clear_sync_state();
-  k_body.modify_host();
-  d_body = k_body.view_device();
-  if (langflag) {
-    k_langextra.sync_host();
-    k_langextra.resize(nmax_body,6);
-    k_langextra.clear_sync_state();
-    k_langextra.modify_host();
-    d_langextra = k_langextra.template view<DeviceType>();
-  }
+  // Always grow the capacity: callers loop on `while (... > nmax_body)
+  // grow_body();`, so nmax_body has to advance on every call.  (Guarding this
+  // on the device extent instead made set_molecule() -- which the base class
+  // already calls grow_body() from when the body list is full -- add another
+  // DELTA_BODY slots on top for every single molecule insertion.)
+  FixRigidSmall::grow_body();
+  resize_body_views();
   Kokkos::Profiling::popRegion();
 }
 
@@ -2468,25 +2565,23 @@ void FixRigidSmallKokkos<DeviceType>::reset_atom2body()
   // FixRigidSmall::reset_atom2body() treats this as a fatal error.  Doing it on
   // the device avoids the out-of-bounds d_bodyown(-1) read the previous code
   // performed, and lets us reproduce the host error afterwards.
-  Kokkos::View<int,DeviceType> d_nmissing("rigid/small:nmissing");
-  Kokkos::deep_copy(d_nmissing, 0);
-
-  Kokkos::parallel_for(
+  // reduce the missing-owner count rather than atomically incrementing one
+  // device address from every atom, which serialises the whole kernel
+  int nmissing = 0;
+  Kokkos::parallel_reduce(
     "fix rigid/small reset atom2body",
     Range1D(0, nlocal),
-    KOKKOS_LAMBDA(const int i){
+    KOKKOS_LAMBDA(const int i, int &missing){
       d_atom2body(i) = -1;
       if (d_bodytag(i)) {
         int iowner = AtomKokkos::map_kokkos<DeviceType>(d_bodytag(i),map_style,k_map_array,k_map_hash);
         if (iowner >= 0) d_atom2body(i) = d_bodyown(iowner);
-        else Kokkos::atomic_add(&d_nmissing(), 1);
+        else missing++;
       }
-    }
+    },
+    nmissing
   );
   k_atom2body.template modify<DeviceType>();
-
-  int nmissing = 0;
-  Kokkos::deep_copy(nmissing, d_nmissing);
   if (nmissing)
     error->one(FLERR, "Rigid body atoms missing on proc {} at step {} "
                "(fix rigid/small/kk)", comm->me, update->ntimestep);
@@ -2951,6 +3046,16 @@ double FixRigidSmallKokkos<DeviceType>::compute_scalar()
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::copy_body_host(){
   Kokkos::Profiling::pushRegion("rigid/small copy body host");
+  // k_body is not sized until setup_device_push().  Callers can run before that
+  // even with setupflag already set -- setup_pre_neighbor() sets it, and
+  // ModifyKokkos::setup() then runs compute temp -> dof() before the fix setup()
+  // loop is reached.  Until the device array exists the host body[] that
+  // create_bodies() filled is the authoritative copy, so there is nothing to
+  // bring down.
+  if (k_body.view_device().extent_int(0) < nlocal_body + nghost_body) {
+    Kokkos::Profiling::popRegion();
+    return;
+  }
   // d_body is written directly by device kernels (integrate/comm) without
   // updating DualView modify flags, so copy explicitly device -> host
   Kokkos::deep_copy(k_body.view_host(), k_body.view_device());
@@ -2963,6 +3068,18 @@ void FixRigidSmallKokkos<DeviceType>::copy_body_host(){
 template<class DeviceType>
 void FixRigidSmallKokkos<DeviceType>::copy_body_device(){
   Kokkos::Profiling::pushRegion("rigid/small copy body device");
+  // Size the device array to what we are about to write.  nlocal_body +
+  // nghost_body can exceed nmax_body (the base set_molecule() only grows when
+  // nlocal_body == nmax_body, which misses the ghost bodies), and k_body does
+  // not exist at all before setup_device_push(); either way writing
+  // k_body.view_host()(ibody) below would run past the extent.
+  const int nbody_all = nlocal_body + nghost_body;
+  if (k_body.view_host().extent_int(0) < nbody_all) {
+    k_body.sync_host();
+    k_body.resize(nbody_all);
+    k_body.sync_host();
+    d_body = k_body.view_device();
+  }
   for(int ibody = 0; ibody < nlocal_body + nghost_body; ibody++){
     copy_body(&k_body.view_host()(ibody), &body[ibody]);
   }

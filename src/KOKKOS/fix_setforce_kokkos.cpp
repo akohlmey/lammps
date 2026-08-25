@@ -151,14 +151,17 @@ template<class DeviceType>
 // NOLINTNEXTLINE
 KOKKOS_INLINE_FUNCTION
 void FixSetForceKokkos<DeviceType>::operator()(TagFixSetForceConstant, const int &i, double_3& foriginal_kk) const {
+  const KK_FLOAT xvalue_kk = static_cast<KK_FLOAT>(xvalue);
+  const KK_FLOAT yvalue_kk = static_cast<KK_FLOAT>(yvalue);
+  const KK_FLOAT zvalue_kk = static_cast<KK_FLOAT>(zvalue);
   if (mask[i] & groupbit) {
     if (region && !d_match[i]) return;
-    foriginal_kk.d0 += f(i,0);
-    foriginal_kk.d1 += f(i,1);
-    foriginal_kk.d2 += f(i,2);
-    if (xstyle) f(i,0) = xvalue;
-    if (ystyle) f(i,1) = yvalue;
-    if (zstyle) f(i,2) = zvalue;
+    foriginal_kk.d0 += static_cast<double>(f(i,0));
+    foriginal_kk.d1 += static_cast<double>(f(i,1));
+    foriginal_kk.d2 += static_cast<double>(f(i,2));
+    if (xstyle) f(i,0) = static_cast<KK_ACC_FLOAT>(xvalue_kk);
+    if (ystyle) f(i,1) = static_cast<KK_ACC_FLOAT>(yvalue_kk);
+    if (zstyle) f(i,2) = static_cast<KK_ACC_FLOAT>(zvalue_kk);
   }
 }
 
@@ -166,17 +169,20 @@ template<class DeviceType>
 // NOLINTNEXTLINE
 KOKKOS_INLINE_FUNCTION
 void FixSetForceKokkos<DeviceType>::operator()(TagFixSetForceNonConstant, const int &i, double_3& foriginal_kk) const {
+  const KK_FLOAT xvalue_kk = static_cast<KK_FLOAT>(xvalue);
+  const KK_FLOAT yvalue_kk = static_cast<KK_FLOAT>(yvalue);
+  const KK_FLOAT zvalue_kk = static_cast<KK_FLOAT>(zvalue);
   if (mask[i] & groupbit) {
     if (region && !d_match[i]) return;
-    foriginal_kk.d0 += f(i,0);
-    foriginal_kk.d1 += f(i,1);
-    foriginal_kk.d2 += f(i,2);
-    if (xstyle == ATOM) f(i,0) = d_sforce(i,0);
-    else if (xstyle) f(i,0) = xvalue;
-    if (ystyle == ATOM) f(i,1) = d_sforce(i,1);
-    else if (ystyle) f(i,1) = yvalue;
-    if (zstyle == ATOM) f(i,2) = d_sforce(i,2);
-    else if (zstyle) f(i,2) = zvalue;
+    foriginal_kk.d0 += static_cast<double>(f(i,0));
+    foriginal_kk.d1 += static_cast<double>(f(i,1));
+    foriginal_kk.d2 += static_cast<double>(f(i,2));
+    if (xstyle == ATOM) f(i,0) = static_cast<KK_ACC_FLOAT>(d_sforce(i,0));
+    else if (xstyle) f(i,0) = static_cast<KK_ACC_FLOAT>(xvalue_kk);
+    if (ystyle == ATOM) f(i,1) = static_cast<KK_ACC_FLOAT>(d_sforce(i,1));
+    else if (ystyle) f(i,1) = static_cast<KK_ACC_FLOAT>(yvalue_kk);
+    if (zstyle == ATOM) f(i,2) = static_cast<KK_ACC_FLOAT>(d_sforce(i,2));
+    else if (zstyle) f(i,2) = static_cast<KK_ACC_FLOAT>(zvalue_kk);
   }
 }
 
