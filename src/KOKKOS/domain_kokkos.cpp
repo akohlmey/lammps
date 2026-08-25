@@ -416,6 +416,17 @@ void DomainKokkos::pbc()
 
 void DomainKokkos::remap_all()
 {
+  // the kernel below does not carry the velocity correction that fix deform's
+  // "remap v" applies when an atom is wrapped, so leave that case to the host
+  // implementation rather than drop the correction
+
+  if (deform_vremap) {
+    atomKK->sync(Host,X_MASK | V_MASK | IMAGE_MASK | MASK_MASK);
+    Domain::remap_all();
+    atomKK->modified(Host,X_MASK | V_MASK | IMAGE_MASK);
+    return;
+  }
+
   atomKK->sync(Device,X_MASK | IMAGE_MASK);
 
   x = atomKK->k_x.view_device();

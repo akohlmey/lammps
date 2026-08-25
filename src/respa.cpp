@@ -17,6 +17,7 @@
 
 #include "respa.h"
 
+#include "accelerator_kokkos.h"
 #include "angle.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -287,6 +288,15 @@ Respa::~Respa()
 void Respa::init()
 {
   Integrate::init();
+
+  // rRESPA keeps its own copy of the forces of each level and clears and sums
+  // them through the plain LAMMPS arrays, and it calls the force computations
+  // without the transfers between the host and the device that run_style
+  // verlet does for the KOKKOS package.  On a GPU that silently gives the
+  // wrong forces, so refuse the combination rather than run it.
+
+  if (lmp->kokkos)
+    error->all(FLERR, "Run style respa is not supported by the KOKKOS package");
 
   // warn if no fixes
 

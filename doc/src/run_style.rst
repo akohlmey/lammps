@@ -375,6 +375,15 @@ REPLICA package.  Correspondingly the *respa/omp* style is available
 only if the OPENMP package was included. See the :doc:`Build package
 <Build_package>` page for more info.
 
+.. versionchanged:: TBD
+
+The *respa* style cannot be used together with the KOKKOS package.  It
+keeps a copy of the forces of each level and clears and sums those
+through the plain LAMMPS arrays, and it calls the force computations
+without the transfers between the host and the device that the *verlet*
+style performs for KOKKOS.  On a GPU this gives wrong forces with no
+indication that anything is amiss, so the combination is refused.
+
 Run style *verlet/split* is not compatible with kspace styles from
 the INTEL package and it is not compatible with any tip4p, dipole,
 or spin kspace styles.

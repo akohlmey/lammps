@@ -21,6 +21,7 @@
 
 #include "atom_kokkos.h"
 #include "domain.h"
+#include "group.h"
 #include "update.h"
 #include "atom_masks.h"
 #include "kokkos_type.h"
@@ -105,6 +106,22 @@ void NBinSSAKokkos<DeviceType>::bin_atoms()
   int nghost = atom->nghost;
   int nall = nlocal + nghost;
 
+  // an include group leaves out the atoms its pairs are not built from: the
+  // owned atoms of the group are the first nfirst, and of the ghosts only
+  // those in the group are binned.  This is what NBinSSA::bin_atoms() does,
+  // and without it the atoms outside the group turn up in the lists of the
+  // atoms inside it.  The ghosts still start at the number of owned atoms.
+
+  const int nowned = nlocal;
+  const int group_bitmask = includegroup ? group->bitmask[includegroup] : 0;
+  if (includegroup) nlocal = atom->nfirst;
+
+  typename AT::t_int_1d mask_;
+  if (includegroup) {
+    atomKK->sync(ExecutionSpaceFromDevice<DeviceType>::space,MASK_MASK);
+    mask_ = atomKK->k_mask.view<DeviceType>();
+  }
+
   atomKK->sync(ExecutionSpaceFromDevice<DeviceType>::space,X_MASK);
   x = atomKK->k_x.view<DeviceType>();
 
@@ -141,7 +158,7 @@ void NBinSSAKokkos<DeviceType>::bin_atoms()
     k_gbincount.sync<DeviceType>();
     ghosts_per_gbin = 0;
     NPairSSAKokkosBinIDGhostsFunctor<DeviceType> f(*this);
-    Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType>(nlocal,nall), f, ghosts_per_gbin);
+    Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType>(nowned,nall), f, ghosts_per_gbin);
   }
 
   // actually bin the ghost atoms
@@ -158,8 +175,9 @@ void NBinSSAKokkos<DeviceType>::bin_atoms()
     auto gbincount_ = gbincount;
     auto gbins_ = gbins;
 
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(nlocal,nall),
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType>(nowned,nall),
      LAMMPS_LAMBDA (const int i) {
+      if (group_bitmask && !(mask_(i) & group_bitmask)) return;
       const int iAIR = binID_(i);
       if (iAIR > 0) { // include only ghost atoms in an AIR
         const int ac = Kokkos::atomic_fetch_add(&gbincount_[iAIR], (int)1);

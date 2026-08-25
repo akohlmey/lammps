@@ -367,13 +367,17 @@ void FixNHKokkos<DeviceType>::remap()
 
   if (allremap) domainKK->x2lamda(nlocal);
   else {
-    for ( int i = 0; i < nlocal; i++)
-      if (mask[i] & dilate_group_bit) {
-        auto h_x = atomKK->k_x.view_host();
-        atomKK->sync(Host,X_MASK);
+    // this loop runs on the host, so it needs the host side of both arrays:
+    // "mask" is the view for the execution space, and reading it here is an
+    // access to device memory from host code.  Sync once for the whole loop
+    // rather than once per atom as well.
+    atomKK->sync(Host,X_MASK|MASK_MASK);
+    auto h_x = atomKK->k_x.view_host();
+    auto h_mask = atomKK->k_mask.view_host();
+    for (int i = 0; i < nlocal; i++)
+      if (h_mask[i] & dilate_group_bit)
         domainKK->x2lamda(&h_x(i,0), &h_x(i,0));
-        atomKK->modified(Host,X_MASK);
-      }
+    atomKK->modified(Host,X_MASK);
   }
 
   if (rfix.size() > 0)
@@ -518,13 +522,17 @@ void FixNHKokkos<DeviceType>::remap()
 
   if (allremap) domainKK->lamda2x(nlocal);
   else {
-    for ( int i = 0; i < nlocal; i++)
-      if (mask[i] & dilate_group_bit) {
-        auto h_x = atomKK->k_x.view_host();
-        atomKK->sync(Host,X_MASK);
+    // this loop runs on the host, so it needs the host side of both arrays:
+    // "mask" is the view for the execution space, and reading it here is an
+    // access to device memory from host code.  Sync once for the whole loop
+    // rather than once per atom as well.
+    atomKK->sync(Host,X_MASK|MASK_MASK);
+    auto h_x = atomKK->k_x.view_host();
+    auto h_mask = atomKK->k_mask.view_host();
+    for (int i = 0; i < nlocal; i++)
+      if (h_mask[i] & dilate_group_bit)
         domainKK->lamda2x(&h_x(i,0), &h_x(i,0));
-        atomKK->modified(Host,X_MASK);
-      }
+    atomKK->modified(Host,X_MASK);
   }
 
   // for (auto &ifix : rfix) ifix->deform(1);
@@ -660,7 +668,6 @@ template<class DeviceType>
 void FixNHKokkos<DeviceType>::nve_x()
 {
   atomKK->sync(execution_space,X_MASK | V_MASK | MASK_MASK);
-  atomKK->modified(execution_space,X_MASK);
 
   x = atomKK->k_x.view<DeviceType>();
   v = atomKK->k_v.view<DeviceType>();
@@ -673,6 +680,12 @@ void FixNHKokkos<DeviceType>::nve_x()
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixNH_nve_x>(0,nlocal),*this);
   copymode = 0;
+
+  // claim the coordinates after the kernel has written them, not before: a
+  // claim made up front can be taken by a copy that runs in between, which
+  // leaves the coordinates this kernel writes unclaimed
+
+  atomKK->modified(execution_space,X_MASK);
 }
 
 template<class DeviceType>

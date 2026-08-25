@@ -1617,9 +1617,13 @@ void FixShakeKokkos<DeviceType>::stats()
 template<class DeviceType>
 void FixShakeKokkos<DeviceType>::grow_arrays(int nmax)
 {
-  k_shake_flag.sync_device();
-  k_shake_atom.sync_device();
-  k_shake_type.sync_device();
+  // grow_kokkos() grows the host side and hands the plain pointers below it
+  // back to the base class, which reads and writes the clusters through them,
+  // so the host side is the one that has to be current here
+
+  k_shake_flag.sync_host();
+  k_shake_atom.sync_host();
+  k_shake_type.sync_host();
 
   memoryKK->grow_kokkos(k_shake_flag,shake_flag,nmax,"shake:shake_flag");
   memoryKK->grow_kokkos(k_shake_atom,shake_atom,nmax,4,"shake:shake_atom");
