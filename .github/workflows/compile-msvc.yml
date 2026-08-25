@@ -20,7 +20,7 @@ jobs:
   build:
     name: Windows Compilation Test
     if: ${{ github.repository == 'lammps/lammps' }}
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
 
@@ -31,7 +31,7 @@ jobs:
         fetch-depth: 2
 
     - name: Enable MSVC++
-      uses: lammps/setup-msvc-dev@v3
+      uses: lammps/setup-msvc-dev@v4
       with:
         arch: x64
 
