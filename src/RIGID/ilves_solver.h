@@ -24,6 +24,8 @@
 #ifndef LMP_ILVES_SOLVER_H
 #define LMP_ILVES_SOLVER_H
 
+#include "ilves_graph.h"
+
 #include <list>
 #include <map>
 #include <tuple>
@@ -43,8 +45,6 @@ namespace std::pmr {
   using list = std::list<T, mempool::GrowingAllocator<T>>;
 }
 #endif
-
-#include "ilves_graph.h"
 
 /**
  * A sparse direct solver for a structurally symmetric matrix.  The matrix is
