@@ -46,7 +46,7 @@ jobs:
         key: win-unit-ccache-${{ github.sha }}
         restore-keys: win-unit-ccache-
     - name: Select Python version
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.11'
 
