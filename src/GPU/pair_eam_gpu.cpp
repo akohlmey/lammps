@@ -97,17 +97,16 @@ void PairEAMGPU::compute(int eflag, int vflag)
     inum = atom->nlocal;
     firstneigh =
         gpu_compute_n_fn(neighbor->ago, inum, nall, atom->x, atom->type, sublo, subhi, atom->tag,
-                          atom->nspecial, atom->special, eflag, vflag, eflag_atom, vflag_atom,
-                          &ilist, &numneigh, success, inum_dev, &fp_pinned,
-                          domain->prd, domain->periodicity);
+                         atom->nspecial, atom->special, eflag, vflag, eflag_atom, vflag_atom,
+                         &ilist, &numneigh, success, inum_dev, &fp_pinned, domain->prd,
+                         domain->periodicity);
   } else {    // gpu_mode == GPU_FORCE
     inum = list->inum;
     ilist = list->ilist;
     numneigh = list->numneigh;
     firstneigh = list->firstneigh;
     gpu_compute_fn(neighbor->ago, inum, nlocal, nall, atom->x, atom->type, ilist, numneigh,
-                   firstneigh, eflag, vflag, eflag_atom, vflag_atom, success,
-                   &fp_pinned);
+                   firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, &fp_pinned);
   }
 
   if (!success) error->one(FLERR, "Insufficient memory on accelerator");

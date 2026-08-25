@@ -50,8 +50,8 @@ class PairEAMGPU : public PairEAM {
   typedef void (*EAMGPUClearFn)();
   typedef int **(*EAMGPUComputeNFn)(const int, const int, const int, double **, int *, double *,
                                     double *, tagint *, int **, tagint **, const bool, const bool,
-                                    const bool, const bool, int **, int **,
-                                    bool &, int &, void **, double *, int *);
+                                    const bool, const bool, int **, int **, bool &, int &, void **,
+                                    double *, int *);
   typedef void (*EAMGPUComputeFn)(const int, const int, const int, const int, double **, int *,
                                   int *, int *, int **, const bool, const bool, const bool,
                                   const bool, bool &, void **);
