@@ -762,7 +762,7 @@ double PairHybrid::init_one(int i, int j)
 
         for (const auto &request : neighbor->get_pair_requests()) {
           if (styles[istyle] == request->get_requestor()) {
-            request->set_cutoff(cutmax_style[istyle]);
+            request->set_cutoff_max(cutmax_style[istyle]);
             break;
           }
         }

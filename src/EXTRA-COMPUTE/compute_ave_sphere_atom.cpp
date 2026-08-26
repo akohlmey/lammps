@@ -116,7 +116,8 @@ void ComputeAveSphereAtom::init()
   // need an occasional full neighbor list
 
   auto *req = neighbor->add_request(this, NeighConst::REQ_FULL | NeighConst::REQ_OCCASIONAL);
-  if (cutflag) req->set_cutoff(cutoff);
+  // the analysis cutoff applies to all atom types
+  if (cutflag) req->set_cutoff_fixed(cutoff);
 }
 
 /* ---------------------------------------------------------------------- */
