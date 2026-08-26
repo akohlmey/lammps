@@ -158,7 +158,6 @@ FixRestrain::FixRestrain(LAMMPS *lmp, int narg, char **arg) :
 
 FixRestrain::~FixRestrain()
 {
-  if (copymode) return;
   memory->destroy(rstyle);
   memory->destroy(mult);
   memory->destroy(ids);

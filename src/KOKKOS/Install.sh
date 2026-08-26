@@ -121,6 +121,8 @@ action compute_temp_partial_kokkos.cpp
 action compute_temp_partial_kokkos.h
 action compute_temp_profile_kokkos.cpp
 action compute_temp_profile_kokkos.h
+action compute_temp_ramp_kokkos.cpp
+action compute_temp_ramp_kokkos.h
 action compute_temp_sphere_kokkos.cpp
 action compute_temp_sphere_kokkos.h
 action dihedral_charmm_kokkos.cpp dihedral_charmm.cpp
@@ -184,6 +186,8 @@ action fix_gjf_kokkos.cpp fix_gjf.cpp
 action fix_gjf_kokkos.h fix_gjf.h
 action fix_halt_kokkos.cpp
 action fix_halt_kokkos.h
+action fix_heat_kokkos.cpp
+action fix_heat_kokkos.h
 action fix_langevin_kokkos.cpp
 action fix_langevin_kokkos.h
 action fix_lineforce_kokkos.cpp

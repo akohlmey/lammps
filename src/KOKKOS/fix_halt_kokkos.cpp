@@ -70,8 +70,11 @@ double FixHaltKokkos<DeviceType>::bondmax()
     copymode = 0;
   }
 
+  // KK_FLOAT is float in single/mixed precision builds; widen for the Allreduce
+
+  double maxone_d = maxone;
   double maxall;
-  MPI_Allreduce(&maxone, &maxall, 1, MPI_DOUBLE, MPI_MAX, world);
+  MPI_Allreduce(&maxone_d, &maxall, 1, MPI_DOUBLE, MPI_MAX, world);
 
   return sqrt(maxall);
 }

@@ -29,32 +29,36 @@ FixStyle(spring/rg/kk/host,FixSpringRGKokkos<LMPHostType>);
 
 namespace LAMMPS_NS {
 
-struct TagFixSpringRG{};
-struct TagFixSpringRGRmass{};
+struct TagFixSpringRGXcm{};
+struct TagFixSpringRGGyration{};
+struct TagFixSpringRGApply{};
 
 template<class DeviceType>
 class FixSpringRGKokkos : public FixSpringRG {
  public:
   typedef DeviceType device_type;
   typedef ArrayTypes<DeviceType> AT;
+  typedef double value_type[];
+  const int value_count = 4;
 
   FixSpringRGKokkos(class LAMMPS *, int, char **);
-  ~FixSpringRGKokkos() override {}
+  ~FixSpringRGKokkos() override = default;
   void init() override;
   void post_force(int) override;
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagFixSpringRG, const int &) const;
+  void operator()(TagFixSpringRGXcm, const int &, value_type) const;
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagFixSpringRGRmass, const int &) const;
+  void operator()(TagFixSpringRGGyration, const int &, value_type) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixSpringRGApply, const int &) const;
 
  private:
-  class AtomKokkos *atomKK;
-  ExecutionSpace execution_space;
-
   typename AT::t_kkfloat_1d_3_lr_randomread x;
   typename AT::t_kkacc_1d_3 f;
   typename AT::t_imageint_1d_randomread image;
@@ -68,6 +72,7 @@ class FixSpringRGKokkos : public FixSpringRG {
   int triclinic;
 
   // set before each kernel launch
+  int l_rmass_flag;
   double l_xcm[3];
   double l_coeff;    // 2*k*(1-rg0/rg)/masstotal
 };

@@ -35,8 +35,6 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-enum { CONSTANT, EQUAL, ATOM };
-
 /* ---------------------------------------------------------------------- */
 
 FixHeat::FixHeat(LAMMPS *lmp, int narg, char **arg) :

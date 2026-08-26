@@ -13,38 +13,33 @@
 
 #ifdef COMPUTE_CLASS
 // clang-format off
-ComputeStyle(temp/profile/kk,ComputeTempProfileKokkos<LMPDeviceType>);
-ComputeStyle(temp/profile/kk/device,ComputeTempProfileKokkos<LMPDeviceType>);
-ComputeStyle(temp/profile/kk/host,ComputeTempProfileKokkos<LMPHostType>);
+ComputeStyle(temp/ramp/kk,ComputeTempRampKokkos<LMPDeviceType>);
+ComputeStyle(temp/ramp/kk/device,ComputeTempRampKokkos<LMPDeviceType>);
+ComputeStyle(temp/ramp/kk/host,ComputeTempRampKokkos<LMPHostType>);
 // clang-format on
 #else
 
 // clang-format off
-#ifndef LMP_COMPUTE_TEMP_PROFILE_KOKKOS_H
-#define LMP_COMPUTE_TEMP_PROFILE_KOKKOS_H
+#ifndef LMP_COMPUTE_TEMP_RAMP_KOKKOS_H
+#define LMP_COMPUTE_TEMP_RAMP_KOKKOS_H
 
-#include "compute_temp_profile.h"
+#include "compute_temp_ramp.h"
 #include "kokkos_type.h"
 
 namespace LAMMPS_NS {
 
-struct TagComputeTempProfileBin{};
+template<int RMASS>
+struct TagComputeTempRampScalar{};
 
 template<int RMASS>
-struct TagComputeTempProfileScatter{};
+struct TagComputeTempRampVector{};
 
-template<int RMASS>
-struct TagComputeTempProfileScalar{};
+struct TagComputeTempRampRemoveBias{};
 
-template<int RMASS>
-struct TagComputeTempProfileVector{};
-
-struct TagComputeTempProfileRemoveBias{};
-
-struct TagComputeTempProfileRestoreBias{};
+struct TagComputeTempRampRestoreBias{};
 
 template<class DeviceType>
-class ComputeTempProfileKokkos : public ComputeTempProfile {
+class ComputeTempRampKokkos : public ComputeTempRamp {
  public:
 
   struct s_CTEMP {
@@ -68,67 +63,50 @@ class ComputeTempProfileKokkos : public ComputeTempProfile {
   typedef ArrayTypes<DeviceType> AT;
   typedef CTEMP value_type;
 
-  ComputeTempProfileKokkos(class LAMMPS *, int, char **);
-
+  ComputeTempRampKokkos(class LAMMPS *, int, char **);
   double compute_scalar() override;
   void compute_vector() override;
-  void compute_array() override;
 
   void remove_bias_all() override;
   void remove_bias_all_kk() override;
   void restore_bias_all() override;
   void restore_bias_all_kk() override;
 
+  template<int RMASS>
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputeTempProfileBin, const int&) const;
+  void operator()(TagComputeTempRampScalar<RMASS>, const int&, CTEMP&) const;
 
   template<int RMASS>
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputeTempProfileScatter<RMASS>, const int&) const;
-
-  template<int RMASS>
-// NOLINTNEXTLINE
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputeTempProfileScalar<RMASS>, const int&, CTEMP&) const;
-
-  template<int RMASS>
-// NOLINTNEXTLINE
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputeTempProfileVector<RMASS>, const int&, CTEMP&) const;
+  void operator()(TagComputeTempRampVector<RMASS>, const int&, CTEMP&) const;
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputeTempProfileRemoveBias, const int&) const;
+  void operator()(TagComputeTempRampRemoveBias, const int&) const;
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagComputeTempProfileRestoreBias, const int&) const;
+  void operator()(TagComputeTempRampRestoreBias, const int&) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
+  double ramp_bias(const int &i) const {
+    double fraction = (x(i,coord_dim) - coord_lo) / (coord_hi - coord_lo);
+    fraction = (fraction < 0.0) ? 0.0 : fraction;
+    fraction = (fraction > 1.0) ? 1.0 : fraction;
+    return v_lo + fraction*(v_hi - v_lo);
+  }
 
  protected:
-  // average COM velocity per bin (device), mirroring ComputeTempProfile::bin_average
-  void bin_average_kk();
-
-  typedef Kokkos::View<double**, DeviceType> t_double_2d;
-
   typename AT::t_kkfloat_1d_3_lr_randomread x;
   typename AT::t_kkfloat_1d_3 v;
+  typename AT::t_kkfloat_1d_3 vbiasall;
   typename AT::t_kkfloat_1d_randomread rmass;
   typename AT::t_kkfloat_1d_randomread mass;
   typename AT::t_int_1d_randomread type;
   typename AT::t_int_1d_randomread mask;
-
-  t_double_2d d_vbin;                    // per-bin mass-weighted v + mass + count (scatter)
-  t_double_2d d_binave;                  // per-bin COM velocity (after Allreduce + divide)
-  typename t_double_2d::host_mirror_type h_vbin, h_binave;   // persistent host mirrors
-  typename AT::t_int_1d d_bin;           // per-atom bin index
-
-  int maxbin;
-
-  // binning frame copied to device-friendly scalars (orthogonal path)
-  KK_FLOAT m_boxlo[3], m_boxhi[3], m_prd[3], m_invdelta[3];
-  int m_periodicity[3];
 };
 
 }    // namespace LAMMPS_NS

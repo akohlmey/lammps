@@ -65,6 +65,8 @@ class FixTISpringKokkos : public FixTISpring, public KokkosBase {
 
   int pack_exchange(int, double *) override;
   int unpack_exchange(int, double *) override;
+  int pack_restart(int, double *) override;
+  void unpack_restart(int, int) override;
 
  protected:
   int nrecv1, nextrarecv1;

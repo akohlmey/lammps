@@ -13,64 +13,56 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(addtorque/group/kk,FixAddTorqueGroupKokkos<LMPDeviceType>);
-FixStyle(addtorque/group/kk/device,FixAddTorqueGroupKokkos<LMPDeviceType>);
-FixStyle(addtorque/group/kk/host,FixAddTorqueGroupKokkos<LMPHostType>);
+FixStyle(heat/kk,FixHeatKokkos<LMPDeviceType>);
+FixStyle(heat/kk/device,FixHeatKokkos<LMPDeviceType>);
+FixStyle(heat/kk/host,FixHeatKokkos<LMPHostType>);
 // clang-format on
 #else
 
 // clang-format off
-#ifndef LMP_FIX_ADDTORQUE_GROUP_KOKKOS_H
-#define LMP_FIX_ADDTORQUE_GROUP_KOKKOS_H
+#ifndef LMP_FIX_HEAT_KOKKOS_H
+#define LMP_FIX_HEAT_KOKKOS_H
 
-#include "fix_addtorque_group.h"
-#include "kokkos_few.h"
+#include "fix_heat.h"
 #include "kokkos_type.h"
 
 namespace LAMMPS_NS {
 
-struct TagFixAddTorqueGroupMass{};
-struct TagFixAddTorqueGroupRmass{};
+struct TagFixHeatKE{};
+struct TagFixHeatApply{};
 
 template<class DeviceType>
-class FixAddTorqueGroupKokkos : public FixAddTorqueGroup {
+class FixHeatKokkos : public FixHeat {
  public:
   typedef DeviceType device_type;
   typedef ArrayTypes<DeviceType> AT;
   typedef double value_type[];
   const int value_count = 4;
 
-  FixAddTorqueGroupKokkos(class LAMMPS *, int, char **);
-  ~FixAddTorqueGroupKokkos() override;
+  FixHeatKokkos(class LAMMPS *, int, char **);
+  ~FixHeatKokkos() override = default;
   void init() override;
-  void post_force(int) override;
+  void end_of_step() override;
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagFixAddTorqueGroupMass, const int &, value_type) const;
+  void operator()(TagFixHeatKE, const int &, value_type) const;
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagFixAddTorqueGroupRmass, const int &, value_type) const;
+  void operator()(TagFixHeatApply, const int &) const;
 
  private:
-  typename AT::t_kkfloat_1d_3_lr_randomread x;
-  typename AT::t_kkacc_1d_3 f;
-  typename AT::t_imageint_1d_randomread image;
+  typename AT::t_kkfloat_1d_3 v;
   typename AT::t_int_1d_randomread mask;
   typename AT::t_int_1d_randomread type;
   typename AT::t_kkfloat_1d_randomread rmass;
   typename AT::t_kkfloat_1d_randomread mass;
 
-  Few<double,3> prd;
-  Few<double,6> h;
-  int triclinic;
-
   // set before each kernel launch
-  double l_xcm[3];
-  double l_omega[3];
-  double l_domegadt[3];
-  double l_mvv2e;
+  int l_rmass_flag;
+  double l_scale;
+  double l_vsub[3];
 };
 
 }    // namespace LAMMPS_NS

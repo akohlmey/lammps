@@ -42,9 +42,13 @@ all common ones done); kspace = plain `pppm` only; regions = `block` + `sphere` 
 
 ## Group F triage
 
-- Real porting targets: `fix heat` (group-KE `parallel_reduce` + velocity-rescale
-  kernel), `fix indent` (per-atom force kernel; host-evaluate only the few variable
-  scalars per step and broadcast them into the kernel).
+- `fix heat` PORTED (on `more-kokkos-porting`): device KE+vcm reduce + rescale
+  kernel; the `region` keyword and atom-style heat-flux variables error out
+  (documented).  `compute temp/ramp` ported alongside (temp/partial pattern).
+- Real porting target remaining: `fix indent` (per-atom force kernel;
+  host-evaluate only the few variable scalars per step and broadcast them into
+  the kernel).  NOTE: the base style has grown to ~1100 lines with several
+  geometry variants -- no longer a small port.
 - LEAVE UNPORTED (full-ports-only policy; no device work to offer): `fix move`
   (`xoriginal` is a plain `double **` CPU array; a real port means converting it to a
   DualView + KokkosBase first), `fix restrain` (`atom->map()` ghost lookups host-side),
@@ -55,7 +59,11 @@ all common ones done); kspace = plain `pppm` only; regions = `block` + `sphere` 
 1. Land the open work: PR #4989, and open a PR for branch `kokkos-tip4p` (NPT of TIP4P
    water is a flagship GPU use case; the per-step host pair+kspace fallback -- not the
    barostat -- is the real bottleneck).
-2. `fix heat/kk` and `fix indent/kk` (the Group F real targets).
+2. `fix indent/kk` (the remaining Group F real target; `heat/kk` is done).
+   Also deferred to the same follow-up: device group reductions for
+   `addtorque/group/kk` (3-stage xcm -> inertia+angmom -> itorque) and
+   `compute temp/rotate/kk`, which needs the identical machinery plus a
+   host-consumer path for its stored per-atom bias.
 3. `compute temp/region/kk` -- gated on region coverage (only `block` and `sphere`
    regions are ported; port the needed `region_*_kokkos` first).
 4. `fix box/relax/kk` (minimization-time barostat; lower frequency).

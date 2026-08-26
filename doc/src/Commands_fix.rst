@@ -97,7 +97,7 @@ parenthesis: g = GPU, i = INTEL, k = KOKKOS, o = OPENMP, t = OPT.
    * :doc:`gravity (ko) <fix_gravity>`
    * :doc:`grem <fix_grem>`
    * :doc:`halt (k) <fix_halt>`
-   * :doc:`heat <fix_heat>`
+   * :doc:`heat (k) <fix_heat>`
    * :doc:`heat/flow <fix_heat_flow>`
    * :doc:`hmc <fix_hmc>`
    * :doc:`hyper/global <fix_hyper_global>`

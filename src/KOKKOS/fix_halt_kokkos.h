@@ -37,7 +37,7 @@ class FixHaltKokkos : public FixHalt {
   typedef ArrayTypes<DeviceType> AT;
 
   FixHaltKokkos(class LAMMPS *, int, char **);
-  ~FixHaltKokkos() {};
+  ~FixHaltKokkos() override = default;
   void end_of_step() override;
 
 // NOLINTNEXTLINE

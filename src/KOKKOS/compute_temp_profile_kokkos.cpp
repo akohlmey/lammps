@@ -19,6 +19,7 @@
 #include "domain.h"
 #include "error.h"
 #include "force.h"
+#include "memory.h"
 #include "update.h"
 
 using namespace LAMMPS_NS;
@@ -38,10 +39,15 @@ ComputeTempProfileKokkos<DeviceType>::ComputeTempProfileKokkos(LAMMPS *lmp, int 
 
   maxbin = 0;
 
-  // per-bin accumulators (nbins, ncount are set by the base constructor)
+  // per-bin accumulators (nbins, ncount are set by the base constructor).
+  // the sums are accumulated in double regardless of the precision of the
+  // per-atom data, and the host mirrors are persistent so no per-step
+  // allocations happen on GPU builds.
 
-  d_vbin = typename AT::t_kkfloat_2d("temp/profile/kk:vbin", nbins, ncount);
-  d_binave = typename AT::t_kkfloat_2d("temp/profile/kk:binave", nbins, ncount);
+  d_vbin = t_double_2d("temp/profile/kk:vbin", nbins, ncount);
+  d_binave = t_double_2d("temp/profile/kk:binave", nbins, ncount);
+  h_vbin = Kokkos::create_mirror_view(d_vbin);
+  h_binave = Kokkos::create_mirror_view(d_binave);
 }
 
 /* ----------------------------------------------------------------------
@@ -54,7 +60,9 @@ void ComputeTempProfileKokkos<DeviceType>::bin_average_kk()
 {
   if (box_change) bin_setup();
 
-  // copy the binning frame into device-friendly scalars
+  // copy the binning frame into device-friendly scalars.  for triclinic
+  // boxes the base class init() pointed boxlo/boxhi/prd at the lamda-space
+  // values, so the same bin formula applies to lamda coordinates.
 
   for (int d = 0; d < 3; d++) {
     m_boxlo[d] = static_cast<KK_FLOAT>(boxlo[d]);
@@ -71,22 +79,34 @@ void ComputeTempProfileKokkos<DeviceType>::bin_average_kk()
     d_bin = typename AT::t_int_1d("temp/profile/kk:bin", maxbin);
   }
 
-  // assign each atom to a bin
+  // assign each atom to a bin on the device.  for triclinic boxes convert
+  // the coordinates to lamda space around the kernel; DomainKokkos does the
+  // conversions with device kernels that sync X themselves.
 
-  if (!triclinic) {
-    atomKK->sync(execution_space, X_MASK | MASK_MASK);
-    x = atomKK->k_x.view<DeviceType>();
-    mask = atomKK->k_mask.view<DeviceType>();
-    copymode = 1;
-    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeTempProfileBin>(0,nlocal),*this);
-    copymode = 0;
-  } else {
-    // rare path: do the (lamda-space) binning on the host, then copy to device
-    atomKK->sync(Host, X_MASK | MASK_MASK);
-    bin_assign();
-    auto h_bin = Kokkos::create_mirror_view(d_bin);
-    for (int i = 0; i < nlocal; i++) h_bin(i) = bin[i];
-    Kokkos::deep_copy(d_bin, h_bin);
+  if (triclinic) domain->x2lamda(nlocal);
+
+  atomKK->sync(execution_space, X_MASK | MASK_MASK);
+  x = atomKK->k_x.view<DeviceType>();
+  mask = atomKK->k_mask.view<DeviceType>();
+  copymode = 1;
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeTempProfileBin>(0,nlocal),*this);
+  copymode = 0;
+
+  if (triclinic) domain->lamda2x(nlocal);
+
+  // keep the host bin[] array current: the inherited per-atom
+  // remove_bias()/restore_bias() (used by non-KOKKOS thermostats pointed at
+  // this compute) and compute_array() index into it.  this copies nlocal
+  // ints to the host, which is cheap next to the per-atom velocity data.
+
+  if (atom->nmax > maxatom) {
+    maxatom = atom->nmax;
+    memory->destroy(bin);
+    memory->create(bin,maxatom,"temp/profile:bin");
+  }
+  if (nlocal > 0) {
+    Kokkos::View<int*,Kokkos::HostSpace,Kokkos::MemoryTraits<Kokkos::Unmanaged>> h_bin_um(bin,nlocal);
+    Kokkos::deep_copy(h_bin_um, Kokkos::subview(d_bin, Kokkos::pair<int,int>(0,nlocal)));
   }
 
   // sum each atom's mass-weighted velocity, mass, and count into its bin
@@ -110,7 +130,6 @@ void ComputeTempProfileKokkos<DeviceType>::bin_average_kk()
 
   // sum bins across procs on the host (bit-faithful to the CPU reduction)
 
-  auto h_vbin = Kokkos::create_mirror_view(d_vbin);
   Kokkos::deep_copy(h_vbin, d_vbin);
   for (int i = 0; i < nbins; i++)
     for (int j = 0; j < ncount; j++) vbin[i][j] = h_vbin(i,j);
@@ -125,9 +144,8 @@ void ComputeTempProfileKokkos<DeviceType>::bin_average_kk()
     if (binave[i][nc1] > 0.0)
       for (int j = 0; j < nc2; j++) binave[i][j] /= binave[i][nc2];
 
-  auto h_binave = Kokkos::create_mirror_view(d_binave);
   for (int i = 0; i < nbins; i++)
-    for (int j = 0; j < ncount; j++) h_binave(i,j) = static_cast<KK_FLOAT>(binave[i][j]);
+    for (int j = 0; j < ncount; j++) h_binave(i,j) = binave[i][j];
   Kokkos::deep_copy(d_binave, h_binave);
 }
 
@@ -183,14 +201,14 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileScatt
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    KK_FLOAT massone;
+    double massone;
     if (RMASS) massone = rmass[i];
     else massone = mass[type[i]];
-    if (xflag) Kokkos::atomic_add(&d_vbin(ibin,ivx), massone*v(i,0));
-    if (yflag) Kokkos::atomic_add(&d_vbin(ibin,ivy), massone*v(i,1));
-    if (zflag) Kokkos::atomic_add(&d_vbin(ibin,ivz), massone*v(i,2));
+    if (xflag) Kokkos::atomic_add(&d_vbin(ibin,ivx), massone*(double)v(i,0));
+    if (yflag) Kokkos::atomic_add(&d_vbin(ibin,ivy), massone*(double)v(i,1));
+    if (zflag) Kokkos::atomic_add(&d_vbin(ibin,ivz), massone*(double)v(i,2));
     Kokkos::atomic_add(&d_vbin(ibin,ncount-2), massone);
-    Kokkos::atomic_add(&d_vbin(ibin,ncount-1), (KK_FLOAT)1.0);
+    Kokkos::atomic_add(&d_vbin(ibin,ncount-1), 1.0);
   }
 }
 
@@ -230,11 +248,11 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileScala
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    KK_FLOAT vt0 = v(i,0), vt1 = v(i,1), vt2 = v(i,2);
+    double vt0 = v(i,0), vt1 = v(i,1), vt2 = v(i,2);
     if (xflag) vt0 -= d_binave(ibin,ivx);
     if (yflag) vt1 -= d_binave(ibin,ivy);
     if (zflag) vt2 -= d_binave(ibin,ivz);
-    KK_FLOAT massone;
+    double massone;
     if (RMASS) massone = rmass[i];
     else massone = mass[type[i]];
     t_kk.t0 += (vt0*vt0 + vt1*vt1 + vt2*vt2) * massone;
@@ -278,11 +296,11 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileVecto
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    KK_FLOAT vt0 = v(i,0), vt1 = v(i,1), vt2 = v(i,2);
+    double vt0 = v(i,0), vt1 = v(i,1), vt2 = v(i,2);
     if (xflag) vt0 -= d_binave(ibin,ivx);
     if (yflag) vt1 -= d_binave(ibin,ivy);
     if (zflag) vt2 -= d_binave(ibin,ivz);
-    KK_FLOAT massone;
+    double massone;
     if (RMASS) massone = rmass[i];
     else massone = mass[type[i]];
     t_kk.t0 += massone * vt0*vt0;
@@ -295,15 +313,69 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileVecto
 }
 
 /* ----------------------------------------------------------------------
-   per-bin temperature output (rare diagnostic path): compute on the host
+   per-bin temperature output (rare diagnostic path): mirrors the base
+   compute_array(), but bins via bin_average_kk() -- the base bin_assign()
+   cannot be used here because DomainKokkos::x2lamda(int) converts the
+   coordinates on the device, which the host loop would not see
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
 void ComputeTempProfileKokkos<DeviceType>::compute_array()
 {
-  atomKK->sync(Host, X_MASK | V_MASK | MASK_MASK | RMASS_MASK | TYPE_MASK);
+  int i,ibin;
+  double vthermal[3];
+
+  invoked_array = update->ntimestep;
+
+  bin_average_kk();
+
+  atomKK->sync(Host, V_MASK | MASK_MASK | RMASS_MASK | TYPE_MASK);
   atomKK->k_mass.sync<LMPHostType>();
-  ComputeTempProfile::compute_array();
+
+  double **v = atom->v;
+  double *mass = atom->mass;
+  double *rmass = atom->rmass;
+  int *type = atom->type;
+  int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+
+  for (i = 0; i < nbins; i++) tbin[i] = 0.0;
+
+  for (i = 0; i < nlocal; i++)
+    if (mask[i] & groupbit) {
+      ibin = bin[i];
+      if (xflag) vthermal[0] = v[i][0] - binave[ibin][ivx];
+      else vthermal[0] = v[i][0];
+      if (yflag) vthermal[1] = v[i][1] - binave[ibin][ivy];
+      else vthermal[1] = v[i][1];
+      if (zflag) vthermal[2] = v[i][2] - binave[ibin][ivz];
+      else vthermal[2] = v[i][2];
+
+      if (rmass)
+        tbin[ibin] += (vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] +
+                       vthermal[2]*vthermal[2]) * rmass[i];
+      else
+        tbin[ibin] += (vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] +
+                       vthermal[2]*vthermal[2]) * mass[type[i]];
+    }
+
+  MPI_Allreduce(tbin,tbinall,nbins,MPI_DOUBLE,MPI_SUM,world);
+
+  double totcount = 0.0;
+  for (i = 0; i < nbins; i++) {
+    array[i][0] = binave[i][ncount-1];
+    totcount += array[i][0];
+  }
+  double nper = domain->dimension - (extra_dof + fix_dof)/totcount;
+  double dofbin, tfactorbin;
+  for (i = 0; i < nbins; i++) {
+    if (array[i][0] > 0.0) {
+      dofbin = nper*array[i][0] - nstreaming;
+      if (dofbin > 0) tfactorbin = force->mvv2e / (dofbin * force->boltz);
+      else tfactorbin = 0.0;
+      array[i][1] = tfactorbin*tbinall[i];
+    } else array[i][1] = 0.0;
+  }
 }
 
 /* ----------------------------------------------------------------------

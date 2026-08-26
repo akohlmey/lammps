@@ -27,6 +27,7 @@
 #include "atom_masks.h"
 
 #include <cmath>
+#include <type_traits>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -56,7 +57,11 @@ FixTempBerendsenKokkos<DeviceType>::FixTempBerendsenKokkos(LAMMPS *lmp, int narg
     Compute *c = modify->get_compute_by_id(id_temp);
     if (c && !c->kokkosable) {
       modify->delete_compute(id_temp);
-      modify->add_compute(fmt::format("{} {} temp/kk", id_temp, group->names[igroup]));
+      // match this fix's host/device flavor so a /kk/host fix gets a
+      // host-space helper (the two are identical on CPU-only builds)
+      const char *tempstyle =
+        std::is_same_v<DeviceType,LMPDeviceType> ? "temp/kk" : "temp/kk/host";
+      modify->add_compute(fmt::format("{} {} {}", id_temp, group->names[igroup], tempstyle));
     }
   }
 }

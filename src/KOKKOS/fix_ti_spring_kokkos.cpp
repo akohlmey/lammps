@@ -289,13 +289,11 @@ void FixTISpringKokkos<DeviceType>::unpack_exchange_kokkos(
 template<class DeviceType>
 int FixTISpringKokkos<DeviceType>::pack_exchange(int i, double *buf)
 {
+  // the base class only reads xoriginal, so no modify_host() here
+
   k_xoriginal.sync_host();
 
-  int m = FixTISpring::pack_exchange(i,buf);
-
-  k_xoriginal.modify_host();
-
-  return m;
+  return FixTISpring::pack_exchange(i,buf);
 }
 
 /* ----------------------------------------------------------------------
@@ -312,6 +310,34 @@ int FixTISpringKokkos<DeviceType>::unpack_exchange(int nlocal, double *buf)
   k_xoriginal.modify_host();
 
   return m;
+}
+
+/* ----------------------------------------------------------------------
+   pack values in local atom-based arrays for restart file
+   the base class reads the host copy, which may be stale after a
+   device-side exchange, so sync it first (read-only: no modify_host)
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+int FixTISpringKokkos<DeviceType>::pack_restart(int i, double *buf)
+{
+  k_xoriginal.sync_host();
+
+  return FixTISpring::pack_restart(i,buf);
+}
+
+/* ----------------------------------------------------------------------
+   unpack values from atom->extra array to restart the fix
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+void FixTISpringKokkos<DeviceType>::unpack_restart(int nlocal, int nth)
+{
+  k_xoriginal.sync_host();
+
+  FixTISpring::unpack_restart(nlocal,nth);
+
+  k_xoriginal.modify_host();
 }
 
 namespace LAMMPS_NS {

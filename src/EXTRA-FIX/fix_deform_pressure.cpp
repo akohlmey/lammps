@@ -380,7 +380,6 @@ FixDeformPressure::FixDeformPressure(LAMMPS *lmp, int narg, char **arg) :
 
 FixDeformPressure::~FixDeformPressure()
 {
-  if (copymode) return;
   if (set_extra)
     for (int i = 0; i < 7; i++)
       delete[] set_extra[i].pstr;

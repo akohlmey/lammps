@@ -102,7 +102,7 @@ void FixGJFKokkos<DeviceType>::init()
   if (tbiasflag)
     error->all(FLERR, "Fix gjf/kk does not yet support temperature bias removal");
 
-  if (tstyle == 2)   // 2 == ATOM style (ATOM enum is private to fix_gjf.cpp)
+  if (tstyle == ATOM)
     error->all(FLERR, "Fix gjf/kk does not yet support per-atom temperature");
 }
 
@@ -461,10 +461,10 @@ void FixGJFKokkos<DeviceType>::unpack_exchange_kokkos(
 template<class DeviceType>
 int FixGJFKokkos<DeviceType>::pack_exchange(int i, double *buf)
 {
+  // the base class only reads lv, so no modify_host() here
+
   k_lv.sync_host();
-  int m = FixGJF::pack_exchange(i, buf);
-  k_lv.modify_host();
-  return m;
+  return FixGJF::pack_exchange(i, buf);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -476,6 +476,31 @@ int FixGJFKokkos<DeviceType>::unpack_exchange(int nlocal, double *buf)
   int m = FixGJF::unpack_exchange(nlocal, buf);
   k_lv.modify_host();
   return m;
+}
+
+/* ----------------------------------------------------------------------
+   pack values in local atom-based arrays for restart file
+   the base class reads the host copy, which may be stale after a
+   device-side exchange, so sync it first (read-only: no modify_host)
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+int FixGJFKokkos<DeviceType>::pack_restart(int i, double *buf)
+{
+  k_lv.sync_host();
+  return FixGJF::pack_restart(i, buf);
+}
+
+/* ----------------------------------------------------------------------
+   unpack values from atom->extra array to restart the fix
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+void FixGJFKokkos<DeviceType>::unpack_restart(int nlocal, int nth)
+{
+  k_lv.sync_host();
+  FixGJF::unpack_restart(nlocal, nth);
+  k_lv.modify_host();
 }
 
 /* ---------------------------------------------------------------------- */
