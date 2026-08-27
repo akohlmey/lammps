@@ -1139,7 +1139,7 @@ def needs_partitions(input_file):
 
 # input scripts under these folders under examples/ couple LAMMPS to another code
 # or are not meant for showing physics, but as GRAPHICS package demos.
-EXCLUDED_FOLDERS = ('COUPLE', 'mdi', 'QUANTUM', 'GRAPHICS', 'PACKAGES/ipi')
+EXCLUDED_FOLDERS = ('COUPLE', 'mdi', 'QUANTUM', 'GRAPHICS', 'ipi')
 EXCLUDED_REASON = "couples LAMMPS to another code or is a graphics demo and cannot be tested standalone"
 
 '''
