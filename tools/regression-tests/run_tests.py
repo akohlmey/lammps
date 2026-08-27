@@ -1139,15 +1139,21 @@ def needs_partitions(input_file):
 
 # input scripts under these folders under examples/ couple LAMMPS to another code
 # or are not meant for showing physics, but as GRAPHICS package demos.
-EXCLUDED_FOLDERS = ('COUPLE', 'mdi', 'QUANTUM', 'GRAPHICS', 'ipi')
+EXCLUDED_FOLDERS = ('COUPLE', 'mdi', 'QUANTUM', 'GRAPHICS', 'PACKAGES/ipi')
 EXCLUDED_REASON = "couples LAMMPS to another code or is a graphics demo and cannot be tested standalone"
 
 '''
     check whether a path is under one of the EXCLUDED_FOLDERS under examples/
+    entries may be a single folder name or a path of multiple folders separated by '/'
 '''
 def excluded_example(path):
     parts = os.path.abspath(path).split(os.sep)
-    return any(folder in parts for folder in EXCLUDED_FOLDERS)
+    for folder in EXCLUDED_FOLDERS:
+        subpath = folder.split('/')
+        num = len(subpath)
+        if any(parts[i:i+num] == subpath for i in range(len(parts) - num + 1)):
+            return True
+    return False
 
 # STATIC AND DYNAMIC SCREENING FOR STYLES MISSING FROM THE TESTED BINARY
 #
