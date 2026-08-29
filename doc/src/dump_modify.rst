@@ -176,7 +176,7 @@ is the default, then each processor writes its output into an internal
 text buffer, which is then sent to the processor(s) which perform file
 writes, and written by those processors(s) as one large chunk of text.
 If specified as *no*, each processor sends its per-atom data in binary
-format to the processor(s) which perform file wirtes, and those
+format to the processor(s) which perform file writes, and those
 processor(s) format and write it line by line into the output file.
 
 The buffering mode is typically faster since each processor does the

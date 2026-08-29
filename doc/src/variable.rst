@@ -65,7 +65,7 @@ Syntax
                            inertia(group,dimdim), omega(group,dim)
          region functions = count(group,region), mass(group,region), charge(group,region),
                            xcm(group,dim,region), vcm(group,dim,region), fcm(group,dim,region),
-                           bound(group,dir,region), gyration(group,region), ke(group,reigon),
+                           bound(group,dir,region), gyration(group,region), ke(group,region),
                            angmom(group,dim,region), torque(group,dim,region),
                            inertia(group,dimdim,region), omega(group,dim,region)
          special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), sort(x), rsort(x),
@@ -264,7 +264,7 @@ causes the next :doc:`jump <jump>` command encountered in the input
 script to be skipped.  This enables the construction of simple loops
 in the input script that are iterated over and then exited from.
 
-As explained above, an exhausted variable can be re-used in an input
+As explained above, an exhausted variable can be reused in an input
 script.  The *delete* style also removes the variable, the same as if
 it were exhausted, allowing it to be redefined later in the input
 script or when the input script is looped over.  This can be useful
@@ -474,7 +474,7 @@ specified before the Python function is invoked for the first time.
 Each time the variable is evaluated, the associated Python function is
 invoked, and the value it returns is also returned by the variable.
 Since the Python function can use other LAMMPS variables as input, or
-query interal LAMMPS quantities to perform its computation, this means
+query internal LAMMPS quantities to perform its computation, this means
 the variable can return a different value each time it is evaluated.
 
 The type of value stored in the variable is determined by the *format*

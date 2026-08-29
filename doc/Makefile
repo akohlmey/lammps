@@ -160,12 +160,16 @@ fasthtml/%.html: $(RSTDIR)/%.rst
 # discard it) and produce different doctrees (e.g. from the sphinx-tabs hack
 # for non-html builders), so sharing $(BUILDDIR)/doctrees would re-read all
 # sources on every run instead of only changed files.
+# the GIT_CONFIG_* override disables log.showsignature for the contributor name
+# scan of sphinxcontrib-spelling, which runs "git log" over the full history:
+# verifying the signature of every signed commit would take minutes.
 spelling: xmlgen globbed-tocs $(SPHINXCONFIG)/conf.py $(VENV) $(SPHINXCONFIG)/false_positives.txt
 	@if [ "$(HAS_BASH)" == "NO" ] ; then echo "bash was not found at $(OSHELL)! Please use: $(MAKE) SHELL=/path/to/bash" 1>&2; exit 1; fi
 	@rm -rf $(BUILDDIR)/spelling
 	@(\
 		. $(VENV)/bin/activate ; \
 		cp $(SPHINXCONFIG)/false_positives.txt $(RSTDIR)/;  env PYTHONWARNINGS= PYTHONDONTWRITEBYTECODE=1 \
+		GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=log.showsignature GIT_CONFIG_VALUE_0=false \
 		sphinx-build $(SPHINXEXTRA) -b spelling -c $(SPHINXCONFIG) -d $(BUILDDIR)/doctrees-spelling $(RSTDIR) spelling ;\
 		rm -f $(BUILDDIR)/doxygen/xml/run.stamp;\
 		deactivate ;\
