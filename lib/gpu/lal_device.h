@@ -49,7 +49,6 @@ class Device {
     * - -5 Double precision is not supported on card
     * - -6 if GPU could not be initialized for use
     * - -7 if accelerator sharing is not currently allowed on system
-    * - -8 GPU particle split must be set to 1 for this pair style
     * - -9 CPU neighbor lists must be used for ellipsoid/sphere mix
     * - -10 Invalid threads_per_atom specified
     * - -11 if config_string has the wrong number of parameters

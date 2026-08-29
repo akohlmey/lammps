@@ -241,23 +241,26 @@ default setting it will automatically change to *neigh no*.
 
 The *newton* keyword sets the Newton flags for pairwise (not bonded)
 interactions to *off* or *on*, the same as the :doc:`newton <newton>`
-command allows.  The default is *off*, which causes more computation but
-less communication.  Note that the newton setting for bonded interactions
-is not affected by this keyword.
+command allows.  If this keyword is not used, the pairwise Newton setting
+is left unchanged, that is it keeps the value selected by the
+:doc:`newton <newton>` command, which is *on* by default.  A setting of
+*off* causes more computation but less communication.  Note that the
+newton setting for bonded interactions is not affected by this keyword.
 
 .. versionchanged:: TBD
 
-   The *newton* keyword now also accepts a value of *on*.  Previously only
-   *off* was allowed, since the host/device particle-split load balancing
-   that has since been removed required the pairwise Newton setting to be
-   *off*.
+A pairwise Newton setting of *on* is no longer restricted.  Previously,
+combining it with a *split* value of less than 1.0 was an error, because
+the host/device particle-split load balancing required the setting to be
+*off*.  That load balancing has been removed, so the restriction no
+longer applies.
 
-The *pair/only* keyword can change how any "gpu" suffix is applied.
-By default a suffix is applied to all styles for which an accelerated
+The *pair/only* keyword can change how any "gpu" suffix is applied.  By
+default a suffix is applied to all styles for which an accelerated
 variant is available.  However, that is not always the most effective
-way to use an accelerator.  With *pair/only* set to *on* the suffix
-will only by applied to supported pair styles, which tend to be the
-most effective in using an accelerator and their operation can be
+way to use an accelerator w.  With *pair/only* set to *on* the
+suffix will only by applied to supported pair styles, which tend to be
+the most effective in using an accelerator and their operation can be
 overlapped with all other computations on the CPU.
 
 The *binsize* keyword sets the size of bins used to bin atoms in
@@ -838,7 +841,7 @@ For the GPU package, the default parameters and settings are:
 
 .. parsed-literal::
 
-   Ngpu = 0, neigh = yes, newton = off, binsize = 0.0, gpuID = 0 to Ngpu-1, tpa = 1, omp = 0, platform=-1.
+   Ngpu = 0, neigh = yes, newton = on, binsize = 0.0, gpuID = 0 to Ngpu-1, tpa = 1, omp = 0, platform=-1.
 
 These settings are made automatically if the "-sf gpu"
 :doc:`command-line switch <Run_options>` is used.  If it is not used,
