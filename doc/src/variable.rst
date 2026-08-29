@@ -376,9 +376,16 @@ to the variable.
 For the *format* style, an equal-style or compatible variable is
 specified along with a C-style format string, e.g. "%f" or "%.10g",
 which must be appropriate for formatting a double-precision
-floating-point value and may not have extra characters.  The default
-format is "%.15g".  This variable style allows an equal-style variable
-to be formatted precisely when it is evaluated.
+floating-point value.  The default format is "%.15g".  This variable
+style allows an equal-style variable to be formatted precisely when it
+is evaluated.
+
+.. versionchanged:: TBD
+
+A conversion in the format string must match a floating-point value.  The
+string may now also contain additional text and use all flags and
+modifiers supported by the C library, e.g. "%+12.6e" or "<%.4f>", which
+were previously rejected.
 
 Note that if you simply wish to print a variable value with desired
 precision to the screen or logfile via the :doc:`print <print>` or

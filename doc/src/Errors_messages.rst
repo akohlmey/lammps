@@ -2500,11 +2500,6 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
    Must have periodic x,y dimensions and non-periodic z dimension to use
    2d slab option with pppm/disp.
 
-*Incorrect conversion in format string*
-   A format style variable was not using either a %f, a %g, or a %e conversion.
-   Or an immediate variable with format suffix was not using either
-   a %f, a %g or a %e conversion in the format suffix.
-
 *Incorrect element names in ADP potential file*
    The element names in the ADP file do not match those requested.
 
