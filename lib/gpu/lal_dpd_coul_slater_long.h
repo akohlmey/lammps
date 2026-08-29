@@ -53,10 +53,6 @@ class DPDCoulSlaterLong : public BaseDPD<numtyp, acctyp> {
   /// Total host memory used by library for pair style
   double host_memory_usage() const;
 
-  /// Update coeff if needed (tstat only)
-  void update_coeff(int ntypes, double **host_a0, double **host_gamma,
-                    double **host_sigma, double **host_cut_dpd );
-
   void get_extra_data(double *host_q);
 
   // --------------------------- TYPE DATA --------------------------

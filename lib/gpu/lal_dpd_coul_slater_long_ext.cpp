@@ -125,12 +125,6 @@ void dpd_coul_slater_long_gpu_compute(const int ago, const int inum_full, const 
                 tag, host_v, dtinvsqrt, seed, timestep, nlocal, boxlo, prd);
 }
 
-void dpd_coul_slater_long_gpu_update_coeff(int ntypes, double **host_a0, double **host_gamma,
-                          double **host_sigma, double **host_cut_dpd)
-{
-   DPDCMF.update_coeff(ntypes,host_a0,host_gamma,host_sigma, host_cut_dpd);
-}
-
 void dpd_coul_slater_long_gpu_get_extra_data(double *host_q) {
   DPDCMF.get_extra_data(host_q);
 }

@@ -120,12 +120,6 @@ void dpd_gpu_compute(const int ago, const int inum_full, const int nall,
                 tag, host_v, dtinvsqrt, seed, timestep, nlocal, boxlo, prd);
 }
 
-void dpd_gpu_update_coeff(int ntypes, double **host_a0, double **host_gamma,
-                          double **host_sigma, double **host_cut)
-{
-   DPDMF.update_coeff(ntypes,host_a0,host_gamma,host_sigma,host_cut);
-}
-
 double dpd_gpu_bytes() {
   return DPDMF.host_memory_usage();
 }
