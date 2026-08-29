@@ -31,15 +31,15 @@
 #error Must include either lal_precision.h or lmptype.h before lammps_gpu.h
 #endif
 
+namespace LAMMPS_GPU {
+
 /* When included from the LAMMPS src side, tagint lives in LAMMPS_NS.
-   Bring it to global scope so the function declarations below can use it
-   unqualified.  From the lib/gpu side (lal_precision.h), tagint is already
-   at global scope, so this block is skipped. */
+   Bring it into this namespace so the function declarations below can use it
+   unqualified.  From the lib/gpu side (lal_precision.h), tagint is already at
+   global scope and is found by ordinary lookup, so this block is skipped. */
 #if defined(LMP_LMPTYPE_H) && !defined(LAL_PRECISION_H)
 using LAMMPS_NS::tagint;
 #endif
-
-namespace LAMMPS_GPU {
 
 // Device-level functions (lal_device.cpp)
 extern bool lmp_has_compatible_gpu_device();
@@ -550,8 +550,8 @@ extern int eam_fs_gpu_init(const int ntypes, double host_cutforcesq, int **host_
                            double **host_cutsq, double rdr, double rdrho, double rhomax,
                            double rhomin, const int he_flag, int nrhor, int nrho, int nz2r,
                            int nfrho, int nr, const int nlocal, const int nall, const int max_nbors,
-                           const int maxspecial, const double cell_size, int &gpu_mode, FILE *screen,
-                           int &fp_size);
+                           const int maxspecial, const double cell_size, int &gpu_mode,
+                           FILE *screen, int &fp_size);
 extern void eam_fs_gpu_clear();
 extern int **eam_fs_gpu_compute_n(const int ago, const int inum_full, const int nall,
                                   double **host_x, int *host_type, double *sublo, double *subhi,
@@ -597,8 +597,8 @@ extern int eam_he_gpu_init(const int ntypes, double host_cutforcesq, int **host_
                            double **host_cutsq, double rdr, double rdrho, double rhomax,
                            double rhomin, const int he_flag, int nrhor, int nrho, int nz2r,
                            int nfrho, int nr, const int nlocal, const int nall, const int max_nbors,
-                           const int maxspecial, const double cell_size, int &gpu_mode, FILE *screen,
-                           int &fp_size);
+                           const int maxspecial, const double cell_size, int &gpu_mode,
+                           FILE *screen, int &fp_size);
 extern void eam_he_gpu_clear();
 extern int **eam_he_gpu_compute_n(const int ago, const int inum_full, const int nall,
                                   double **host_x, int *host_type, double *sublo, double *subhi,
@@ -1594,9 +1594,24 @@ extern void zbl_gpu_compute(const int ago, const int inum, const int nall, doubl
                             bool &success);
 extern double zbl_gpu_bytes();
 
+// kspace ewald
+extern void ewald_gpu_init(const int nlocal, const int nall, FILE *screen, int &success);
+extern void ewald_gpu_setup(const int kmax, const int kcount, int *kxvecs, int *kyvecs,
+                            int *kzvecs, double *ug, double **eg, double **vg, double *unitk,
+                            int &success);
+extern int ewald_gpu_structure(const int ago, const int nlocal, const int nall, double **host_x,
+                               int *host_type, double *host_q, double *host_sfacrl,
+                               double *host_sfacim, bool &success);
+extern void ewald_gpu_compute(double *host_sfacrl_all, double *host_sfacim_all,
+                              const double qscale, const int slabflag, const int eflag_atom,
+                              const int vflag_atom, double *host_eatom, double **host_vatom,
+                              bool &success);
+extern void ewald_gpu_clear(const double cpu_time);
+extern double ewald_gpu_bytes();
+
 // pppm need two versions for single and double precision FFTs
 
-extern float *ppm_gpu_init_f(const int nlocal, const int nall, FILE *screen, const int order,
+extern float *pppm_gpu_init_f(const int nlocal, const int nall, FILE *screen, const int order,
                              const int nxlo_out, const int nylo_out, const int nzlo_out,
                              const int nxhi_out, const int nyhi_out, const int nzhi_out,
                              float **rho_coeff, float **_vd_brick, const double slab_volfactor,

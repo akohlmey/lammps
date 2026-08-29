@@ -24,13 +24,13 @@
 #include "gpu_extra.h"
 #include "info.h"
 #include "kspace.h"
+#include "lammps_gpu.h"
 #include "math_const.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "suffix.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -93,7 +93,8 @@ void PairBornCoulLongCSGPU::compute(int eflag, int vflag)
     numneigh = list->numneigh;
     firstneigh = list->firstneigh;
     bornclcs_gpu_compute(neighbor->ago, inum, nall, atom->x, atom->type, ilist, numneigh,
-                         firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, atom->q, atom->nlocal, domain->boxlo, domain->prd);
+                         firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, atom->q,
+                         atom->nlocal, domain->boxlo, domain->prd);
   }
   if (!success) error->one(FLERR, "Insufficient memory on accelerator");
 
@@ -153,4 +154,3 @@ double PairBornCoulLongCSGPU::memory_usage()
   double bytes = Pair::memory_usage();
   return bytes + bornclcs_gpu_bytes();
 }
-

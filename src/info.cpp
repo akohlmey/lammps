@@ -1043,25 +1043,24 @@ bool Info::has_package(const std::string &package_name) {
 
 #if defined(LMP_GPU)
 #include "lammps_gpu.h"
-using namespace LAMMPS_GPU;
 
 // we will only report compatible GPUs, i.e. when a GPU device is
 // available *and* supports the required floating point precision
 bool Info::has_gpu_device()
 {
-  return lmp_has_compatible_gpu_device();
+  return LAMMPS_GPU::lmp_has_compatible_gpu_device();
 }
 
 std::string Info::get_gpu_device_info()
 {
-  return lmp_gpu_device_info();
+  return LAMMPS_GPU::lmp_gpu_device_info();
 }
 
 // defer (or restore) the GPU package device teardown. used only by the test
 // harness so the GPU package does not reset a device the KOKKOS package shares.
 void Info::gpu_defer_device_clear(int flag)
 {
-  lmp_gpu_defer_device_clear(flag);
+  LAMMPS_GPU::lmp_gpu_defer_device_clear(flag);
 }
 #else
 bool Info::has_gpu_device()
@@ -1144,7 +1143,7 @@ bool Info::has_accelerator_feature(const std::string &package,
 #endif
 #if defined(LMP_GPU)
   if (package == "GPU") {
-    return lmp_gpu_config(category,setting);
+    return LAMMPS_GPU::lmp_gpu_config(category,setting);
   }
 #endif
 #if defined(LMP_OPENMP)

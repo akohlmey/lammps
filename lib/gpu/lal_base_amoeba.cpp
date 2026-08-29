@@ -271,15 +271,15 @@ inline int BaseAmoebaT::build_nbor_list(const int inum, const int host_inum,
 // ---------------------------------------------------------------------------
 
 template <class numtyp, class acctyp>
-int** BaseAmoebaT::precompute(const int ago, const int inum_full, const int nall,
-                              double **host_x, int *host_type, int *host_amtype,
-                              int *host_amgroup, double **host_rpole,
-                              double **host_uind, double **host_uinp, double *host_pval,
-                              double *sublo, double *subhi, tagint *tag,
-                              int **nspecial, tagint **special,
-                              int *nspecial15, tagint **special15,
-                              const bool eflag_in, const bool vflag_in,
-                              const bool eatom, const bool vatom, int **&ilist, int **&jnum, bool &success, double *host_q, double * /*boxlo*/, double * /*prd*/) {
+int **BaseAmoebaT::precompute(const int ago, const int inum_full, const int nall, double **host_x,
+                              int *host_type, int *host_amtype, int *host_amgroup,
+                              double **host_rpole, double **host_uind, double **host_uinp,
+                              double *host_pval, double *sublo, double *subhi, tagint *tag,
+                              int **nspecial, tagint **special, int *nspecial15, tagint **special15,
+                              const bool eflag_in, const bool vflag_in, const bool eatom,
+                              const bool vatom, int **&ilist, int **&jnum, bool &success,
+                              double *host_q, double * /*boxlo*/, double * /*prd*/)
+{
   acc_timers();
   if (eatom) _eflag=2;
   else if (eflag_in) _eflag=1;

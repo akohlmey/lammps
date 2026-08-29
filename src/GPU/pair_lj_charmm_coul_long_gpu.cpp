@@ -24,12 +24,12 @@
 #include "force.h"
 #include "gpu_extra.h"
 #include "kspace.h"
+#include "lammps_gpu.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "suffix.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -80,18 +80,18 @@ void PairLJCharmmCoulLongGPU::compute(int eflag, int vflag)
       domain->bbox(domain->sublo_lamda, domain->subhi_lamda, sublo, subhi);
     }
     inum = atom->nlocal;
-    firstneigh = crml_gpu_compute_n(
-        neighbor->ago, inum, nall, atom->x, atom->type, sublo, subhi,
-        atom->tag, atom->nspecial, atom->special, eflag, vflag,
-        eflag_atom, vflag_atom, &ilist, &numneigh, success, atom->q, domain->boxlo, domain->prd, domain->periodicity);
+    firstneigh = crml_gpu_compute_n(neighbor->ago, inum, nall, atom->x, atom->type, sublo, subhi,
+                                    atom->tag, atom->nspecial, atom->special, eflag, vflag,
+                                    eflag_atom, vflag_atom, &ilist, &numneigh, success, atom->q,
+                                    domain->boxlo, domain->prd, domain->periodicity);
   } else {
     inum = list->inum;
     ilist = list->ilist;
     numneigh = list->numneigh;
     firstneigh = list->firstneigh;
-    crml_gpu_compute(neighbor->ago, inum, nall, atom->x, atom->type,
-                     ilist, numneigh, firstneigh, eflag, vflag,
-                     eflag_atom, vflag_atom, success, atom->q, atom->nlocal, domain->boxlo, domain->prd);
+    crml_gpu_compute(neighbor->ago, inum, nall, atom->x, atom->type, ilist, numneigh, firstneigh,
+                     eflag, vflag, eflag_atom, vflag_atom, success, atom->q, atom->nlocal,
+                     domain->boxlo, domain->prd);
   }
   if (!success) error->one(FLERR, "Insufficient memory on accelerator");
 
@@ -165,4 +165,3 @@ double PairLJCharmmCoulLongGPU::memory_usage()
   double bytes = Pair::memory_usage();
   return bytes + crml_gpu_bytes();
 }
-

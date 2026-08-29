@@ -63,10 +63,10 @@ int crm_gpu_init(const int ntypes, double cut_bothsq, double **host_lj1,
 
   int init_ok=0;
   if (world_me==0)
-    CRMMF.init(ntypes, cut_bothsq, host_lj1, host_lj2, host_lj3, host_lj4,
-                special_lj, inum, nall, max_nbors, maxspecial, cell_size, screen, host_cut_ljsq, host_cut_coulsq,
-                host_special_coul, qqrd2e, cut_lj_innersq, cut_coul_innersq,
-                denom_lj, denom_coul, epsilon, sigma, mix_arithmetic);
+    CRMMF.init(ntypes, cut_bothsq, host_lj1, host_lj2, host_lj3, host_lj4, special_lj, inum, nall,
+               max_nbors, maxspecial, cell_size, screen, host_cut_ljsq, host_cut_coulsq,
+               host_special_coul, qqrd2e, cut_lj_innersq, cut_coul_innersq, denom_lj, denom_coul,
+               epsilon, sigma, mix_arithmetic);
 
   CRMMF.device->world_barrier();
   if (message)
@@ -106,12 +106,12 @@ void crm_gpu_clear() {
   CRMMF.clear();
 }
 
-int** crm_gpu_compute_n(const int ago, const int inum_full, const int nall,
-                          double **host_x, int *host_type, double *sublo,
-                          double *subhi, tagint *tag, int **nspecial,
-                          tagint **special, const bool eflag, const bool vflag,
-                          const bool eatom, const bool vatom, int **ilist, int **jnum, bool &success, double *host_q, double *boxlo,
-                          double *prd, int *periodicity) {
+int **crm_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
+                        int *host_type, double *sublo, double *subhi, tagint *tag, int **nspecial,
+                        tagint **special, const bool eflag, const bool vflag, const bool eatom,
+                        const bool vatom, int **ilist, int **jnum, bool &success, double *host_q,
+                        double *boxlo, double *prd, int *periodicity)
+{
   return CRMMF.compute(ago, inum_full, nall, host_x, host_type, sublo,
                         subhi, tag, nspecial, special, eflag, vflag, eatom,
                         vatom, ilist, jnum, success,

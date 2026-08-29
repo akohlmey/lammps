@@ -22,13 +22,13 @@
 #include "error.h"
 #include "force.h"
 #include "gpu_extra.h"
+#include "lammps_gpu.h"
 #include "math_const.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "suffix.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -144,4 +144,3 @@ double PairSoftGPU::memory_usage()
   double bytes = Pair::memory_usage();
   return bytes + soft_gpu_bytes();
 }
-

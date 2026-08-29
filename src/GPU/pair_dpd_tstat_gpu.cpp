@@ -22,13 +22,13 @@
 #include "error.h"
 #include "force.h"
 #include "gpu_extra.h"
+#include "lammps_gpu.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "suffix.h"
 #include "update.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -103,8 +103,9 @@ void PairDPDTstatGPU::compute(int eflag, int vflag)
     numneigh = list->numneigh;
     firstneigh = list->firstneigh;
     dpd_tstat_gpu_compute(neighbor->ago, inum, nall, atom->x, atom->type, ilist, numneigh,
-                          firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, atom->tag, atom->v, dtinvsqrt, seed, update->ntimestep,
-                          atom->nlocal, domain->boxlo, domain->prd);
+                          firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, atom->tag,
+                          atom->v, dtinvsqrt, seed, update->ntimestep, atom->nlocal, domain->boxlo,
+                          domain->prd);
   }
   if (!success) error->one(FLERR, "Insufficient memory on accelerator");
 
@@ -153,4 +154,3 @@ double PairDPDTstatGPU::memory_usage()
   double bytes = Pair::memory_usage();
   return bytes + dpd_tstat_gpu_bytes();
 }
-

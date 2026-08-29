@@ -73,8 +73,9 @@ int DPDCoulSlaterLongT::init(const int ntypes,
                         // q
   int success;
   bool need_charges = true;
-  success=this->init_atomic(nlocal,nall,max_nbors,maxspecial,cell_size,
-                            _screen,dpd_coul_slater_long,"k_dpd_coul_slater_long",onetype, extra_fields, need_charges);
+  success = this->init_atomic(nlocal, nall, max_nbors, maxspecial, cell_size, _screen,
+                              dpd_coul_slater_long, "k_dpd_coul_slater_long", onetype, extra_fields,
+                              need_charges);
 
   if (success!=0)
     return success;

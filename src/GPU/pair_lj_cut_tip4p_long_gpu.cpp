@@ -27,13 +27,13 @@
 #include "force.h"
 #include "gpu_extra.h"
 #include "kspace.h"
+#include "lammps_gpu.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
 #include "suffix.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -96,7 +96,8 @@ void PairLJCutTIP4PLongGPU::compute(int eflag, int vflag)
     ljtip4p_long_copy_molecule_data(nall, atom->tag, atom->get_map_array(), atom->get_map_size(),
                                     atom->sametag, atom->get_max_same(), neighbor->ago);
     ljtip4p_long_gpu_compute(neighbor->ago, inum, nall, atom->x, atom->type, ilist, numneigh,
-                             firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, atom->q, atom->nlocal, domain->boxlo, domain->prd);
+                             firstneigh, eflag, vflag, eflag_atom, vflag_atom, success, atom->q,
+                             atom->nlocal, domain->boxlo, domain->prd);
   }
   if (!success) error->one(FLERR, "Insufficient memory on accelerator");
   if (atom->molecular != Atom::ATOMIC && neighbor->ago == 0)

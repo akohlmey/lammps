@@ -23,12 +23,12 @@
 #include "force.h"
 #include "gpu_extra.h"
 #include "kspace.h"
+#include "lammps_gpu.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "suffix.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -79,8 +79,8 @@ void PairLJCutCoulMSMGPU::compute(int eflag, int vflag)
     inum = atom->nlocal;
     firstneigh = ljcm_gpu_compute_n(neighbor->ago, inum, nall, atom->x, atom->type, sublo, subhi,
                                     atom->tag, atom->nspecial, atom->special, eflag, vflag,
-                                    eflag_atom, vflag_atom, &ilist, &numneigh, success, atom->q, domain->boxlo, domain->prd,
-                                    domain->periodicity);
+                                    eflag_atom, vflag_atom, &ilist, &numneigh, success, atom->q,
+                                    domain->boxlo, domain->prd, domain->periodicity);
   } else {
     inum = list->inum;
     ilist = list->ilist;
@@ -151,4 +151,3 @@ double PairLJCutCoulMSMGPU::memory_usage()
   double bytes = Pair::memory_usage();
   return bytes + ljcm_gpu_bytes();
 }
-

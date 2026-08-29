@@ -110,12 +110,12 @@ int** compute(const int ago, const int inum_full, const int nall,
                 const bool eatom, const bool vatom, int **ilist, int **numj, bool &success,
                 const int *ellipsoid, const EllipsoidBonus *bonus);
 
-int** gb_gpu_compute_n(const int ago, const int inum_full, const int nall,
-                       double **host_x, int *host_type, double *sublo,
-                       double *subhi, tagint *tag, int **nspecial,
-                       tagint **special, const bool eflag, const bool vflag,
-                       const bool eatom, const bool vatom, int **ilist, int **jnum, bool &success, const int *ellipsoid,
-                       const void *bonus) {
+int **gb_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
+                       int *host_type, double *sublo, double *subhi, tagint *tag, int **nspecial,
+                       tagint **special, const bool eflag, const bool vflag, const bool eatom,
+                       const bool vatom, int **ilist, int **jnum, bool &success,
+                       const int *ellipsoid, const void *bonus)
+{
   return GBMF.compute(ago, inum_full, nall, host_x, host_type, sublo, subhi,
                       tag, nspecial, special, eflag, vflag, eatom, vatom,
                       ilist, jnum, success,

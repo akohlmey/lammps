@@ -60,10 +60,10 @@ int bornclcs_gpu_init(const int ntypes, double **cutsq, double **host_rhoinv,
 
   int init_ok=0;
   if (world_me==0)
-    init_ok=BCLCSMF.init(ntypes, cutsq, host_rhoinv, host_born1, host_born2,
-                          host_born3, host_a, host_c, host_d, sigma, offset,
-                          special_lj, inum, nall, max_nbors, maxspecial, cell_size, screen, host_cut_ljsq, host_cut_coulsq,
-                          host_special_coul, qqrd2e, g_ewald);
+    init_ok = BCLCSMF.init(ntypes, cutsq, host_rhoinv, host_born1, host_born2, host_born3, host_a,
+                           host_c, host_d, sigma, offset, special_lj, inum, nall, max_nbors,
+                           maxspecial, cell_size, screen, host_cut_ljsq, host_cut_coulsq,
+                           host_special_coul, qqrd2e, g_ewald);
 
   BCLCSMF.device->world_barrier();
   if (message)
@@ -79,10 +79,10 @@ int bornclcs_gpu_init(const int ntypes, double **cutsq, double **host_rhoinv,
       fflush(screen);
     }
     if (gpu_rank==i && world_me!=0)
-      init_ok=BCLCSMF.init(ntypes, cutsq, host_rhoinv, host_born1, host_born2,
-                            host_born3, host_a, host_c, host_d, sigma, offset,
-                            special_lj, inum, nall, max_nbors, maxspecial, cell_size, screen, host_cut_ljsq, host_cut_coulsq,
-                            host_special_coul, qqrd2e, g_ewald);
+      init_ok = BCLCSMF.init(ntypes, cutsq, host_rhoinv, host_born1, host_born2, host_born3, host_a,
+                             host_c, host_d, sigma, offset, special_lj, inum, nall, max_nbors,
+                             maxspecial, cell_size, screen, host_cut_ljsq, host_cut_coulsq,
+                             host_special_coul, qqrd2e, g_ewald);
 
     BCLCSMF.device->serialize_init();
     if (message)
@@ -100,12 +100,13 @@ void bornclcs_gpu_clear() {
   BCLCSMF.clear();
 }
 
-int** bornclcs_gpu_compute_n(const int ago, const int inum_full,
-                           const int nall, double **host_x, int *host_type,
-                           double *sublo, double *subhi, tagint *tag, int **nspecial,
-                           tagint **special, const bool eflag, const bool vflag,
-                           const bool eatom, const bool vatom, int **ilist, int **jnum,  bool &success, double *host_q, double *boxlo,
-                           double *prd, int* periodicity) {
+int **bornclcs_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
+                             int *host_type, double *sublo, double *subhi, tagint *tag,
+                             int **nspecial, tagint **special, const bool eflag, const bool vflag,
+                             const bool eatom, const bool vatom, int **ilist, int **jnum,
+                             bool &success, double *host_q, double *boxlo, double *prd,
+                             int *periodicity)
+{
   return BCLCSMF.compute(ago, inum_full, nall, host_x, host_type, sublo,
                           subhi, tag, nspecial, special, eflag, vflag, eatom,
                           vatom, ilist, jnum, success,

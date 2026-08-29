@@ -59,8 +59,8 @@ int ljgrm_gpu_init(const int ntypes, double **cutsq, double **host_lj1,
 
   int init_ok=0;
   if (world_me==0)
-    LJGRMMF.init(ntypes, cutsq, host_lj1, host_lj2, host_lj3, host_lj4,
-                 special_lj, inum, nall, max_nbors, maxspecial, cell_size, screen, host_ljsw1, host_ljsw2, host_ljsw3,
+    LJGRMMF.init(ntypes, cutsq, host_lj1, host_lj2, host_lj3, host_lj4, special_lj, inum, nall,
+                 max_nbors, maxspecial, cell_size, screen, host_ljsw1, host_ljsw2, host_ljsw3,
                  host_ljsw4, host_ljsw5, cut_inner, cut_inner_sq);
 
   LJGRMMF.device->world_barrier();
@@ -77,9 +77,10 @@ int ljgrm_gpu_init(const int ntypes, double **cutsq, double **host_lj1,
       fflush(screen);
     }
     if (gpu_rank==i && world_me!=0)
-      init_ok=LJGRMMF.init(ntypes, cutsq, host_lj1, host_lj2, host_lj3, host_lj4,
-                           special_lj, inum, nall, max_nbors, maxspecial, cell_size, screen, host_ljsw1, host_ljsw2, host_ljsw3,
-                           host_ljsw4, host_ljsw5, cut_inner, cut_inner_sq);
+      init_ok =
+          LJGRMMF.init(ntypes, cutsq, host_lj1, host_lj2, host_lj3, host_lj4, special_lj, inum,
+                       nall, max_nbors, maxspecial, cell_size, screen, host_ljsw1, host_ljsw2,
+                       host_ljsw3, host_ljsw4, host_ljsw5, cut_inner, cut_inner_sq);
 
     LJGRMMF.device->serialize_init();
     if (message)
@@ -97,11 +98,12 @@ void ljgrm_gpu_clear() {
   LJGRMMF.clear();
 }
 
-int ** ljgrm_gpu_compute_n(const int ago, const int inum_full,
-                           const int nall, double **host_x, int *host_type,
-                           double *sublo, double *subhi, tagint *tag, int **nspecial,
-                           tagint **special, const bool eflag, const bool vflag,
-                           const bool eatom, const bool vatom, int **ilist, int **jnum, bool &success, double *prd, int *periodicity) {
+int **ljgrm_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
+                          int *host_type, double *sublo, double *subhi, tagint *tag, int **nspecial,
+                          tagint **special, const bool eflag, const bool vflag, const bool eatom,
+                          const bool vatom, int **ilist, int **jnum, bool &success, double *prd,
+                          int *periodicity)
+{
   return LJGRMMF.compute(ago, inum_full, nall, host_x, host_type, sublo,
                          subhi, tag, nspecial, special, eflag, vflag, eatom,
                          vatom, ilist, jnum, success, prd, periodicity);

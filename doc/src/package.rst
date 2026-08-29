@@ -245,6 +245,13 @@ command allows.  The default is *off*, which causes more computation but
 less communication.  Note that the newton setting for bonded interactions
 is not affected by this keyword.
 
+.. versionchanged:: TBD
+
+   The *newton* keyword now also accepts a value of *on*.  Previously only
+   *off* was allowed, since the host/device particle-split load balancing
+   that has since been removed required the pairwise Newton setting to be
+   *off*.
+
 The *pair/only* keyword can change how any "gpu" suffix is applied.
 By default a suffix is applied to all styles for which an accelerated
 variant is available.  However, that is not always the most effective

@@ -26,6 +26,7 @@
 #include "fix_store_atom.h"
 #include "gpu_extra.h"
 #include "info.h"
+#include "lammps_gpu.h"
 #include "math_const.h"
 #include "my_page.h"
 #include "neigh_list.h"
@@ -34,7 +35,6 @@
 
 #include <cmath>
 #include <cstring>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;

@@ -59,9 +59,9 @@ int sw_gpu_init(const int ntypes, const int inum, const int nall,
 
   int init_ok=0;
   if (world_me==0)
-    init_ok=SWMF.init(ntypes, inum, nall, max_nbors, cell_size, screen, ncutsq, ncut, sigma, powerp, powerq,
-                      sigma_gamma, c1, c2, c3, c4, c5, c6, lambda_epsilon,
-                      costheta, map, e2param);
+    init_ok = SWMF.init(ntypes, inum, nall, max_nbors, cell_size, screen, ncutsq, ncut, sigma,
+                        powerp, powerq, sigma_gamma, c1, c2, c3, c4, c5, c6, lambda_epsilon,
+                        costheta, map, e2param);
 
   SWMF.device->world_barrier();
   if (message)
@@ -77,9 +77,9 @@ int sw_gpu_init(const int ntypes, const int inum, const int nall,
       fflush(screen);
     }
     if (gpu_rank==i && world_me!=0)
-      init_ok=SWMF.init(ntypes, inum, nall, max_nbors, cell_size, screen, ncutsq, ncut, sigma, powerp, powerq,
-                        sigma_gamma, c1, c2, c3, c4, c5, c6, lambda_epsilon,
-                        costheta, map, e2param);
+      init_ok = SWMF.init(ntypes, inum, nall, max_nbors, cell_size, screen, ncutsq, ncut, sigma,
+                          powerp, powerq, sigma_gamma, c1, c2, c3, c4, c5, c6, lambda_epsilon,
+                          costheta, map, e2param);
 
     SWMF.device->serialize_init();
     if (message)
@@ -97,11 +97,11 @@ void sw_gpu_clear() {
   SWMF.clear();
 }
 
-int ** sw_gpu_compute_n(const int ago, const int inum_full,
-                        const int nall, double **host_x, int *host_type,
-                        double *sublo, double *subhi, tagint *tag, int **nspecial,
-                        tagint **special, const bool eflag, const bool vflag,
-                        const bool eatom, const bool vatom, int **ilist, int **jnum, bool &success) {
+int **sw_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
+                       int *host_type, double *sublo, double *subhi, tagint *tag, int **nspecial,
+                       tagint **special, const bool eflag, const bool vflag, const bool eatom,
+                       const bool vatom, int **ilist, int **jnum, bool &success)
+{
   return SWMF.compute(ago, inum_full, nall, host_x, host_type, sublo,
                        subhi, tag, nspecial, special, eflag, vflag, eatom,
                        vatom, ilist, jnum, success);

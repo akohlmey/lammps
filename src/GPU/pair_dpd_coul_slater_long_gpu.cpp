@@ -30,9 +30,9 @@
 
 #include "ewald_const.h"
 #include "kspace.h"
+#include "lammps_gpu.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
@@ -160,4 +160,3 @@ double PairDPDCoulSlaterLongGPU::memory_usage()
   double bytes = Pair::memory_usage();
   return bytes + dpd_coul_slater_long_gpu_bytes();
 }
-

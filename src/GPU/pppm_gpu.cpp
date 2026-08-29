@@ -26,6 +26,7 @@
 #include "force.h"
 #include "gpu_extra.h"
 #include "grid3d.h"
+#include "lammps_gpu.h"
 #include "math_const.h"
 #include "memory.h"
 #include "modify.h"
@@ -35,7 +36,6 @@
 #include "update.h"
 
 #include <cstring>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace MathConst;

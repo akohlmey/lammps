@@ -57,8 +57,8 @@ int cdsf_gpu_init(const int ntypes, const int inum, const int nall,
 
   int init_ok=0;
   if (world_me==0)
-    init_ok=CDMF.init(ntypes, inum, nall, max_nbors, maxspecial, cell_size, screen, host_cut_coulsq, host_special_coul,
-                      qqrd2e, e_shift, f_shift, alpha);
+    init_ok = CDMF.init(ntypes, inum, nall, max_nbors, maxspecial, cell_size, screen,
+                        host_cut_coulsq, host_special_coul, qqrd2e, e_shift, f_shift, alpha);
 
   CDMF.device->world_barrier();
   if (message)
@@ -74,8 +74,8 @@ int cdsf_gpu_init(const int ntypes, const int inum, const int nall,
       fflush(screen);
     }
     if (gpu_rank==i && world_me!=0)
-      init_ok=CDMF.init(ntypes, inum, nall, max_nbors, maxspecial, cell_size, screen, host_cut_coulsq, host_special_coul,
-                        qqrd2e, e_shift, f_shift, alpha);
+      init_ok = CDMF.init(ntypes, inum, nall, max_nbors, maxspecial, cell_size, screen,
+                          host_cut_coulsq, host_special_coul, qqrd2e, e_shift, f_shift, alpha);
 
     CDMF.device->serialize_init();
     if (message)
@@ -93,12 +93,12 @@ void cdsf_gpu_clear() {
   CDMF.clear();
 }
 
-int** cdsf_gpu_compute_n(const int ago, const int inum_full,
-                         const int nall, double **host_x, int *host_type,
-                         double *sublo, double *subhi, tagint *tag, int **nspecial,
-                         tagint **special, const bool eflag, const bool vflag,
-                         const bool eatom, const bool vatom, int **ilist, int **jnum, bool &success, double *host_q, double *boxlo,
-                         double *prd, int *periodicity) {
+int **cdsf_gpu_compute_n(const int ago, const int inum_full, const int nall, double **host_x,
+                         int *host_type, double *sublo, double *subhi, tagint *tag, int **nspecial,
+                         tagint **special, const bool eflag, const bool vflag, const bool eatom,
+                         const bool vatom, int **ilist, int **jnum, bool &success, double *host_q,
+                         double *boxlo, double *prd, int *periodicity)
+{
   return CDMF.compute(ago, inum_full, nall, host_x, host_type, sublo,
                       subhi, tag, nspecial, special, eflag, vflag, eatom,
                       vatom, ilist, jnum, success,

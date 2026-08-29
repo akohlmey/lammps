@@ -23,12 +23,12 @@
 #include "force.h"
 #include "gpu_extra.h"
 #include "info.h"
+#include "lammps_gpu.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "suffix.h"
 
 #include <cmath>
-#include "lammps_gpu.h"
 
 using namespace LAMMPS_NS;
 using namespace LAMMPS_GPU;
