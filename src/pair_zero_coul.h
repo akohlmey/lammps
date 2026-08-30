@@ -11,38 +11,31 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#ifdef COMPUTE_CLASS
+#ifdef PAIR_CLASS
 // clang-format off
-ComputeStyle(contact/atom,ComputeContactAtom);
+PairStyle(zero/coul,PairZeroCoul);
 // clang-format on
 #else
 
-#ifndef LMP_COMPUTE_CONTACT_ATOM_H
-#define LMP_COMPUTE_CONTACT_ATOM_H
+#ifndef LMP_PAIR_ZERO_COUL_H
+#define LMP_PAIR_ZERO_COUL_H
 
-#include "compute.h"
+#include "pair_zero.h"
 
 namespace LAMMPS_NS {
 
-class ComputeContactAtom : public Compute {
+/* pair zero/coul is a variant of pair style zero that presents itself as
+   a Coulombic pair style: it declares compatibility with kspace styles
+   and provides the real-space Coulomb cutoff, but computes no
+   interactions, just like pair style zero.  This allows computing only
+   the k-space contribution to forces and energies, or satisfying styles
+   that require the presence of a Coulombic pair style, e.g. for testing
+   and debugging purposes. */
+
+class PairZeroCoul : public PairZero {
  public:
-  ComputeContactAtom(class LAMMPS *, int, char **);
-  ~ComputeContactAtom() override;
-  void init() override;
-  void init_list(int, class NeighList *) override;
-  void compute_peratom() override;
-  int pack_reverse_comm(int, int, double *) override;
-  void unpack_reverse_comm(int, int *, double *) override;
-  double memory_usage() override;
-
- protected:
-  int nmax;
-
-  char *group2;
-  int jgroup, jgroupbit;
-
-  class NeighList *list;
-  double *contact;
+  PairZeroCoul(class LAMMPS *);
+  void *extract(const char *, int &) override;
 };
 
 }    // namespace LAMMPS_NS

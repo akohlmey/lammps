@@ -13,36 +13,21 @@
 
 #ifdef COMPUTE_CLASS
 // clang-format off
-ComputeStyle(contact/atom,ComputeContactAtom);
+ComputeStyle(contact/atom/omp,ComputeContactAtomOMP);
 // clang-format on
 #else
 
-#ifndef LMP_COMPUTE_CONTACT_ATOM_H
-#define LMP_COMPUTE_CONTACT_ATOM_H
+#ifndef LMP_COMPUTE_CONTACT_ATOM_OMP_H
+#define LMP_COMPUTE_CONTACT_ATOM_OMP_H
 
-#include "compute.h"
+#include "compute_contact_atom.h"
 
 namespace LAMMPS_NS {
 
-class ComputeContactAtom : public Compute {
+class ComputeContactAtomOMP : public ComputeContactAtom {
  public:
-  ComputeContactAtom(class LAMMPS *, int, char **);
-  ~ComputeContactAtom() override;
-  void init() override;
-  void init_list(int, class NeighList *) override;
+  ComputeContactAtomOMP(class LAMMPS *, int, char **);
   void compute_peratom() override;
-  int pack_reverse_comm(int, int, double *) override;
-  void unpack_reverse_comm(int, int *, double *) override;
-  double memory_usage() override;
-
- protected:
-  int nmax;
-
-  char *group2;
-  int jgroup, jgroupbit;
-
-  class NeighList *list;
-  double *contact;
 };
 
 }    // namespace LAMMPS_NS
