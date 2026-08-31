@@ -227,7 +227,6 @@ be sufficient. In general, for best performance with OpenMP 4.0 or later
 set ``OMP_PROC_BIND=spread`` and ``OMP_PLACES=threads``.  For binding
 threads with the KOKKOS pthreads option, compile LAMMPS with the hwloc
 or libnuma support enabled as described in the :ref:`extra build options page <kokkos>`.
-
 Running on Knight's Landing (KNL) Intel Xeon Phi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -399,7 +398,7 @@ As noted above, KOKKOS by default assumes that the MPI library is
 GPU-aware.  This is not always the case and can lead to segmentation
 faults when using more than one MPI process.  Normally, LAMMPS will
 print a warning like "*Turning off GPU-aware MPI since it is not
-detected*", or an error message like "*Kokkos with GPU-enabled backend
+detected*", or an error message like "*Kokkos with GPU-enabled back end
 assumes GPU-aware MPI is available*", OR a **segmentation fault**.  To
 confirm that a segmentation fault is caused by this, you can turn off
 the GPU-aware assumption via the :doc:`package kokkos command <package>`
@@ -538,9 +537,11 @@ Generally speaking, the following rules of thumb apply:
   MPI ranks in order to avoid competing with the MPS daemon for
   CPU resources.
 
-See the `Benchmark page <https://www.lammps.org/bench.html>`_ of the
-LAMMPS website for performance of the KOKKOS package on different
-hardware.
+..
+   FIXME:
+   See the `Benchmark page <https://www.lammps.org/bench.html>`_ of the
+   LAMMPS website for performance of the KOKKOS package on different
+   hardware.
 
 Advanced Kokkos options
 """""""""""""""""""""""

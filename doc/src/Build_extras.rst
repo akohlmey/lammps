@@ -65,10 +65,10 @@ This is the list of packages that may require additional steps.
    * :ref:`PLUMED <plumed>`
    * :ref:`PYTHON <python>`
    * :ref:`QMMM <qmmm>`
+   * :ref:`QMMM-XTB <qmmm-xtb>`
    * :ref:`RHEO <rheo>`
    * :ref:`SCAFACOS <scafacos>`
    * :ref:`VORONOI <voronoi>`
-   * :ref:`VTK <vtk>`
 
 ----------
 
@@ -110,6 +110,42 @@ versions use an incompatible API and thus LAMMPS will fail to compile.
 
       The COMPRESS package no longer supports the traditional make build.
       You need to build LAMMPS with CMake.
+
+----------
+
+.. _fenix_build:
+
+FENIX package
+-------------
+
+.. versionadded:: TBD
+
+To build with this package you must have the `Fenix library
+<https://github.com/sandialabs/fenix>` available on your system. The Fenix
+library must be newer than version 1 (currently meaning built from the default
+"develop" branch). Older versions use an incompatible API and this LAMMPS will
+fail to compile.
+
+.. tabs::
+
+   .. tab:: CMake build
+
+      .. code-block:: bash
+
+         -D WITH_FENIX=value # enables FENIX package
+                             # value = yes or no (default)
+
+      If CMake cannot find the Fenix library or include files, you can set the
+      following:
+
+      .. code-block:: bash
+
+         -D FENIX_ROOT=/path/to/fenix/install
+
+   .. tab:: Traditional make
+
+      The Fenix package does not support the traditional make build. You need to
+      build LAMMPS with CMake.
 
 ----------
 
@@ -207,17 +243,18 @@ CMake build
    -D GPU_API=value             # value = opencl (default) or cuda or hip
    -D GPU_PREC=value            # precision setting
                                 # value = double or mixed (default) or single
-   -D GPU_ARCH=value            # primary GPU hardware choice for GPU_API=cuda
-                                # value = sm_XX (see below, default is sm_75)
+   -D GPU_ARCH=value            # primary GPU hardware choice for all GPU_API back ends
+                                # value = sm_XX for cuda and hip/nvcc (see below),
+                                # gfx<XXX> for hip/amd, or spirv for hip/spirv
+                                # defaults: sm_75 (cuda, hip/nvcc), gfx906 (hip/amd),
+                                # spirv (hip/spirv)
    -D GPU_DEBUG=value           # enable debug code in the GPU package library,
                                 # mostly useful for developers
                                 # value = yes or no (default)
    -D HIP_PATH=value            # value = path to HIP installation. Must be set if
                                 # GPU_API=HIP
-   -D HIP_ARCH=value            # primary GPU hardware choice for GPU_API=hip
-                                # value depends on selected HIP_PLATFORM
-                                # default is 'gfx906' for HIP_PLATFORM=amd and 'sm_75' for
-                                # HIP_PLATFORM=nvcc
+   -D HIP_ARCH=value            # deprecated, use GPU_ARCH instead (still accepted,
+                                # but prints a deprecation warning)
    -D HIP_USE_DEVICE_SORT=value # enables GPU sorting
                                 # value = yes (default) or no
    -D CUDPP_OPT=value           # use GPU binning with CUDA (should be off for modern GPUs)
@@ -254,7 +291,15 @@ LAMMPS must be compiled with ``-DFFT_SINGLE`` to use PPPM with GPU acceleration
 or GPU acceleration should be disabled for PPPM (e.g. suffix off or ``pair/only``
 as described in the LAMMPS documentation).
 
-``GPU_ARCH`` settings for different GPU hardware is as follows:
+.. versionchanged:: 4Jul2026
+
+``GPU_ARCH`` is the canonical architecture setting for all ``GPU_API``
+back ends.  The back end specific ``HIP_ARCH`` (for ``GPU_API=hip``)
+variable is still accepted for backward compatibility, but its use is
+deprecated and prints a warning.
+
+For ``GPU_API=cuda`` and ``GPU_API=hip`` with ``HIP_PLATFORM=nvcc``, the
+``GPU_ARCH`` settings for different GPU hardware are as follows:
 
 * ``sm_30`` for Kepler (supported since CUDA 5 and until CUDA 10.x)
 * ``sm_35`` or ``sm_37`` for Kepler (supported since CUDA 5 and until CUDA 11.x)
@@ -331,6 +376,19 @@ HIP_USE_DEVICE_SORT=on`` requires installing the ``hipcub`` library
 
 The GPU library has some multi-thread support using OpenMP.  If LAMMPS
 is built with ``-D BUILD_OMP=on`` this will also be enabled.
+
+.. note::
+
+   Some Clang-based tool chains - in particular ``hipcc`` from ROCm - do not
+   ship the ``omp.h`` header in the compiler's own resource directory.  When
+   building with ``-D BUILD_OMP=on`` and such a compiler, host code that
+   includes ``<omp.h>`` would fail to compile even though the ``-fopenmp``
+   flag is accepted.  CMake detects this case and adds the ``omp.h`` from a
+   matching version of the system Clang installation as a fallback include
+   path (using ``-idirafter`` so it does not shadow other headers).  If no
+   matching ``omp.h`` can be found automatically, you may need to add the
+   directory containing it yourself, for example with
+   ``-D CMAKE_CXX_FLAGS=-idirafter/usr/lib/clang/<version>/include``.
 
 For a debug build, set ``GPU_DEBUG`` to be ``yes``.
 
@@ -1696,8 +1754,7 @@ pre-compiled version already present on your system.
 INTEL package
 -----------------------------------
 
-To build with this package, you must choose which hardware you want to
-build for, either x86 CPUs or Intel KNLs in offload mode.  You should
+This package optimizes styles for x86 CPUs.  You should
 also typically :ref:`install the OPENMP package <openmp>`, as it can be
 used in tandem with the INTEL package to good effect, as explained
 on the :doc:`Speed_intel` page.
@@ -1717,31 +1774,18 @@ code when using features from the INTEL package.
 
       .. code-block:: bash
 
-         -D INTEL_ARCH=value     # value = cpu (default) or knl
          -D INTEL_LRT_MODE=value # value = threads, none, or c++17
 
    .. tab:: Traditional make
 
-      Choose which hardware to compile for in Makefile.machine via the
-      following settings.  See ``src/MAKE/OPTIONS/Makefile.intel_cpu*``
-      and ``Makefile.knl`` files for examples. and
-      ``src/INTEL/README`` for additional information.
-
-      For CPUs:
+      Choose compiler flags in Makefile.machine via the following
+      settings.  See ``src/MAKE/OPTIONS/Makefile.intel_cpu*`` files for
+      examples and ``src/INTEL/README`` for additional information.
 
       .. code-block:: make
 
          OPTFLAGS =  -xHost -O2 -fp-model fast=2 -no-prec-div -qoverride-limits -qopt-zmm-usage=high
-         CCFLAGS =   -g -qopenmp -DLAMMPS_MEMALIGN=64 -no-offload -fno-alias -ansi-alias -restrict $(OPTFLAGS)
-         LINKFLAGS = -g -qopenmp $(OPTFLAGS)
-         LIB =       -ltbbmalloc
-
-      For KNLs:
-
-      .. code-block:: make
-
-         OPTFLAGS =  -xMIC-AVX512 -O2 -fp-model fast=2 -no-prec-div -qoverride-limits
-         CCFLAGS =   -g -qopenmp -DLAMMPS_MEMALIGN=64 -no-offload -fno-alias -ansi-alias -restrict $(OPTFLAGS)
+         CCFLAGS =   -g -qopenmp -DLAMMPS_MEMALIGN=64 -fno-alias -ansi-alias -restrict $(OPTFLAGS)
          LINKFLAGS = -g -qopenmp $(OPTFLAGS)
          LIB =       -ltbbmalloc
 
@@ -1976,6 +2020,58 @@ verified to work in February 2020 with Quantum Espresso versions 6.3 to
 
 ----------
 
+.. _qmmm-xtb:
+
+QMMM-XTB package
+----------------
+
+The QMMM-XTB package provides in-process GFN1-xTB and GFN2-xTB QM/MM
+coupling through `libxtb <https://github.com/grimme-lab/xtb>`_.  It requires
+the KSPACE package, libxtb 6.7 or newer, mctc-lib, and BLAS.  The ``xtb.pc``
+and ``mctc-lib.pc`` files must be available to ``pkg-config``.
+
+The package uses libxtb's Fortran module interface because its public C API
+does not expose the atom-dependent potential callback required during every
+SCC iteration.  Consequently, the libxtb Fortran ``.mod`` files must be
+installed and must be compatible with the Fortran compiler used to build
+LAMMPS.  A normal libxtb installation may omit these private modules; rebuild
+libxtb with the Meson option ``-Dinstall_modules=true`` when necessary.
+
+.. tabs::
+
+   .. tab:: CMake build
+
+      If libxtb and mctc-lib are installed in nonstandard locations, add
+      their ``pkgconfig`` directories to ``PKG_CONFIG_PATH``.  Then configure
+      LAMMPS with both KSPACE and QMMM-XTB enabled and identify the directory
+      containing the libxtb Fortran modules:
+
+      .. code-block:: bash
+
+         export PKG_CONFIG_PATH=/path/to/xtb/lib/pkgconfig:/path/to/mctc/lib/pkgconfig
+         cmake -S cmake -B build \
+           -D PKG_KSPACE=yes \
+           -D PKG_QMMM-XTB=yes \
+           -D XTB_FORTRAN_MODULE_DIR=/path/to/xtb-modules
+         cmake --build build -j 8
+
+      ``XTB_FORTRAN_MODULE_DIR`` may be omitted when the module files are in
+      a directory reported by ``xtb.pc``.  Configuration stops with an error
+      if compatible module files cannot be found.  CMake locates BLAS through
+      its standard ``find_package(BLAS)`` mechanism.
+
+      At runtime, the dynamic loader must be able to find libxtb and its
+      dependencies.  Set ``XTBPATH`` to the directory containing
+      ``param_gfn1-xtb.txt`` and ``param_gfn2-xtb.txt`` when those files are
+      not installed in libxtb's default data location.
+
+   .. tab:: Traditional make
+
+      The QMMM-XTB package does not support the traditional make
+      build.  You need to build LAMMPS with CMake to use it.
+
+----------
+
 .. _rheo:
 
 RHEO package
@@ -2044,33 +2140,4 @@ To build with this package, you must download and build the
       .. versionchanged:: 10Sep2025
 
       The SCAFACOS package no longer supports the traditional make build.
-      You need to build LAMMPS with CMake.
-
-----------
-
-.. _vtk:
-
-VTK package
--------------------------------
-
-To build with this package you must have the VTK library installed on
-your system.
-
-.. tabs::
-
-   .. tab:: CMake build
-
-      No additional settings are needed besides ``-D PKG_VTK=yes``.
-
-      This should auto-detect the VTK library if it is installed on your
-      system at standard locations.  Several advanced VTK options exist
-      if you need to specify where it was installed.  Use the ``ccmake``
-      (terminal window) or ``cmake-gui`` (graphical) tools to see these
-      options and set them interactively from their user interfaces.
-
-   .. tab:: Traditional make
-
-      .. versionchanged:: 10Sep2025
-
-      The VTK package no longer supports the traditional make build.
       You need to build LAMMPS with CMake.

@@ -40,7 +40,10 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-PairOxdna2Dh::PairOxdna2Dh(LAMMPS *lmp) : Pair(lmp)
+PairOxdna2Dh::PairOxdna2Dh(LAMMPS *lmp) :
+    Pair(lmp), qeff_dh_pf(nullptr), kappa_dh(nullptr), b_dh(nullptr), cut_dh_ast(nullptr),
+    cutsq_dh_ast(nullptr), cut_dh_c(nullptr), cutsq_dh_c(nullptr), nxyz_xtrct(nullptr),
+    fix_lrf(nullptr)
 {
   single_enable = 0;
   writedata = 0;
@@ -430,7 +433,7 @@ void PairOxdna2Dh::init_style()
 {
   fix_lrf = nullptr;
   auto fixes = modify->get_fix_by_style("^OXDNA/LRF");
-  if (fixes.size() == 0) error->all(FLERR, "Fix OXDNA/LRF not found. Ensure pair oxdna/excv is present");
+  if (fixes.empty()) error->all(FLERR, "Fix OXDNA/LRF not found. Ensure pair oxdna/excv is present");
   else fix_lrf = dynamic_cast<FixOxdnaLRF *>(fixes[0]);
 
   neighbor->add_request(this, NeighConst::REQ_DEFAULT);

@@ -16,6 +16,7 @@
 
 #include "pointers.h"
 
+#include "creator_registry.h"
 #include "json_fwd.h"
 
 #include <map>
@@ -114,7 +115,7 @@ class Atom : protected Pointers {
 
   // PERI package
 
-  double *vfrac, *s0;
+  double *vfrac, *s0, *smin;
   double **x0;
 
   // SPIN package
@@ -136,7 +137,6 @@ class Atom : protected Pointers {
   double *uCond, *uMech, *uChem, *uCGnew, *uCG;
   double *duChem;
   double *dpdTheta;
-  int nspecies_dpd;
 
   // MESO package
 
@@ -311,8 +311,9 @@ class Atom : protected Pointers {
   // AtomVec factory types and map
 
   using AtomVecCreator = AtomVec *(*)(LAMMPS *);
-  using AtomVecCreatorMap = std::map<std::string, AtomVecCreator>;
-  AtomVecCreatorMap *avec_map;
+
+  // global registry of atom (AtomVec) style factory functions
+  static CreatorRegistry<AtomVecCreator> &avec_styles();
 
   // --------------------------------------------------------------------
   // functions
@@ -384,7 +385,7 @@ class Atom : protected Pointers {
   virtual int add_custom(const char *, int, int, int ghost = 0);
   virtual void remove_custom(int, int, int);
 
-  void *extract(const char *);
+  virtual void *extract(const char *);
   int extract_datatype(const char *);
   int extract_size(const char *, int);
 

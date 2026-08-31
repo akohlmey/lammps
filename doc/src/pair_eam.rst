@@ -19,6 +19,10 @@
 .. index:: pair_style eam/fs/omp
 .. index:: pair_style eam/fs/opt
 .. index:: pair_style eam/he
+.. index:: pair_style eam/he/gpu
+.. index:: pair_style eam/he/kk
+.. index:: pair_style eam/he/omp
+.. index:: pair_style eam/he/opt
 
 pair_style eam command
 ======================
@@ -43,6 +47,8 @@ Accelerator Variants: *eam/fs/gpu*, *eam/fs/intel*, *eam/fs/kk*, *eam/fs/omp*, *
 
 pair_style eam/he command
 =========================
+
+Accelerator Variants: *eam/he/gpu*, *eam/he/kk*, *eam/he/omp*, *eam/he/opt*
 
 Syntax
 """"""
@@ -493,9 +499,6 @@ commands in an input script that reads a restart file.
 The eam pair styles can only be used via the *pair* keyword of the
 :doc:`run_style respa <run_style>` command.  They do not support the
 *inner*, *middle*, *outer* keywords.
-
-
-
 
 ----------
 

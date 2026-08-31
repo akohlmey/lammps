@@ -2115,7 +2115,7 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
 *Fix orient/fcc found self twice*
    The neighbor lists used by fix orient/fcc are messed up.  If this
    error occurs, it is likely a bug, so send an email to the
-   `developers <https://www.lammps.org/authors.html>`_.
+   `developers <https://www.lammps.org/about/developers/>`_.
 
 *Fix peri neigh does not exist*
    Somehow a fix that the pair style defines has been deleted.
@@ -2278,10 +2278,6 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
 
 *Found no restart file matching pattern*
    When using a "\*" in the restart file name, no matching file was found.
-
-*GPU particle split must be set to 1 for this pair style.*
-   For this pair style, you cannot run part of the force calculation on
-   the host.  See the package command.
 
 *GPUs are requested but Kokkos has not been compiled for CUDA*
    Re-compile Kokkos with CUDA support to use GPUs.

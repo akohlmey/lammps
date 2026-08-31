@@ -6,7 +6,6 @@ pair_style eam/alloy command.
 The source files and potentials were provided by Gerolf Ziegenhain
 (gerolf at ziegenhain.com).  You could modify these programs to write
 out your own EAM potentials in LAMMPS-compatible format.
-
 two_band_fecr.py
 ----------------
 
