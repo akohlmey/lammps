@@ -29,3 +29,6 @@ add_example_test(heat      HeatExamples      HEAT)
 add_example_test(kappa     KappaExamples     KAPPA)
 add_example_test(viscosity ViscosityExamples VISCOSITY)
 add_example_test(mc_loop   MCLoopExamples    MC-LOOP)
+
+set_tests_properties(ElasticTExamples HeatExamples KappaExamples ViscosityExamples
+                     PROPERTIES LABELS "slow")
