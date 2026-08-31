@@ -13,7 +13,9 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(frenkel, ComputeFrenkel)
+// clang-format off
+ComputeStyle(frenkel,ComputeFrenkel)
+// clang-format on
 
 #else
 
@@ -21,7 +23,6 @@ ComputeStyle(frenkel, ComputeFrenkel)
 #define LMP_COMPUTE_FRENKEL_H
 
 #include "compute.h"
-#include "region.h"
 
 #include <functional>
 #include <unordered_map>
@@ -32,7 +33,6 @@ class ComputeFrenkel : public Compute {
  public:
   ComputeFrenkel(class LAMMPS *, int, char **);
   ~ComputeFrenkel() override;
-  int modify_param(int, char **) override;
 
   void init() override;
   int pack_reverse_comm(int, int, double *) override;
@@ -52,7 +52,8 @@ class ComputeFrenkel : public Compute {
   double **image_objarray;
   int image_nmax;
 
-  Region *region;
+  class Region *region;
+  std::string idregion;
   std::string sitefile;
   bool rescale;
 
@@ -62,8 +63,13 @@ class ComputeFrenkel : public Compute {
   tagint **occupant_tag;
   int nnormal;
   double **normal;
-  double cut_vac, cut_int, cutoff, binwidth;
+  double dr_vac, dr_int;      // cluster connection distances in units of dnn
+  double dnn;                 // nearest neighbor distance of the reference lattice
+  double cut_vac, cut_int;    // the same connection distances in distance units
+  double cutoff, binwidth;    // derived search and binning cutoff
   int nlatsites, nlatghosts;
+  bigint nlatsites_all;    // total number of reference sites on all processes
+  int warn_vacancies;      // 1 while the plausibility check is still pending
   double **latsites;
   double **latsites0;
   tagint *site_tag;
@@ -80,13 +86,16 @@ class ComputeFrenkel : public Compute {
   std::vector<int> cluster_nsites;                // Number of sites involved in cluster
   double **cluster_center;                        // Geometric center of cluster in x,y,z
   int noccupied;
-  tagint *occupied_cluster_ID;    // Per-cluster vector, length noccupied
-  double old_boxlo[3], old_boxhi[3];
+  tagint *occupied_cluster_ID;          // Per-cluster vector, length noccupied
+  double old_boxlo[3], old_boxhi[3];    // box the reference sites were created for
+  double bin_boxlo[3], bin_boxhi[3];    // box the site bins were built for
 
   bigint invoked_find_defects;
   bigint invoked_find_clusters;
   bigint invoked_construct_WS_cell;
 
+  double nearest_neighbor_distance();
+  void update_cutoffs(double);
   void create_lattice_sites();
   void put_sites_in_bins();
   int site_tag2index(tagint);

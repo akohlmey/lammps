@@ -17,11 +17,13 @@
 
    Updated July 8, 2022 by the author.
 
-   Refactored for inclusion into LAMMPS 23 June 2026
+   Refactored for inclusion into LAMMPS: June to August 2026
+   to use dump local for writing out interstitials and vacancies
    and to use dump image for graphics: by Axel Kohlmeyer, Temple U
 ------------------------------------------------------------------------- */
 
 #include "compute_frenkel.h"
+
 #include "atom.h"
 #include "citeme.h"
 #include "comm.h"
@@ -35,6 +37,7 @@
 #include "modify.h"
 #include "neighbor.h"
 #include "pair.h"
+#include "region.h"
 #include "text_file_reader.h"
 #include "update.h"
 
@@ -43,22 +46,45 @@
 #include <cmath>
 #include <cstring>
 
-static constexpr int BIN_GROW_SIZE = 32;    // bins start this size and grow by this
-static constexpr int MAX_OCCUPANTS = 8;     // max number of occupants of one lattice site
-static constexpr double BIG = 1.0e20;
-static constexpr double SMALL = 1.0e-10;
+namespace {
+constexpr int BIN_GROW_SIZE = 32;    // minimum number of sites per bin
+constexpr int MAX_OCCUPANTS = 8;     // max number of occupants of one lattice site
+constexpr double BIG = 1.0e20;
+constexpr double SMALL = 1.0e-10;
+
+// Default cluster connection distances, as multiples of the nearest neighbor
+// distance of the reference lattice.  Expressed this way, one setting has the
+// same meaning for every lattice: with the distances of the neighbor shells
+// divided by the nearest neighbor distance being 1, 1.414, 1.732, 2.0 for both
+// simple cubic and fcc lattices and 1, 1.155, 1.633, 1.915 for bcc lattices,
+// 1.5 connects the first two neighbor shells and 1.82 the first three for all
+// of them.  Interstitial configurations such as dumbbells are spatially more
+// extended than vacancies, hence the larger default for the latter.
+constexpr double DEFAULT_DRVAC = 1.5;
+constexpr double DEFAULT_DRINT = 1.82;
+
+// Lower bound for the binning and nearest site search cutoff, also as a multiple
+// of the nearest neighbor distance.  Without it, small drvac or drint settings
+// would shrink the bins so much that an atom no longer finds its reference site
+// and would be counted as a vacancy.
+constexpr double MIN_SEARCH_DISTANCE = 1.5;
+
+// Fraction of empty reference sites above which the analysis is almost certainly
+// not measuring what the user intended, and a warning is printed.
+constexpr double VACANCY_WARN_FRACTION = 0.2;
 
 // small, fixed MPI message tags for the ghost-site exchange.  Using the MPI
 // rank (or rank + n*nprocs) as a tag can exceed the guaranteed MPI_TAG_UB
 // (>= 32767) on large runs; the source rank is already given to MPI_Irecv, so
 // one constant tag per message type is sufficient and portable.
-static constexpr int TAG_COUNT = 0;
-static constexpr int TAG_SITE = 1;
-static constexpr int TAG_X = 2;
-static constexpr int TAG_OCCUP = 3;
-static constexpr int TAG_CLUST = 4;
-static constexpr int TAG_RTAG = 5;    // reverse (ghost -> owner) label push: site tags
-static constexpr int TAG_RCID = 6;    // reverse (ghost -> owner) label push: cluster IDs
+constexpr int TAG_COUNT = 0;
+constexpr int TAG_SITE = 1;
+constexpr int TAG_X = 2;
+constexpr int TAG_OCCUP = 3;
+constexpr int TAG_CLUST = 4;
+constexpr int TAG_RTAG = 5;    // reverse (ghost -> owner) label push: site tags
+constexpr int TAG_RCID = 6;    // reverse (ghost -> owner) label push: cluster IDs
+}    // namespace
 
 using namespace LAMMPS_NS;
 using MathConst::MY_2PI;
@@ -80,15 +106,15 @@ static const char cite_compute_frenkel_c[] =
 
 ComputeFrenkel::ComputeFrenkel(class LAMMPS *lmp, int narg, char **arg) :
     Compute(lmp, narg, arg), image_objvec(nullptr), image_objarray(nullptr), image_nmax(0),
-    region(nullptr), rescale(false), mindist(nullptr),
-    site_mindist(nullptr), noccupants(nullptr), occupant_tag(nullptr), nnormal(0), normal(nullptr),
-    nlatsites(0), nlatghosts(0), latsites(nullptr), latsites0(nullptr), site_tag(nullptr),
+    region(nullptr), rescale(false), mindist(nullptr), site_mindist(nullptr), noccupants(nullptr),
+    occupant_tag(nullptr), nnormal(0), normal(nullptr), nlatsites(0), nlatghosts(0),
+    nlatsites_all(0), warn_vacancies(0), latsites(nullptr), latsites0(nullptr), site_tag(nullptr),
     first_local_tag(0), nlatbins{0, 0, 0, 0}, latbins(nullptr), clusterID(nullptr),
     cluster_center(nullptr), noccupied(0), occupied_cluster_ID(nullptr), old_boxlo{0.0, 0.0, 0.0},
-    old_boxhi{0.0, 0.0, 0.0}, invoked_find_defects(-1), invoked_find_clusters(-1),
-    invoked_construct_WS_cell(-1)
+    old_boxhi{0.0, 0.0, 0.0}, bin_boxlo{0.0, 0.0, 0.0}, bin_boxhi{0.0, 0.0, 0.0},
+    invoked_find_defects(-1), invoked_find_clusters(-1), invoked_construct_WS_cell(-1)
 {
-  if (narg != 3) error->all(FLERR, "Illegal compute frenkel command");
+  if (narg < 3) utils::missing_cmd_args(FLERR, "compute frenkel", error);
 
   if (lmp->citeme) lmp->citeme->add(cite_compute_frenkel_c);
 
@@ -114,13 +140,53 @@ ComputeFrenkel::ComputeFrenkel(class LAMMPS *lmp, int narg, char **arg) :
   memory->create(vector, size_vector, "ComputeFrenkel:vector");
   memory->create(array, size_array_rows, size_array_cols, "ComputeFrenkel:array");
 
-  // default vacancy/interstitial search radii from the lattice spacing
-  double a_max =
-      MAX(MAX(domain->lattice->xlattice, domain->lattice->ylattice), domain->lattice->zlattice);
-  cut_vac = 1.01 * a_max;
-  cut_int = 1.42 * a_max;
-  cutoff = MAX(cut_vac, cut_int);
-  binwidth = cutoff;
+  // Cluster connection distances, in multiples of the nearest neighbor distance.
+  // They are converted to distance units in init(), where the lattice is known
+  // to be the one that will be used for generating the reference sites.
+  dr_vac = DEFAULT_DRVAC;
+  dr_int = DEFAULT_DRINT;
+  dnn = cut_vac = cut_int = cutoff = binwidth = 0.0;
+
+  // optional keyword/value pairs
+
+  int iarg = 3;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "drvac") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute frenkel drvac", error);
+      dr_vac = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      if (dr_vac <= 0.0) error->all(FLERR, iarg + 1, "Compute frenkel drvac value must be > 0.0");
+      iarg += 2;
+    } else if (strcmp(arg[iarg], "drint") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute frenkel drint", error);
+      dr_int = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      if (dr_int <= 0.0) error->all(FLERR, iarg + 1, "Compute frenkel drint value must be > 0.0");
+      iarg += 2;
+    } else if (strcmp(arg[iarg], "region") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute frenkel region", error);
+      idregion.clear();
+      if (strcmp(arg[iarg + 1], "none") != 0) {
+        if (!domain->get_region_by_id(arg[iarg + 1]))
+          error->all(FLERR, iarg + 1, "Region {} for compute frenkel doesn't exist", arg[iarg + 1]);
+        idregion = arg[iarg + 1];
+      }
+      iarg += 2;
+    } else if (strcmp(arg[iarg], "rescale") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute frenkel rescale", error);
+      rescale = utils::logical(FLERR, arg[iarg + 1], false, lmp);
+      iarg += 2;
+    } else if (strcmp(arg[iarg], "site_file") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute frenkel site_file", error);
+      sitefile.clear();
+      if (strcmp(arg[iarg + 1], "none") != 0) {
+        sitefile = arg[iarg + 1];
+        if (!platform::file_is_readable(sitefile))
+          error->all(FLERR, iarg + 1, "Compute frenkel site file {} is not readable", sitefile);
+      }
+      iarg += 2;
+    } else {
+      error->all(FLERR, iarg, "Unknown compute frenkel keyword: {}", arg[iarg]);
+    }
+  }
 }
 
 /****************************************************************************/
@@ -149,50 +215,6 @@ ComputeFrenkel::~ComputeFrenkel()
 
 /****************************************************************************/
 
-// Handle the style-specific compute_modify keywords.  The base class
-// Compute::modify_params() handles the generic ones (extra/dof, dynamic/dof)
-// and calls this for anything it does not recognize; we return the number of
-// arguments consumed, or 0 if the keyword is not one of ours.
-int ComputeFrenkel::modify_param(int narg, char **arg)
-{
-  if (strcmp(arg[0], "drvac") == 0) {
-    if (narg < 2) utils::missing_cmd_args(FLERR, "compute_modify drvac", error);
-    cut_vac = utils::numeric(FLERR, arg[1], false, lmp);
-    if (cut_vac <= 0.0) error->all(FLERR, "compute_modify drvac value must be > 0.0");
-    return 2;
-  } else if (strcmp(arg[0], "drint") == 0) {
-    if (narg < 2) utils::missing_cmd_args(FLERR, "compute_modify drint", error);
-    cut_int = utils::numeric(FLERR, arg[1], false, lmp);
-    if (cut_int <= 0.0) error->all(FLERR, "compute_modify drint value must be > 0.0");
-    return 2;
-  } else if (strcmp(arg[0], "region") == 0) {
-    if (narg < 2) utils::missing_cmd_args(FLERR, "compute_modify region", error);
-    if (strcmp(arg[1], "none") == 0) {
-      region = nullptr;
-    } else {
-      region = domain->get_region_by_id(arg[1]);
-      if (!region) error->all(FLERR, "compute_modify region {} does not exist", arg[1]);
-    }
-    return 2;
-  } else if (strcmp(arg[0], "rescale") == 0) {
-    if (narg < 2) utils::missing_cmd_args(FLERR, "compute_modify rescale", error);
-    rescale = utils::logical(FLERR, arg[1], false, lmp);
-    return 2;
-  } else if (strcmp(arg[0], "site_file") == 0) {
-    if (narg < 2) utils::missing_cmd_args(FLERR, "compute_modify site_file", error);
-    sitefile.clear();
-    if (strcmp(arg[1], "none") != 0) {
-      sitefile = arg[1];
-      if (!platform::file_is_readable(sitefile))
-        error->one(FLERR, "Compute frenkel site file {} is not readable", sitefile);
-    }
-    return 2;
-  }
-  return 0;
-}
-
-/****************************************************************************/
-
 void ComputeFrenkel::init()
 {
   // Note that invoked_vector and invoked_array are reset inside
@@ -204,6 +226,16 @@ void ComputeFrenkel::init()
   // Make sure we have a way to generate lattice sites
   if (!domain->lattice)
     error->all(FLERR, Error::NOLASTLINE, "Use of compute style frenkel with undefined lattice");
+
+  // look up the region pointer from its ID.  This must be done here and not in
+  // the constructor, since the region may have been deleted and redefined.
+  region = nullptr;
+  if (!idregion.empty()) {
+    region = domain->get_region_by_id(idregion);
+    if (!region)
+      error->all(FLERR, Error::NOLASTLINE, "Region {} for compute frenkel does not exist",
+                 idregion);
+  }
 
   // Unsupported cases: the reference sites do not follow a changing box tilt,
   // and the site-to-processor assignment and ghost-site exchange assume the
@@ -221,17 +253,36 @@ void ComputeFrenkel::init()
                "Compute frenkel is not compatible with fix balance; "
                "please contact the LAMMPS developers");
 
-  // the reference sites follow a changing box only with rescale yes; warn when
-  // the box will change (box-changing fix or shrink-wrapped boundary) without it
-  if (!rescale && (domain->box_change_size || domain->box_change_shape) && (comm->me == 0))
-    error->warning(FLERR,
-                   "The simulation box changes during the run but compute frenkel rescale "
-                   "is not enabled: the reference sites will not follow the box");
-  // Recompute the derived search/bin cutoffs from the (possibly compute_modify
-  // changed) vacancy and interstitial radii, so drvac/drint stay consistent
-  // with the values used for binning, ghost exchange, and nearest-site search.
-  cutoff = MAX(cut_vac, cut_int);
-  binwidth = cutoff;
+  // The reference sites follow a changing box only with rescale yes, and they
+  // never follow a changing box shape.  Warn about both cases separately, so it
+  // is clear which one applies (a changing shape implies a triclinic box, which
+  // is rejected above when rescale is enabled).
+  if (!rescale && (comm->me == 0)) {
+    if (domain->box_change_size)
+      error->warning(FLERR,
+                     "The size of the simulation box changes during the run but compute "
+                     "frenkel rescale is not enabled: the reference sites will not follow "
+                     "the box");
+    if (domain->box_change_shape)
+      error->warning(FLERR,
+                     "The shape of the simulation box changes during the run: the reference "
+                     "sites of compute frenkel do not follow a shearing box");
+  }
+
+  // check the number of vacancies once per run, on the first invocation
+  warn_vacancies = 1;
+
+  // Convert the cluster connection distances to distance units.  This is done
+  // here and not in the constructor, because the lattice command that defines
+  // the reference sites may have been issued or changed in between.
+  dnn = nearest_neighbor_distance();
+  update_cutoffs(1.0);
+
+  if (comm->me == 0)
+    utils::logmesg(lmp,
+                   "Compute {} nearest neighbor distance {:.6} with cluster connection "
+                   "distances {:.6} for vacancies and {:.6} for interstitials\n",
+                   id, dnn, cut_vac, cut_int);
 
   // Ghost atoms must reach at least one search cutoff beyond the subdomain or
   // defects near subdomain boundaries can be silently misidentified.  The
@@ -313,6 +364,18 @@ void ComputeFrenkel::find_defects()
   invoked_find_defects = update->ntimestep;
 
   rescale_lattice_sites();
+
+  // The bins are anchored at the (moving) subdomain boundaries and have a fixed
+  // width, so when the box changes size a site drifts away from the bin it was
+  // stored in: with rescale yes because the sites are moved, without it because
+  // the subdomain boundaries are.  Either way the atom-to-site search would then
+  // scan a bin that no longer holds the nearby sites and report false vacancies,
+  // so rebuild the bins whenever the box is no longer the one they were built for.
+  if ((domain->boxlo[0] != bin_boxlo[0]) || (domain->boxlo[1] != bin_boxlo[1]) ||
+      (domain->boxlo[2] != bin_boxlo[2]) || (domain->boxhi[0] != bin_boxhi[0]) ||
+      (domain->boxhi[1] != bin_boxhi[1]) || (domain->boxhi[2] != bin_boxhi[2]))
+    put_sites_in_bins();
+
   exchange_lattice_ghosts();    // In case sites are NOW close enough to exchange
   construct_site_nlists();
 
@@ -411,6 +474,25 @@ void ComputeFrenkel::find_defects()
   // per-atom output values for atoms outside the compute group are zero
   for (int i = 0; i < atom->nlocal; i++)
     if (!(atom->mask[i] & groupbit)) mindist[i] = 0.0;
+
+  // Once per run, check that the result is plausible.  A large fraction of empty
+  // sites usually means that the lattice does not match the crystal, or that
+  // part of the simulation box is empty and a region restriction is needed.
+  if (warn_vacancies) {
+    warn_vacancies = 0;
+    bigint nvac = 0;
+    for (int k = 0; k < nlatsites; k++)
+      if (noccupants[k] == 0) nvac++;
+    bigint nvac_all = 0;
+    MPI_Allreduce(&nvac, &nvac_all, 1, MPI_LMP_BIGINT, MPI_SUM, world);
+    if ((comm->me == 0) && (nlatsites_all > 0) &&
+        ((double) nvac_all > VACANCY_WARN_FRACTION * (double) nlatsites_all))
+      error->warning(FLERR,
+                     "Compute frenkel finds {} vacancies for {} reference sites. Please check "
+                     "that the lattice matches the crystal and whether a region is needed to "
+                     "exclude empty parts of the simulation box",
+                     nvac_all, nlatsites_all);
+  }
 }
 
 /****************************************************************************/
@@ -950,6 +1032,9 @@ void ComputeFrenkel::create_lattice_sites()
             c[2] >= sublo[2] && c[2] < subhi[2]);
   };
 
+  // required before Region::match() for regions with a variable shape
+  if (region) region->prematch();
+
   std::vector<std::array<double, 3>> sites;
 
   if (!sitefile.empty()) {
@@ -1013,7 +1098,13 @@ void ComputeFrenkel::create_lattice_sites()
 
   nlatsites = static_cast<int>(sites.size());
   nlatghosts = 0;
-  if (nlatsites == 0) error->warning(FLERR, "compute frenkel generated no lattice sites");
+
+  // warn only if *no* process has reference sites.  With a region restriction it
+  // is perfectly normal for individual subdomains to contain none of them.
+  bigint nsites_local = nlatsites;
+  MPI_Allreduce(&nsites_local, &nlatsites_all, 1, MPI_LMP_BIGINT, MPI_SUM, world);
+  if ((nlatsites_all == 0) && (comm->me == 0))
+    error->warning(FLERR, "Compute frenkel generated no lattice sites");
 
   memory->destroy(latsites);
   memory->create(latsites, MAX(nlatsites, 1), 3, "ComputeFrenkel:latsites");
@@ -1107,10 +1198,8 @@ void ComputeFrenkel::exchange_one(const std::function<void *(int)> &sbuf,
   std::vector<MPI_Request> rreq(nexch, MPI_REQUEST_NULL);
   for (int q = 0; q < nexch; q++) {
     if (procs[q] == me) continue;
-    if (n_send[q] > 0)
-      MPI_Isend(sbuf(q), n_send[q] * stride, type, procs[q], tag, world, &sreq[q]);
-    if (n_recv[q] > 0)
-      MPI_Irecv(rbuf(q), n_recv[q] * stride, type, procs[q], tag, world, &rreq[q]);
+    if (n_send[q] > 0) MPI_Isend(sbuf(q), n_send[q] * stride, type, procs[q], tag, world, &sreq[q]);
+    if (n_recv[q] > 0) MPI_Irecv(rbuf(q), n_recv[q] * stride, type, procs[q], tag, world, &rreq[q]);
   }
   MPI_Waitall(nexch, sreq.data(), MPI_STATUSES_IGNORE);
   MPI_Waitall(nexch, rreq.data(), MPI_STATUSES_IGNORE);
@@ -1470,50 +1559,120 @@ void ComputeFrenkel::construct_site_nlists()
 
 /****************************************************************************/
 
+double ComputeFrenkel::nearest_neighbor_distance()
+{
+  // Smallest distance between two reference sites, in distance units.  Scans the
+  // sites of the unit cell and of its neighboring cells, i.e. the same set of
+  // sites that construct_WS_cell() uses to build the cell faces.
+
+  Lattice *const lattice = domain->lattice;
+  const int nlayer = (domain->dimension == 2) ? 0 : 1;
+
+  double x0 = lattice->basis[0][0];
+  double y0 = lattice->basis[0][1];
+  double z0 = lattice->basis[0][2];
+  lattice->lattice2box(x0, y0, z0);
+
+  double drsq_min = BIG;
+  for (int j = 0; j < lattice->nbasis; j++)
+    for (int n1 = -1; n1 <= 1; n1++)
+      for (int n2 = -1; n2 <= 1; n2++)
+        for (int n3 = -nlayer; n3 <= nlayer; n3++) {
+          if ((j == 0) && (n1 == 0) && (n2 == 0) && (n3 == 0)) continue;
+          double x = lattice->basis[j][0] + n1 * lattice->a1[0] + n2 * lattice->a2[0] +
+              n3 * lattice->a3[0];
+          double y = lattice->basis[j][1] + n1 * lattice->a1[1] + n2 * lattice->a2[1] +
+              n3 * lattice->a3[1];
+          double z = lattice->basis[j][2] + n1 * lattice->a1[2] + n2 * lattice->a2[2] +
+              n3 * lattice->a3[2];
+          lattice->lattice2box(x, y, z);
+          const double dx = x - x0;
+          const double dy = y - y0;
+          const double dz = z - z0;
+          const double drsq = dx * dx + dy * dy + dz * dz;
+          if ((drsq > SMALL) && (drsq < drsq_min)) drsq_min = drsq;
+        }
+
+  if (drsq_min >= BIG)
+    error->all(FLERR, Error::NOLASTLINE,
+               "Could not determine the nearest neighbor distance of the lattice "
+               "used by compute frenkel");
+
+  return sqrt(drsq_min);
+}
+
+/****************************************************************************/
+
+void ComputeFrenkel::update_cutoffs(double scale)
+{
+  // Convert the cluster connection distances from multiples of the nearest
+  // neighbor distance to distance units.  The scale factor is 1.0 unless the
+  // reference sites have been rescaled with the box.  The search and binning
+  // cutoff must cover both of them and is bounded from below, so that small
+  // connection distances cannot break the assignment of atoms to sites.
+
+  cut_vac = dr_vac * dnn * scale;
+  cut_int = dr_int * dnn * scale;
+  cutoff = MAX(MIN_SEARCH_DISTANCE * dnn * scale, MAX(cut_vac, cut_int));
+  binwidth = cutoff;
+}
+
+/****************************************************************************/
+
 void ComputeFrenkel::put_sites_in_bins()
 {
-  // Each site is assigned to a unique bin of width cutoff.
+  // Each site is assigned to a unique bin of width cutoff.  Only sites owned by
+  // this process are binned: the atom-to-site assignment in find_defects() must
+  // never pick a ghost site, because the occupancy of a site is tallied by the
+  // process that owns it.  Ghost sites are still connected to nearby local sites
+  // through the per-site neighbor lists that construct_site_nlists() builds from
+  // these bins.
   nlatbins[0] = MAX(1, (int) lround((domain->subhi[0] - domain->sublo[0]) / binwidth));
   nlatbins[1] = MAX(1, (int) lround((domain->subhi[1] - domain->sublo[1]) / binwidth));
   nlatbins[2] = MAX(1, (int) lround((domain->subhi[2] - domain->sublo[2]) / binwidth));
-  nlatbins[3] = domain->lattice->nbasis * BIN_GROW_SIZE;    // can grow
+  const int nbins = nlatbins[0] * nlatbins[1] * nlatbins[2];
 
-  // Temporary array to store the index we're currently on
+  // Temporary array for counting the sites of each bin
   int ***binindex =
       memory->create(binindex, nlatbins[0], nlatbins[1], nlatbins[2], "ComputeFrenkel:binindex");
+  int *const count = binindex[0][0];
+  for (int i = 0; i < nbins; i++) count[i] = 0;
 
-  // Create the bins
+  // First pass: count the sites per bin, so that the capacity of the bins is
+  // known before they are allocated.  Growing the last dimension of the bin
+  // array later is not an option: memory->grow() reallocates the data block and
+  // then relinks the pointers using the new stride, which scrambles the bin
+  // contents stored so far.
+  int i, j, k;
+  for (int n = 0; n < nlatsites; n++) {
+    find_closest_bin(latsites[n], i, j, k);
+    binindex[i][j][k] += 1;
+  }
+  nlatbins[3] = domain->lattice->nbasis * BIN_GROW_SIZE;
+  for (int m = 0; m < nbins; m++) nlatbins[3] = MAX(nlatbins[3], count[m]);
+
+  // Create the bins and mark all their slots as unused
   memory->destroy(latbins);
   memory->create(latbins, nlatbins[0], nlatbins[1], nlatbins[2], nlatbins[3],
-                 "ComputeFrenkel:nlatbins");
+                 "ComputeFrenkel:latbins");
+  int *const slot = latbins[0][0][0];
+  for (int m = 0; m < nbins * nlatbins[3]; m++) slot[m] = -1;
 
-  // Initialize the bin contents
-  int *iptr = binindex[0][0];
-  for (int i = 0; i < nlatbins[0] * nlatbins[1] * nlatbins[2]; i++) iptr[i] = 0;
-  iptr = latbins[0][0][0];
-  for (int i = 0; i < nlatbins[0] * nlatbins[1] * nlatbins[2] * nlatbins[3]; i++) iptr[i] = -1;
-
-  // Store indices of all lattice points in appropriate bins
-  for (int n = 0; n < nlatsites + nlatghosts; n++) {
-    int i, j, k, l;
+  // Second pass: store the indices of all local lattice sites in their bin
+  for (int m = 0; m < nbins; m++) count[m] = 0;
+  for (int n = 0; n < nlatsites; n++) {
     find_closest_bin(latsites[n], i, j, k);
-    l = binindex[i][j][k];
-    latbins[i][j][k][l] = n;
-    binindex[i][j][k] += 1;
-    if (binindex[i][j][k] >= nlatbins[3]) {
-      int startval = nlatbins[3];
-      nlatbins[3] += BIN_GROW_SIZE;
-      memory->grow(latbins, nlatbins[0], nlatbins[1], nlatbins[2], nlatbins[3],
-                   "ComputeFrenkel:realloc-latbins");
-      for (int ii = 0; ii < nlatbins[0]; ii++)
-        for (int jj = 0; jj < nlatbins[1]; jj++)
-          for (int kk = 0; kk < nlatbins[2]; kk++)
-            for (int ll = startval; ll < nlatbins[3]; ll++) latbins[ii][jj][kk][ll] = -1;
-    }
+    latbins[i][j][k][binindex[i][j][k]++] = n;
   }
 
   // Deallocate our counting array
   memory->destroy(binindex);
+
+  // remember which box these bins belong to (see find_defects())
+  for (int d = 0; d < 3; ++d) {
+    bin_boxlo[d] = domain->boxlo[d];
+    bin_boxhi[d] = domain->boxhi[d];
+  }
 }
 
 /****************************************************************************/
@@ -1735,6 +1894,12 @@ void ComputeFrenkel::rescale_lattice_sites()
     latsites[k][1] = (latsites0[k][1] - old_boxlo[1]) * ycontract + domain->boxlo[1];
     latsites[k][2] = (latsites0[k][2] - old_boxlo[2]) * zcontract + domain->boxlo[2];
   }
+
+  // The reference sites and thus their nearest neighbor distance have changed
+  // with the box, so the connection distances derived from it must follow.
+  const double scale = (domain->dimension == 2) ? sqrt(xcontract * ycontract)
+                                                : cbrt(xcontract * ycontract * zcontract);
+  update_cutoffs(scale);
 }
 
 /****************************************************************************/

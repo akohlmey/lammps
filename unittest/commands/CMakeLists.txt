@@ -117,6 +117,10 @@ target_compile_definitions(test_labelmap PRIVATE -DTEST_INPUT_FOLDER=${CMAKE_CUR
 target_link_libraries(test_labelmap PRIVATE lammps GTest::GMock)
 add_test(NAME Labelmap COMMAND test_labelmap)
 
+add_executable(test_compute_frenkel test_compute_frenkel.cpp)
+target_link_libraries(test_compute_frenkel PRIVATE lammps GTest::GMock)
+add_test(NAME ComputeFrenkel COMMAND test_compute_frenkel)
+
 add_executable(test_variables test_variables.cpp)
 target_link_libraries(test_variables PRIVATE lammps GTest::GMock)
 add_test(NAME Variables COMMAND test_variables)
