@@ -166,12 +166,12 @@ an error.
 With the *site_file* keyword the reference sites are not generated from
 the lattice but read from the given text file, which must contain one
 site per line as three coordinates "x y z" (anything following a "#"
-character is ignored).  This allows using a reference structure that is
-not a perfect lattice, for example the relaxed atom positions from the
-beginning of the simulation.  A :doc:`lattice <lattice>` command is
-still required, since the shape of the Wigner-Seitz cells and the
-nearest neighbor distance that *drvac* and *drint* refer to are derived
-from it.
+character is ignored).  Blank lines and comment-only lines are skipped.
+This allows using a reference structure that is not a perfect lattice,
+for example the relaxed atom positions from the beginning of a
+simulation.  A :doc:`lattice <lattice>` command is still required, since
+the shape of the Wigner-Seitz cells and the nearest neighbor distance
+that *drvac* and *drint* refer to are derived from it.
 
 With the *site_file* keyword the reference sites are not generated from
 the lattice but read from the given text file, which must contain one
@@ -184,12 +184,13 @@ default distances are derived from it.
 
 .. note::
 
-   The lattice must match the crystal that the atoms actually occupy.  If
-   the lattice spacing or orientation is wrong, essentially every atom
-   will be flagged as a defect.  For a crystal at finite temperature it is
-   usually best to use the thermally expanded lattice constant (or
-   *rescale yes*), and to analyze the inherent structure (a quenched or
-   minimized snapshot) when the thermal displacements are large.
+   The lattice must match the crystal that the atoms actually occupy.
+   If the lattice spacing or orientation is wrong, essentially every
+   atom will be flagged as a defect.  For a crystal at finite
+   temperature it is usually best to use the thermally expanded lattice
+   constant (or *rescale yes*), and to analyze the inherent structure (a
+   quenched or minimized snapshot) when the thermal displacements are
+   large.
 
 In a restarted simulation this compute behaves like any other compute:
 the :doc:`lattice <lattice>` and compute commands must be repeated in
