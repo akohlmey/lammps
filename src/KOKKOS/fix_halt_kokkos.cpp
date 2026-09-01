@@ -72,7 +72,7 @@ double FixHaltKokkos<DeviceType>::bondmax()
 
   // KK_FLOAT is float in single/mixed precision builds; widen for the Allreduce
 
-  double maxone_d = maxone;
+  double maxone_d = static_cast<double>(maxone);
   double maxall;
   MPI_Allreduce(&maxone_d, &maxall, 1, MPI_DOUBLE, MPI_MAX, world);
 

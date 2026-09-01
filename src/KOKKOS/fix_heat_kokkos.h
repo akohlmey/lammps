@@ -37,7 +37,7 @@ class FixHeatKokkos : public FixHeat {
   typedef DeviceType device_type;
   typedef ArrayTypes<DeviceType> AT;
   typedef double value_type[];
-  const int value_count = 4;
+  const int value_count = 5;
 
   FixHeatKokkos(class LAMMPS *, int, char **);
   ~FixHeatKokkos() override = default;
@@ -58,11 +58,13 @@ class FixHeatKokkos : public FixHeat {
   typename AT::t_int_1d_randomread type;
   typename AT::t_kkfloat_1d_randomread rmass;
   typename AT::t_kkfloat_1d_randomread mass;
+  typename AT::t_int_1d_randomread d_match;
 
   // set before each kernel launch
   int l_rmass_flag;
-  double l_scale;
-  double l_vsub[3];
+  int l_region_flag;
+  KK_FLOAT l_scale;
+  KK_FLOAT l_vsub[3];
 };
 
 }    // namespace LAMMPS_NS

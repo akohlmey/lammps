@@ -135,9 +135,9 @@ void FixSpringRGKokkos<DeviceType>::operator()(TagFixSpringRGXcm, const int &i, 
 {
   if (mask[i] & groupbit) {
     Few<double,3> x_i;
-    x_i[0] = x(i,0);
-    x_i[1] = x(i,1);
-    x_i[2] = x(i,2);
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
     auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
     const double massone = l_rmass_flag ? (double)rmass[i] : (double)mass[type[i]];
     result[0] += massone * unwrap[0];
@@ -156,9 +156,9 @@ void FixSpringRGKokkos<DeviceType>::operator()(TagFixSpringRGGyration, const int
 {
   if (mask[i] & groupbit) {
     Few<double,3> x_i;
-    x_i[0] = x(i,0);
-    x_i[1] = x(i,1);
-    x_i[2] = x(i,2);
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
     auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
     const double dx = unwrap[0] - l_xcm[0];
     const double dy = unwrap[1] - l_xcm[1];
@@ -177,14 +177,14 @@ void FixSpringRGKokkos<DeviceType>::operator()(TagFixSpringRGApply, const int &i
 {
   if (mask[i] & groupbit) {
     Few<double,3> x_i;
-    x_i[0] = x(i,0);
-    x_i[1] = x(i,1);
-    x_i[2] = x(i,2);
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
     auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
     const double massone = l_rmass_flag ? (double)rmass[i] : (double)mass[type[i]];
-    f(i,0) -= l_coeff * massone * (unwrap[0] - l_xcm[0]);
-    f(i,1) -= l_coeff * massone * (unwrap[1] - l_xcm[1]);
-    f(i,2) -= l_coeff * massone * (unwrap[2] - l_xcm[2]);
+    f(i,0) -= static_cast<KK_ACC_FLOAT>(l_coeff * massone * (unwrap[0] - l_xcm[0]));
+    f(i,1) -= static_cast<KK_ACC_FLOAT>(l_coeff * massone * (unwrap[1] - l_xcm[1]));
+    f(i,2) -= static_cast<KK_ACC_FLOAT>(l_coeff * massone * (unwrap[2] - l_xcm[2]));
   }
 }
 

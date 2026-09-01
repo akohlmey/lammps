@@ -207,11 +207,11 @@ KOKKOS_INLINE_FUNCTION
 void FixTempCSLDKokkos<DeviceType>::operator()(TagFixTempCSLDInitial, const int &i) const {
   if (mask[i] & groupbit) {
     KK_FLOAT m = l_rmass_flag ? rmass[i] : mass[type[i]];
-    const KK_FLOAT factor = 1.0/Kokkos::sqrt(m);
+    const KK_FLOAT factor = static_cast<KK_FLOAT>(1.0)/Kokkos::sqrt(m);
     rand_type rand_gen = rand_pool.get_state();
-    d_vhold(i,0) = v(i,0); v(i,0) = rand_gen.normal()*factor;
-    d_vhold(i,1) = v(i,1); v(i,1) = rand_gen.normal()*factor;
-    d_vhold(i,2) = v(i,2); v(i,2) = rand_gen.normal()*factor;
+    d_vhold(i,0) = v(i,0); v(i,0) = static_cast<KK_FLOAT>(rand_gen.normal())*factor;
+    d_vhold(i,1) = v(i,1); v(i,1) = static_cast<KK_FLOAT>(rand_gen.normal())*factor;
+    d_vhold(i,2) = v(i,2); v(i,2) = static_cast<KK_FLOAT>(rand_gen.normal())*factor;
     rand_pool.free_state(rand_gen);
   }
 }

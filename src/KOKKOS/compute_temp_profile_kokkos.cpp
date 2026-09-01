@@ -202,8 +202,8 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileScatt
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
     double massone;
-    if (RMASS) massone = rmass[i];
-    else massone = mass[type[i]];
+    if (RMASS) massone = static_cast<double>(rmass[i]);
+    else massone = static_cast<double>(mass[type[i]]);
     if (xflag) Kokkos::atomic_add(&d_vbin(ibin,ivx), massone*(double)v(i,0));
     if (yflag) Kokkos::atomic_add(&d_vbin(ibin,ivy), massone*(double)v(i,1));
     if (zflag) Kokkos::atomic_add(&d_vbin(ibin,ivz), massone*(double)v(i,2));
@@ -248,13 +248,13 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileScala
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    double vt0 = v(i,0), vt1 = v(i,1), vt2 = v(i,2);
+    double vt0 = static_cast<double>(v(i,0)), vt1 = static_cast<double>(v(i,1)), vt2 = static_cast<double>(v(i,2));
     if (xflag) vt0 -= d_binave(ibin,ivx);
     if (yflag) vt1 -= d_binave(ibin,ivy);
     if (zflag) vt2 -= d_binave(ibin,ivz);
     double massone;
-    if (RMASS) massone = rmass[i];
-    else massone = mass[type[i]];
+    if (RMASS) massone = static_cast<double>(rmass[i]);
+    else massone = static_cast<double>(mass[type[i]]);
     t_kk.t0 += (vt0*vt0 + vt1*vt1 + vt2*vt2) * massone;
   }
 }
@@ -296,13 +296,13 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileVecto
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    double vt0 = v(i,0), vt1 = v(i,1), vt2 = v(i,2);
+    double vt0 = static_cast<double>(v(i,0)), vt1 = static_cast<double>(v(i,1)), vt2 = static_cast<double>(v(i,2));
     if (xflag) vt0 -= d_binave(ibin,ivx);
     if (yflag) vt1 -= d_binave(ibin,ivy);
     if (zflag) vt2 -= d_binave(ibin,ivz);
     double massone;
-    if (RMASS) massone = rmass[i];
-    else massone = mass[type[i]];
+    if (RMASS) massone = static_cast<double>(rmass[i]);
+    else massone = static_cast<double>(mass[type[i]]);
     t_kk.t0 += massone * vt0*vt0;
     t_kk.t1 += massone * vt1*vt1;
     t_kk.t2 += massone * vt2*vt2;
@@ -366,13 +366,12 @@ void ComputeTempProfileKokkos<DeviceType>::compute_array()
     array[i][0] = binave[i][ncount-1];
     totcount += array[i][0];
   }
-  double nper = domain->dimension - (extra_dof + fix_dof)/totcount;
+  double nper = (totcount > 0.0) ? domain->dimension - (extra_dof + fix_dof)/totcount : 0.0;
   double dofbin, tfactorbin;
   for (i = 0; i < nbins; i++) {
     if (array[i][0] > 0.0) {
       dofbin = nper*array[i][0] - nstreaming;
-      if (dofbin > 0) tfactorbin = force->mvv2e / (dofbin * force->boltz);
-      else tfactorbin = 0.0;
+      tfactorbin = (dofbin > 0.0) ? force->mvv2e / (dofbin * force->boltz) : 0.0;
       array[i][1] = tfactorbin*tbinall[i];
     } else array[i][1] = 0.0;
   }
@@ -413,9 +412,9 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileRemov
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    if (xflag) v(i,0) -= d_binave(ibin,ivx);
-    if (yflag) v(i,1) -= d_binave(ibin,ivy);
-    if (zflag) v(i,2) -= d_binave(ibin,ivz);
+    if (xflag) v(i,0) -= static_cast<KK_FLOAT>(d_binave(ibin,ivx));
+    if (yflag) v(i,1) -= static_cast<KK_FLOAT>(d_binave(ibin,ivy));
+    if (zflag) v(i,2) -= static_cast<KK_FLOAT>(d_binave(ibin,ivz));
   }
 }
 
@@ -452,9 +451,9 @@ void ComputeTempProfileKokkos<DeviceType>::operator()(TagComputeTempProfileResto
 {
   if (mask[i] & groupbit) {
     const int ibin = d_bin[i];
-    if (xflag) v(i,0) += d_binave(ibin,ivx);
-    if (yflag) v(i,1) += d_binave(ibin,ivy);
-    if (zflag) v(i,2) += d_binave(ibin,ivz);
+    if (xflag) v(i,0) += static_cast<KK_FLOAT>(d_binave(ibin,ivx));
+    if (yflag) v(i,1) += static_cast<KK_FLOAT>(d_binave(ibin,ivy));
+    if (zflag) v(i,2) += static_cast<KK_FLOAT>(d_binave(ibin,ivz));
   }
 }
 

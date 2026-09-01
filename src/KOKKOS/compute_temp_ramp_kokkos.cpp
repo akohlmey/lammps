@@ -84,13 +84,13 @@ KOKKOS_INLINE_FUNCTION
 void ComputeTempRampKokkos<DeviceType>::operator()(TagComputeTempRampScalar<RMASS>, const int &i, CTEMP& t_kk) const {
   if (mask[i] & groupbit) {
     double vthermal[3];
-    vthermal[0] = v(i,0);
-    vthermal[1] = v(i,1);
-    vthermal[2] = v(i,2);
+    vthermal[0] = static_cast<double>(v(i,0));
+    vthermal[1] = static_cast<double>(v(i,1));
+    vthermal[2] = static_cast<double>(v(i,2));
     vthermal[v_dim] -= ramp_bias(i);
     double massone;
-    if (RMASS) massone = rmass[i];
-    else massone = mass[type[i]];
+    if (RMASS) massone = static_cast<double>(rmass[i]);
+    else massone = static_cast<double>(mass[type[i]]);
     t_kk.t0 += (vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] +
                 vthermal[2]*vthermal[2]) * massone;
   }
@@ -142,13 +142,13 @@ KOKKOS_INLINE_FUNCTION
 void ComputeTempRampKokkos<DeviceType>::operator()(TagComputeTempRampVector<RMASS>, const int &i, CTEMP& t_kk) const {
   if (mask[i] & groupbit) {
     double vthermal[3];
-    vthermal[0] = v(i,0);
-    vthermal[1] = v(i,1);
-    vthermal[2] = v(i,2);
+    vthermal[0] = static_cast<double>(v(i,0));
+    vthermal[1] = static_cast<double>(v(i,1));
+    vthermal[2] = static_cast<double>(v(i,2));
     vthermal[v_dim] -= ramp_bias(i);
     double massone;
-    if (RMASS) massone = rmass[i];
-    else massone = mass[type[i]];
+    if (RMASS) massone = static_cast<double>(rmass[i]);
+    else massone = static_cast<double>(mass[type[i]]);
     t_kk.t0 += massone * vthermal[0]*vthermal[0];
     t_kk.t1 += massone * vthermal[1]*vthermal[1];
     t_kk.t2 += massone * vthermal[2]*vthermal[2];
@@ -199,8 +199,8 @@ KOKKOS_INLINE_FUNCTION
 void ComputeTempRampKokkos<DeviceType>::operator()(TagComputeTempRampRemoveBias, const int &i) const {
   if (mask[i] & groupbit) {
     const double vramp = ramp_bias(i);
-    vbiasall(i,v_dim) = vramp;
-    v(i,v_dim) -= vramp;
+    vbiasall(i,v_dim) = static_cast<KK_FLOAT>(vramp);
+    v(i,v_dim) -= static_cast<KK_FLOAT>(vramp);
   }
 }
 

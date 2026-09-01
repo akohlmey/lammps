@@ -134,9 +134,10 @@ the :doc:`run <run>` command.  This fix is not invoked during :doc:`energy minim
 Restrictions
 """"""""""""
 
-The *heat/kk* accelerator variant supports neither the *region* keyword
-nor an atom-style variable as the *eflux* argument.  It stops with an
-error in either case.
+The *heat/kk* accelerator variant does not support an atom-style
+variable as the *eflux* argument and stops with an error in that case.
+When used with the *region* keyword, it requires a KOKKOS-enabled
+region style (see the :doc:`region <region>` command).
 
 Related commands
 """"""""""""""""

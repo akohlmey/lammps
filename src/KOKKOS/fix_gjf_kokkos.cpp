@@ -124,7 +124,10 @@ void FixGJFKokkos<DeviceType>::initial_integrate(int /* vflag */)
   type = atomKK->k_type.view<DeviceType>();
 
   if (l_rmass_flag) rmass = atomKK->k_rmass.view<DeviceType>();
-  else              mass  = atomKK->k_mass.view<DeviceType>();
+  else {
+    atomKK->k_mass.sync<DeviceType>();
+    mass = atomKK->k_mass.view<DeviceType>();
+  }
 
   // vhalf mode: copy lv → v at start of step (all but the first step)
   if (!osflag && lv_allocated) {
@@ -188,43 +191,44 @@ void FixGJFKokkos<DeviceType>::operator()(TagFixGJFInitialIntegrate, const int &
 
     // random force magnitude: beta = tsqrt * sqrt(2*dt*m*boltz/t_period/mvv2e) / ftm2v
     const KK_FLOAT beta = l_tsqrt
-        * Kokkos::sqrt(2.0 * l_dt * m * l_boltz / l_t_period / l_mvv2e) / l_ftm2v;
+        * Kokkos::sqrt(static_cast<KK_FLOAT>(2.0) * l_dt * m * l_boltz / l_t_period / l_mvv2e)
+        / l_ftm2v;
 
     rand_type rand_gen = rand_pool.get_state();
-    const KK_FLOAT fran0 = beta * rand_gen.normal();
-    const KK_FLOAT fran1 = beta * rand_gen.normal();
-    const KK_FLOAT fran2 = beta * rand_gen.normal();
+    const KK_FLOAT fran0 = beta * static_cast<KK_FLOAT>(rand_gen.normal());
+    const KK_FLOAT fran1 = beta * static_cast<KK_FLOAT>(rand_gen.normal());
+    const KK_FLOAT fran2 = beta * static_cast<KK_FLOAT>(rand_gen.normal());
     rand_pool.free_state(rand_gen);
 
     const KK_FLOAT dtfm = l_dtf / m;
 
     // Eq. 24a: v += csq * dtfm * f
-    v(i,0) += l_csq * dtfm * f(i,0);
-    v(i,1) += l_csq * dtfm * f(i,1);
-    v(i,2) += l_csq * dtfm * f(i,2);
+    v(i,0) += l_csq * dtfm * static_cast<KK_FLOAT>(f(i,0));
+    v(i,1) += l_csq * dtfm * static_cast<KK_FLOAT>(f(i,1));
+    v(i,2) += l_csq * dtfm * static_cast<KK_FLOAT>(f(i,2));
 
     // Eq. 24b: x += 0.5 * csq * dt * v
-    x(i,0) += 0.5 * l_csq * l_dt * v(i,0);
-    x(i,1) += 0.5 * l_csq * l_dt * v(i,1);
-    x(i,2) += 0.5 * l_csq * l_dt * v(i,2);
+    x(i,0) += static_cast<KK_FLOAT>(0.5) * l_csq * l_dt * v(i,0);
+    x(i,1) += static_cast<KK_FLOAT>(0.5) * l_csq * l_dt * v(i,1);
+    x(i,2) += static_cast<KK_FLOAT>(0.5) * l_csq * l_dt * v(i,2);
 
     // Eq. 24c: lv = c1sqrt * v + ftm2v * (c3sqrt / (2*m)) * fran
-    const KK_FLOAT lv_coeff = l_ftm2v * l_c3sqrt / (2.0 * m);
+    const KK_FLOAT lv_coeff = l_ftm2v * l_c3sqrt / (static_cast<KK_FLOAT>(2.0) * m);
     d_lv(i,0) = l_c1sqrt * v(i,0) + lv_coeff * fran0;
     d_lv(i,1) = l_c1sqrt * v(i,1) + lv_coeff * fran1;
     d_lv(i,2) = l_c1sqrt * v(i,2) + lv_coeff * fran2;
 
     // Eq. 24d: v = (gjfc2/c1sqrt) * lv + ftm2v * csq * (0.5/m) * fran
     const KK_FLOAT v_coeff1 = l_gjfc2 / l_c1sqrt;
-    const KK_FLOAT v_coeff2 = l_ftm2v * l_csq * 0.5 / m;
+    const KK_FLOAT v_coeff2 = l_ftm2v * l_csq * static_cast<KK_FLOAT>(0.5) / m;
     v(i,0) = v_coeff1 * d_lv(i,0) + v_coeff2 * fran0;
     v(i,1) = v_coeff1 * d_lv(i,1) + v_coeff2 * fran1;
     v(i,2) = v_coeff1 * d_lv(i,2) + v_coeff2 * fran2;
 
     // Eq. 24e: x += 0.5 * csq * dt * v
-    x(i,0) += 0.5 * l_csq * l_dt * v(i,0);
-    x(i,1) += 0.5 * l_csq * l_dt * v(i,1);
-    x(i,2) += 0.5 * l_csq * l_dt * v(i,2);
+    x(i,0) += static_cast<KK_FLOAT>(0.5) * l_csq * l_dt * v(i,0);
+    x(i,1) += static_cast<KK_FLOAT>(0.5) * l_csq * l_dt * v(i,1);
+    x(i,2) += static_cast<KK_FLOAT>(0.5) * l_csq * l_dt * v(i,2);
   }
 }
 
@@ -245,7 +249,10 @@ void FixGJFKokkos<DeviceType>::final_integrate()
   mask = atomKK->k_mask.view<DeviceType>();
   type = atomKK->k_type.view<DeviceType>();
   if (l_rmass_flag) rmass = atomKK->k_rmass.view<DeviceType>();
-  else              mass  = atomKK->k_mass.view<DeviceType>();
+  else {
+    atomKK->k_mass.sync<DeviceType>();
+    mass = atomKK->k_mass.view<DeviceType>();
+  }
 
   // these member vars were set in initial_integrate; they have the same values
   l_dtf = static_cast<KK_FLOAT>(0.5 * update->dt * force->ftm2v);
@@ -274,9 +281,9 @@ void FixGJFKokkos<DeviceType>::operator()(TagFixGJFFinalIntegrate, const int &i)
 
     // Eq. 24f: v += csq * dtfm * f
     const KK_FLOAT dtfm = l_dtf / m;
-    v(i,0) += l_csq * dtfm * f(i,0);
-    v(i,1) += l_csq * dtfm * f(i,1);
-    v(i,2) += l_csq * dtfm * f(i,2);
+    v(i,0) += l_csq * dtfm * static_cast<KK_FLOAT>(f(i,0));
+    v(i,1) += l_csq * dtfm * static_cast<KK_FLOAT>(f(i,1));
+    v(i,2) += l_csq * dtfm * static_cast<KK_FLOAT>(f(i,2));
   }
 }
 
@@ -359,9 +366,9 @@ void FixGJFKokkos<DeviceType>::pack_exchange_item(const int &mysend, int &offset
 
   int m = nsend + offset;
   d_buf[mysend] = m;
-  d_buf[m++] = d_lv(i,0);
-  d_buf[m++] = d_lv(i,1);
-  d_buf[m++] = d_lv(i,2);
+  d_buf[m++] = static_cast<double>(d_lv(i,0));
+  d_buf[m++] = static_cast<double>(d_lv(i,1));
+  d_buf[m++] = static_cast<double>(d_lv(i,2));
   if (mysend == nsend - 1) d_count() = m;
   offset = m - nsend;
 

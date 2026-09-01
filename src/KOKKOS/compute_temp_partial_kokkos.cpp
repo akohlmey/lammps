@@ -87,8 +87,11 @@ void ComputeTempPartialKokkos<DeviceType>::operator()(TagComputeTempPartialScala
     KK_FLOAT massone = 0.0;
     if (RMASS) massone = rmass[i];
     else massone = mass[type[i]];
-    t_kk.t0 += (xflag*v(i,0)*v(i,0) + yflag*v(i,1)*v(i,1) +
-                zflag*v(i,2)*v(i,2)) * massone;
+    const KK_FLOAT xflag_kk = static_cast<KK_FLOAT>(xflag);
+    const KK_FLOAT yflag_kk = static_cast<KK_FLOAT>(yflag);
+    const KK_FLOAT zflag_kk = static_cast<KK_FLOAT>(zflag);
+    t_kk.t0 += static_cast<double>((xflag_kk*v(i,0)*v(i,0) + yflag_kk*v(i,1)*v(i,1) +
+                zflag_kk*v(i,2)*v(i,2)) * massone);
   }
 }
 
@@ -144,12 +147,15 @@ void ComputeTempPartialKokkos<DeviceType>::operator()(TagComputeTempPartialVecto
     KK_FLOAT massone = 0.0;
     if (RMASS) massone = rmass[i];
     else massone = mass[type[i]];
-    t_kk.t0 += massone * xflag*v(i,0)*v(i,0);
-    t_kk.t1 += massone * yflag*v(i,1)*v(i,1);
-    t_kk.t2 += massone * zflag*v(i,2)*v(i,2);
-    t_kk.t3 += massone * xflag*yflag*v(i,0)*v(i,1);
-    t_kk.t4 += massone * xflag*zflag*v(i,0)*v(i,2);
-    t_kk.t5 += massone * yflag*zflag*v(i,1)*v(i,2);
+    const KK_FLOAT xflag_kk = static_cast<KK_FLOAT>(xflag);
+    const KK_FLOAT yflag_kk = static_cast<KK_FLOAT>(yflag);
+    const KK_FLOAT zflag_kk = static_cast<KK_FLOAT>(zflag);
+    t_kk.t0 += static_cast<double>(massone * xflag_kk*v(i,0)*v(i,0));
+    t_kk.t1 += static_cast<double>(massone * yflag_kk*v(i,1)*v(i,1));
+    t_kk.t2 += static_cast<double>(massone * zflag_kk*v(i,2)*v(i,2));
+    t_kk.t3 += static_cast<double>(massone * xflag_kk*yflag_kk*v(i,0)*v(i,1));
+    t_kk.t4 += static_cast<double>(massone * xflag_kk*zflag_kk*v(i,0)*v(i,2));
+    t_kk.t5 += static_cast<double>(massone * yflag_kk*zflag_kk*v(i,1)*v(i,2));
   }
 }
 

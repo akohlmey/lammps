@@ -24,11 +24,14 @@ FixStyle(addtorque/group/kk/host,FixAddTorqueGroupKokkos<LMPHostType>);
 #define LMP_FIX_ADDTORQUE_GROUP_KOKKOS_H
 
 #include "fix_addtorque_group.h"
+#include "group_kokkos.h"
 #include "kokkos_few.h"
 #include "kokkos_type.h"
 
 namespace LAMMPS_NS {
 
+struct TagFixAddTorqueGroupItorqueMass{};
+struct TagFixAddTorqueGroupItorqueRmass{};
 struct TagFixAddTorqueGroupMass{};
 struct TagFixAddTorqueGroupRmass{};
 
@@ -47,6 +50,14 @@ class FixAddTorqueGroupKokkos : public FixAddTorqueGroup {
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixAddTorqueGroupItorqueMass, const int &, double &, double &, double &) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixAddTorqueGroupItorqueRmass, const int &, double &, double &, double &) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
   void operator()(TagFixAddTorqueGroupMass, const int &, value_type) const;
 
 // NOLINTNEXTLINE
@@ -54,6 +65,8 @@ class FixAddTorqueGroupKokkos : public FixAddTorqueGroup {
   void operator()(TagFixAddTorqueGroupRmass, const int &, value_type) const;
 
  private:
+  GroupKokkos *groupKK;
+
   typename AT::t_kkfloat_1d_3_lr_randomread x;
   typename AT::t_kkacc_1d_3 f;
   typename AT::t_imageint_1d_randomread image;

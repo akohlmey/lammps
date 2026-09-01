@@ -119,16 +119,19 @@ void FixTISpringKokkos<DeviceType>::post_force(int /*vflag*/)
       LAMMPS_LAMBDA(const int& i, double& espring_kk) {
         if (l_mask[i] & l_groupbit) {
           Few<double,3> x_i;
-          x_i[0] = l_x(i,0);
-          x_i[1] = l_x(i,1);
-          x_i[2] = l_x(i,2);
+          x_i[0] = static_cast<double>(l_x(i,0));
+          x_i[1] = static_cast<double>(l_x(i,1));
+          x_i[2] = static_cast<double>(l_x(i,2));
           auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,l_image(i));
-          auto dx = unwrap[0] - l_xoriginal(i,0);
-          auto dy = unwrap[1] - l_xoriginal(i,1);
-          auto dz = unwrap[2] - l_xoriginal(i,2);
-          l_f(i,0) = (1.0 - l_lambda) * l_f(i,0) + l_lambda * (-l_k*dx);
-          l_f(i,1) = (1.0 - l_lambda) * l_f(i,1) + l_lambda * (-l_k*dy);
-          l_f(i,2) = (1.0 - l_lambda) * l_f(i,2) + l_lambda * (-l_k*dz);
+          const double dx = unwrap[0] - static_cast<double>(l_xoriginal(i,0));
+          const double dy = unwrap[1] - static_cast<double>(l_xoriginal(i,1));
+          const double dz = unwrap[2] - static_cast<double>(l_xoriginal(i,2));
+          l_f(i,0) = static_cast<KK_ACC_FLOAT>(1.0 - l_lambda) * l_f(i,0)
+            + static_cast<KK_ACC_FLOAT>(l_lambda * (-l_k*dx));
+          l_f(i,1) = static_cast<KK_ACC_FLOAT>(1.0 - l_lambda) * l_f(i,1)
+            + static_cast<KK_ACC_FLOAT>(l_lambda * (-l_k*dy));
+          l_f(i,2) = static_cast<KK_ACC_FLOAT>(1.0 - l_lambda) * l_f(i,2)
+            + static_cast<KK_ACC_FLOAT>(l_lambda * (-l_k*dz));
           espring_kk += l_k * (dx*dx + dy*dy + dz*dz);
         }
       }, espring_kk);
@@ -176,9 +179,9 @@ void FixTISpringKokkos<DeviceType>::pack_exchange_item(const int &mysend, int &o
 
   int m = nsend + offset;
   d_buf[mysend] = m;
-  d_buf[m++] = d_xoriginal(i,0);
-  d_buf[m++] = d_xoriginal(i,1);
-  d_buf[m++] = d_xoriginal(i,2);
+  d_buf[m++] = static_cast<double>(d_xoriginal(i,0));
+  d_buf[m++] = static_cast<double>(d_xoriginal(i,1));
+  d_buf[m++] = static_cast<double>(d_xoriginal(i,2));
   if (mysend == nsend-1) d_count() = m;
   offset = m - nsend;
 
@@ -246,9 +249,9 @@ void FixTISpringKokkos<DeviceType>::operator()(TagFixTISpringUnpackExchange, con
     if (i >= nrecv1)
       m = nextrarecv1 + d_buf[nextrarecv1 + i - nrecv1];
 
-    d_xoriginal(index,0) = d_buf[m++];
-    d_xoriginal(index,1) = d_buf[m++];
-    d_xoriginal(index,2) = d_buf[m++];
+    d_xoriginal(index,0) = static_cast<KK_FLOAT> (d_buf[m++]);
+    d_xoriginal(index,1) = static_cast<KK_FLOAT> (d_buf[m++]);
+    d_xoriginal(index,2) = static_cast<KK_FLOAT> (d_buf[m++]);
   }
 }
 

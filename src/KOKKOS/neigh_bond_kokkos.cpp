@@ -255,6 +255,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::bond_all()
 {
   atomKK->sync(execution_space, BOND_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_bondlist.clear_sync_state();
   v_bondlist = k_bondlist.view<DeviceType>();
   num_bond = atomKK->k_num_bond.view<DeviceType>();
   bond_atom = atomKK->k_bond_atom.view<DeviceType>();
@@ -338,6 +343,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::bond_partial()
 {
   atomKK->sync(execution_space, BOND_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_bondlist.clear_sync_state();
   v_bondlist = k_bondlist.view<DeviceType>();
   num_bond = atomKK->k_num_bond.view<DeviceType>();
   bond_atom = atomKK->k_bond_atom.view<DeviceType>();
@@ -447,6 +457,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::angle_all()
 {
   atomKK->sync(execution_space, ANGLE_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_anglelist.clear_sync_state();
   v_anglelist = k_anglelist.view<DeviceType>();
   num_angle = atomKK->k_num_angle.view<DeviceType>();
   angle_atom1 = atomKK->k_angle_atom1.view<DeviceType>();
@@ -536,6 +551,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::angle_partial()
 {
   atomKK->sync(execution_space, ANGLE_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_anglelist.clear_sync_state();
   v_anglelist = k_anglelist.view<DeviceType>();
   num_angle = atomKK->k_num_angle.view<DeviceType>();
   angle_atom1 = atomKK->k_angle_atom1.view<DeviceType>();
@@ -666,6 +686,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::dihedral_all()
 {
   atomKK->sync(execution_space, DIHEDRAL_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_dihedrallist.clear_sync_state();
   v_dihedrallist = k_dihedrallist.view<DeviceType>();
   num_dihedral = atomKK->k_num_dihedral.view<DeviceType>();
   dihedral_atom1 = atomKK->k_dihedral_atom1.view<DeviceType>();
@@ -760,6 +785,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::dihedral_partial()
 {
   atomKK->sync(execution_space, DIHEDRAL_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_dihedrallist.clear_sync_state();
   v_dihedrallist = k_dihedrallist.view<DeviceType>();
   num_dihedral = atomKK->k_num_dihedral.view<DeviceType>();
   dihedral_atom1 = atomKK->k_dihedral_atom1.view<DeviceType>();
@@ -913,6 +943,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::improper_all()
 {
   atomKK->sync(execution_space, IMPROPER_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_improperlist.clear_sync_state();
   v_improperlist = k_improperlist.view<DeviceType>();
   num_improper = atomKK->k_num_improper.view<DeviceType>();
   improper_atom1 = atomKK->k_improper_atom1.view<DeviceType>();
@@ -1007,6 +1042,11 @@ template<class DeviceType>
 void NeighBondKokkos<DeviceType>::improper_partial()
 {
   atomKK->sync(execution_space, IMPROPER_MASK);
+  // the loop below rebuilds the whole list from the atom topology, so retire any
+  // outstanding claim first: a host style that edits the list in place (bond
+  // quartic breaks bonds there) leaves one behind, and the claim taken at the
+  // end of this function would then collide with it
+  k_improperlist.clear_sync_state();
   v_improperlist = k_improperlist.view<DeviceType>();
   num_improper = atomKK->k_num_improper.view<DeviceType>();
   improper_atom1 = atomKK->k_improper_atom1.view<DeviceType>();

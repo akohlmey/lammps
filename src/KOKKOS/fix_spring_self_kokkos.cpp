@@ -258,9 +258,9 @@ void FixSpringSelfKokkos<DeviceType>::operator()(TagFixSpringSelfUnpackExchange,
     if (i >= nrecv1)
       m = nextrarecv1 + d_buf[nextrarecv1 + i - nrecv1];
 
-    d_xoriginal(index,0) = static_cast<tagint> (d_buf[m++]);
-    d_xoriginal(index,1) = static_cast<tagint> (d_buf[m++]);
-    d_xoriginal(index,2) = static_cast<tagint> (d_buf[m++]);
+    d_xoriginal(index,0) = static_cast<KK_FLOAT> (d_buf[m++]);
+    d_xoriginal(index,1) = static_cast<KK_FLOAT> (d_buf[m++]);
+    d_xoriginal(index,2) = static_cast<KK_FLOAT> (d_buf[m++]);
   }
 }
 

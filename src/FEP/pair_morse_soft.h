@@ -53,7 +53,7 @@ class PairMorseSoft : public PairMorse {
   int nlambda;
   double shift_range;
 
-  void allocate() override;
+  virtual void allocate() override;
 };
 
 }    // namespace LAMMPS_NS

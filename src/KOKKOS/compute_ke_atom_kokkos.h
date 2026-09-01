@@ -47,7 +47,7 @@ class ComputeKEAtomKokkos : public ComputeKEAtom {
   void operator()(TagComputeKEAtom<RMASS>, const int&) const;
 
  protected:
-  double mvv2e;
+  KK_FLOAT mvv2e;
 
   typename AT::t_kkfloat_1d_3_randomread v;
   typename AT::t_kkfloat_1d_randomread rmass;

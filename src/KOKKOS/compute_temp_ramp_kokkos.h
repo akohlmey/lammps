@@ -93,7 +93,7 @@ class ComputeTempRampKokkos : public ComputeTempRamp {
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   double ramp_bias(const int &i) const {
-    double fraction = (x(i,coord_dim) - coord_lo) / (coord_hi - coord_lo);
+    double fraction = (static_cast<double>(x(i,coord_dim)) - coord_lo) / (coord_hi - coord_lo);
     fraction = (fraction < 0.0) ? 0.0 : fraction;
     fraction = (fraction > 1.0) ? 1.0 : fraction;
     return v_lo + fraction*(v_hi - v_lo);

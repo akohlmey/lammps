@@ -394,7 +394,11 @@ int MinFireKokkos::run_iterate(int maxiter) {
       }
     }
 
+    // output for thermo, dump, restart files
+
     if (output->next == ntimestep) {
+      atomKK->sync(Host,ALL_MASK);
+
       timer->stamp();
       output->write(ntimestep);
       timer->stamp(Timer::OUTPUT);

@@ -67,7 +67,7 @@ void ComputeKEAtomKokkos<DeviceType>::compute_peratom()
   atomKK->sync(execution_space, datamask_read);
   atomKK->k_mass.sync<DeviceType>();
 
-  mvv2e = force->mvv2e;
+  mvv2e = static_cast<KK_FLOAT>(force->mvv2e);
   v = atomKK->k_v.view<DeviceType>();
   if (atomKK->rmass)
     rmass = atomKK->k_rmass.view<DeviceType>();
@@ -97,7 +97,8 @@ void ComputeKEAtomKokkos<DeviceType>::operator()(TagComputeKEAtom<RMASS>, const 
     KK_FLOAT massone = 0.0;
     if (RMASS) massone = rmass[i];
     else massone = mass[type[i]];
-    d_ke[i] = 0.5 * mvv2e * massone *
+    const KK_FLOAT mvv2e_kk = static_cast<KK_FLOAT>(mvv2e);
+    d_ke[i] = static_cast<KK_FLOAT>(0.5) * mvv2e_kk * massone *
       (v(i,0)*v(i,0) + v(i,1)*v(i,1) + v(i,2)*v(i,2));
   } else {
     d_ke[i] = 0.0;

@@ -40,6 +40,7 @@ FixAddTorqueGroupKokkos<DeviceType>::FixAddTorqueGroupKokkos(LAMMPS *lmp, int na
 {
   kokkosable = 1;
   atomKK = (AtomKokkos *) atom;
+  groupKK = (GroupKokkos *) group;
   execution_space = ExecutionSpaceFromDevice<DeviceType>::space;
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;
@@ -83,48 +84,64 @@ void FixAddTorqueGroupKokkos<DeviceType>::post_force(int /*vflag*/)
     modify->addstep_compute(update->ntimestep + 1);
   }
 
-  // compute group properties on host (xcm, inertia, angmom, omega, itorque)
-
-  atomKK->sync(Host, X_MASK | IMAGE_MASK | MASK_MASK | TYPE_MASK | RMASS_MASK);
+  // group properties (xcm, inertia, angmom) are reduced on the device by the
+  // GroupKokkos helpers, which sync the arrays they read themselves.  omega()
+  // is scalar linear algebra on the reduced quantities and has no per-atom part
 
   atom->check_mass(FLERR);
-  double masstotal = group->mass(igroup);
+  const double masstotal = groupKK->mass_kk<DeviceType>(igroup);
   double xcm[3], inertia[3][3], angmom[3], omega[3];
   double tlocal[3], itorque[3], tcm[3], domegadt[3];
 
-  group->xcm(igroup, masstotal, xcm);
-  group->inertia(igroup, xcm, inertia);
-  group->angmom(igroup, xcm, angmom);
+  groupKK->xcm_kk<DeviceType>(igroup, masstotal, xcm);
+  groupKK->inertia_kk<DeviceType>(igroup, xcm, inertia);
+  groupKK->angmom_kk<DeviceType>(igroup, xcm, angmom);
   group->omega(angmom, inertia, omega);
 
-  // itorque computation on host
+  const int nlocal = atom->nlocal;
+  const double mvv2e = force->mvv2e;
 
-  double **x_host = atom->x;
-  int *mask_host = atom->mask;
-  int *type_host = atom->type;
-  imageint *image_host = atom->image;
-  double *mass_host = atom->mass;
-  double *rmass_host = atom->rmass;
-  int nlocal = atom->nlocal;
-  double mvv2e = force->mvv2e;
+  // store scalars read by the kernels below
 
-  double unwrap[3];
+  for (int d = 0; d < 3; d++) {
+    l_xcm[d] = xcm[d];
+    l_omega[d] = omega[d];
+  }
+  l_mvv2e = mvv2e;
+
+  prd = Few<double,3>(domain->prd);
+  h = Few<double,6>(domain->h);
+  triclinic = domain->triclinic;
+
+  atomKK->sync(execution_space, X_MASK | F_MASK | IMAGE_MASK | MASK_MASK | TYPE_MASK | RMASS_MASK);
+
+  x = atomKK->k_x.view<DeviceType>();
+  f = atomKK->k_f.view<DeviceType>();
+  image = atomKK->k_image.view<DeviceType>();
+  mask = atomKK->k_mask.view<DeviceType>();
+  const int use_rmass = (atom->rmass != nullptr);
+  if (use_rmass) {
+    rmass = atomKK->k_rmass.view<DeviceType>();
+  } else {
+    atomKK->k_mass.sync<DeviceType>();
+    mass = atomKK->k_mass.view<DeviceType>();
+    type = atomKK->k_type.view<DeviceType>();
+  }
+
+  // torque the group's own rotation already exerts, reduced on the device
+
   tlocal[0] = tlocal[1] = tlocal[2] = 0.0;
 
-  for (int i = 0; i < nlocal; i++)
-    if (mask_host[i] & groupbit) {
-      domain->unmap(x_host[i], image_host[i], unwrap);
-      double dx = unwrap[0] - xcm[0];
-      double dy = unwrap[1] - xcm[1];
-      double dz = unwrap[2] - xcm[2];
-      double massone;
-      if (rmass_host) massone = rmass_host[i];
-      else massone = mass_host[type_host[i]];
-      double omegadotr = omega[0]*dx + omega[1]*dy + omega[2]*dz;
-      tlocal[0] += massone * omegadotr * (dy*omega[2] - dz*omega[1]);
-      tlocal[1] += massone * omegadotr * (dz*omega[0] - dx*omega[2]);
-      tlocal[2] += massone * omegadotr * (dx*omega[1] - dy*omega[0]);
-    }
+  copymode = 1;
+  if (use_rmass)
+    Kokkos::parallel_reduce(
+      Kokkos::RangePolicy<DeviceType,TagFixAddTorqueGroupItorqueRmass>(0,nlocal), *this,
+      tlocal[0], tlocal[1], tlocal[2]);
+  else
+    Kokkos::parallel_reduce(
+      Kokkos::RangePolicy<DeviceType,TagFixAddTorqueGroupItorqueMass>(0,nlocal), *this,
+      tlocal[0], tlocal[1], tlocal[2]);
+  copymode = 0;
 
   MPI_Allreduce(tlocal, itorque, 3, MPI_DOUBLE, MPI_SUM, world);
 
@@ -133,41 +150,19 @@ void FixAddTorqueGroupKokkos<DeviceType>::post_force(int /*vflag*/)
   tcm[2] = zvalue - mvv2e*itorque[2];
   group->omega(tcm, inertia, domegadt);
 
-  // store scalars for device kernel
-
-  for (int d = 0; d < 3; d++) {
-    l_xcm[d] = xcm[d];
-    l_omega[d] = omega[d];
-    l_domegadt[d] = domegadt[d];
-  }
-  l_mvv2e = mvv2e;
-
-  prd = Few<double,3>(domain->prd);
-  h = Few<double,6>(domain->h);
-  triclinic = domain->triclinic;
+  for (int d = 0; d < 3; d++) l_domegadt[d] = domegadt[d];
 
   // apply forces on device
-
-  atomKK->sync(execution_space, X_MASK | F_MASK | IMAGE_MASK | MASK_MASK | TYPE_MASK | RMASS_MASK);
-
-  x = atomKK->k_x.view<DeviceType>();
-  f = atomKK->k_f.view<DeviceType>();
-  image = atomKK->k_image.view<DeviceType>();
-  mask = atomKK->k_mask.view<DeviceType>();
 
   double result[4] = {0.0, 0.0, 0.0, 0.0};
 
   copymode = 1;
-  if (atom->rmass) {
-    rmass = atomKK->k_rmass.view<DeviceType>();
+  if (use_rmass)
     Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType,TagFixAddTorqueGroupRmass>(0,nlocal),
                             *this, result);
-  } else {
-    mass = atomKK->k_mass.view<DeviceType>();
-    type = atomKK->k_type.view<DeviceType>();
+  else
     Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType,TagFixAddTorqueGroupMass>(0,nlocal),
                             *this, result);
-  }
   copymode = 0;
 
   atomKK->modified(execution_space, F_MASK);
@@ -176,6 +171,63 @@ void FixAddTorqueGroupKokkos<DeviceType>::post_force(int /*vflag*/)
   foriginal[1] = result[1];
   foriginal[2] = result[2];
   foriginal[3] = result[3];
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   torque the group's own rotation already exerts about its centre of mass
+   (mirrors the tlocal loop of FixAddTorqueGroup::post_force)
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+// NOLINTNEXTLINE
+KOKKOS_INLINE_FUNCTION
+void FixAddTorqueGroupKokkos<DeviceType>::operator()(TagFixAddTorqueGroupItorqueMass,
+                                                     const int &i,
+                                                     double &t0, double &t1, double &t2) const
+{
+  if (mask[i] & groupbit) {
+    Few<double,3> x_i;
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
+    auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
+    const double dx = unwrap[0] - l_xcm[0];
+    const double dy = unwrap[1] - l_xcm[1];
+    const double dz = unwrap[2] - l_xcm[2];
+    const double massone = static_cast<double>(mass[type[i]]);
+    const double omegadotr = l_omega[0]*dx + l_omega[1]*dy + l_omega[2]*dz;
+    t0 += massone * omegadotr * (dy*l_omega[2] - dz*l_omega[1]);
+    t1 += massone * omegadotr * (dz*l_omega[0] - dx*l_omega[2]);
+    t2 += massone * omegadotr * (dx*l_omega[1] - dy*l_omega[0]);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
+// NOLINTNEXTLINE
+KOKKOS_INLINE_FUNCTION
+void FixAddTorqueGroupKokkos<DeviceType>::operator()(TagFixAddTorqueGroupItorqueRmass,
+                                                     const int &i,
+                                                     double &t0, double &t1, double &t2) const
+{
+  if (mask[i] & groupbit) {
+    Few<double,3> x_i;
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
+    auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
+    const double dx = unwrap[0] - l_xcm[0];
+    const double dy = unwrap[1] - l_xcm[1];
+    const double dz = unwrap[2] - l_xcm[2];
+    const double massone = static_cast<double>(rmass[i]);
+    const double omegadotr = l_omega[0]*dx + l_omega[1]*dy + l_omega[2]*dz;
+    t0 += massone * omegadotr * (dy*l_omega[2] - dz*l_omega[1]);
+    t1 += massone * omegadotr * (dz*l_omega[0] - dx*l_omega[2]);
+    t2 += massone * omegadotr * (dx*l_omega[1] - dy*l_omega[0]);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -189,9 +241,9 @@ void FixAddTorqueGroupKokkos<DeviceType>::operator()(TagFixAddTorqueGroupMass,
 {
   if (mask[i] & groupbit) {
     Few<double,3> x_i;
-    x_i[0] = x(i,0);
-    x_i[1] = x(i,1);
-    x_i[2] = x(i,2);
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
     auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
     double dx = unwrap[0] - l_xcm[0];
     double dy = unwrap[1] - l_xcm[1];
@@ -199,17 +251,18 @@ void FixAddTorqueGroupKokkos<DeviceType>::operator()(TagFixAddTorqueGroupMass,
     double vx = l_mvv2e*(dz*l_omega[1]-dy*l_omega[2]);
     double vy = l_mvv2e*(dx*l_omega[2]-dz*l_omega[0]);
     double vz = l_mvv2e*(dy*l_omega[0]-dx*l_omega[1]);
-    const double massone = mass[type[i]];
+    const double massone = static_cast<double>(mass[type[i]]);
     double fx = massone * (dz*l_domegadt[1]-dy*l_domegadt[2] + vz*l_omega[1]-vy*l_omega[2]);
     double fy = massone * (dx*l_domegadt[2]-dz*l_domegadt[0] + vx*l_omega[2]-vz*l_omega[0]);
     double fz = massone * (dy*l_domegadt[0]-dx*l_domegadt[1] + vy*l_omega[0]-vx*l_omega[1]);
-    result[0] -= fx*x(i,0) + fy*x(i,1) + fz*x(i,2);
-    result[1] += dy*f(i,2) - dz*f(i,1);
-    result[2] += dz*f(i,0) - dx*f(i,2);
-    result[3] += dx*f(i,1) - dy*f(i,0);
-    f(i,0) += fx;
-    f(i,1) += fy;
-    f(i,2) += fz;
+    result[0] -= fx*static_cast<double>(x(i,0)) + fy*static_cast<double>(x(i,1))
+      + fz*static_cast<double>(x(i,2));
+    result[1] += dy*static_cast<double>(f(i,2)) - dz*static_cast<double>(f(i,1));
+    result[2] += dz*static_cast<double>(f(i,0)) - dx*static_cast<double>(f(i,2));
+    result[3] += dx*static_cast<double>(f(i,1)) - dy*static_cast<double>(f(i,0));
+    f(i,0) += static_cast<KK_ACC_FLOAT>(fx);
+    f(i,1) += static_cast<KK_ACC_FLOAT>(fy);
+    f(i,2) += static_cast<KK_ACC_FLOAT>(fz);
   }
 }
 
@@ -224,9 +277,9 @@ void FixAddTorqueGroupKokkos<DeviceType>::operator()(TagFixAddTorqueGroupRmass,
 {
   if (mask[i] & groupbit) {
     Few<double,3> x_i;
-    x_i[0] = x(i,0);
-    x_i[1] = x(i,1);
-    x_i[2] = x(i,2);
+    x_i[0] = static_cast<double>(x(i,0));
+    x_i[1] = static_cast<double>(x(i,1));
+    x_i[2] = static_cast<double>(x(i,2));
     auto unwrap = DomainKokkos::unmap(prd,h,triclinic,x_i,image(i));
     double dx = unwrap[0] - l_xcm[0];
     double dy = unwrap[1] - l_xcm[1];
@@ -234,17 +287,18 @@ void FixAddTorqueGroupKokkos<DeviceType>::operator()(TagFixAddTorqueGroupRmass,
     double vx = l_mvv2e*(dz*l_omega[1]-dy*l_omega[2]);
     double vy = l_mvv2e*(dx*l_omega[2]-dz*l_omega[0]);
     double vz = l_mvv2e*(dy*l_omega[0]-dx*l_omega[1]);
-    const double massone = rmass[i];
+    const double massone = static_cast<double>(rmass[i]);
     double fx = massone * (dz*l_domegadt[1]-dy*l_domegadt[2] + vz*l_omega[1]-vy*l_omega[2]);
     double fy = massone * (dx*l_domegadt[2]-dz*l_domegadt[0] + vx*l_omega[2]-vz*l_omega[0]);
     double fz = massone * (dy*l_domegadt[0]-dx*l_domegadt[1] + vy*l_omega[0]-vx*l_omega[1]);
-    result[0] -= fx*x(i,0) + fy*x(i,1) + fz*x(i,2);
-    result[1] += dy*f(i,2) - dz*f(i,1);
-    result[2] += dz*f(i,0) - dx*f(i,2);
-    result[3] += dx*f(i,1) - dy*f(i,0);
-    f(i,0) += fx;
-    f(i,1) += fy;
-    f(i,2) += fz;
+    result[0] -= fx*static_cast<double>(x(i,0)) + fy*static_cast<double>(x(i,1))
+      + fz*static_cast<double>(x(i,2));
+    result[1] += dy*static_cast<double>(f(i,2)) - dz*static_cast<double>(f(i,1));
+    result[2] += dz*static_cast<double>(f(i,0)) - dx*static_cast<double>(f(i,2));
+    result[3] += dx*static_cast<double>(f(i,1)) - dy*static_cast<double>(f(i,0));
+    f(i,0) += static_cast<KK_ACC_FLOAT>(fx);
+    f(i,1) += static_cast<KK_ACC_FLOAT>(fy);
+    f(i,2) += static_cast<KK_ACC_FLOAT>(fz);
   }
 }
 
