@@ -1158,7 +1158,7 @@ EXCLUDED_FOLDERS = {
          'PACKAGES/cgspica/peg-verlet'),
     "inputs that may abort for a missing feature but for which there is no test to cleanly skip":
         ('mliap/jax', 'PACKAGES/colvars', 'PACKAGES/plumed'),
-}}
+}
 
 '''
     check whether a path is under one of the EXCLUDED_FOLDERS under examples/
