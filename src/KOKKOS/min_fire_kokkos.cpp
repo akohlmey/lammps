@@ -262,7 +262,7 @@ int MinFireKokkos::run_iterate(int maxiter) {
         KK_FLOAT vmax = Kokkos::fmax(Kokkos::fabs(l_v(i,0)), Kokkos::fmax(Kokkos::fabs(l_v(i,1)), Kokkos::fabs(l_v(i,2))));
         if (dtmin_local * static_cast<double>(vmax) > l_dmax) dtmin_local = l_dmax / static_cast<double>(vmax);
       }, Kokkos::Min<double>(dtvone));
-      dtvone = Kokkos::min(dtvone, dt);
+      dtvone = Kokkos::fmin(dtvone, dt);
     }
     MPI_Allreduce(&dtvone, &dtv, 1, MPI_DOUBLE, MPI_MIN, world);
     if (update->multireplica == 1) {

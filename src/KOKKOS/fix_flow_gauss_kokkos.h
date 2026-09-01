@@ -77,7 +77,7 @@ class FixFlowGaussKokkos : public FixFlowGauss {
 
  private:
   typename AT::t_kkacc_1d_3 d_f;
-  typename AT::t_kkfloat_1d_3_lr_randomread d_v;
+  typename AT::t_kkfloat_1d_3_randomread d_v;
   typename AT::t_int_1d_randomread d_mask;
   typename AT::t_int_1d_randomread d_type;
   typename AT::t_kkfloat_1d_randomread d_rmass;

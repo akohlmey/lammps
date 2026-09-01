@@ -60,7 +60,7 @@ class FixWallPistonKokkos : public FixWallPiston {
   void operator()(TagFixWallPistonTemp<RMASS>, const int&) const;
 
  private:
-  typename AT::t_kkfloat_1d_3 d_x;
+  typename AT::t_kkfloat_1d_3_lr d_x;
   typename AT::t_kkfloat_1d_3 d_v;
   typename AT::t_kkacc_1d_3 d_f;
   typename AT::t_kkfloat_1d_randomread d_rmass;

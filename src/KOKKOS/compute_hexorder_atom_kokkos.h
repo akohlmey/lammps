@@ -52,7 +52,7 @@ class ComputeHexOrderAtomKokkos : public ComputeHexOrderAtom {
  protected:
   int inum;
 
-  typename AT::t_kkfloat_1d_3_randomread x;
+  typename AT::t_kkfloat_1d_3_lr_randomread x;
   typename AT::t_int_1d_randomread mask;
 
   typename AT::t_neighbors_2d d_neighbors;

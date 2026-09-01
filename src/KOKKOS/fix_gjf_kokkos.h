@@ -95,7 +95,7 @@ class FixGJFKokkos : public FixGJF, public KokkosBase {
 
   typename AT::t_kkfloat_1d_3_lr x;
   typename AT::t_kkacc_1d_3 f;
-  typename AT::t_kkfloat_1d_3_lr v;
+  typename AT::t_kkfloat_1d_3 v;
   typename AT::t_int_1d_randomread mask;
   typename AT::t_int_1d_randomread type;
   typename AT::t_kkfloat_1d_randomread rmass;

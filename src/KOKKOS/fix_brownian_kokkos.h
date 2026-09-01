@@ -56,7 +56,7 @@ class FixBrownianKokkos : public FixBrownian {
  private:
   template<int Tp_UNIFORM, int Tp_GAUSS, int Tp_2D> void initial_integrate_kokkos();
 
-  typename AT::t_kkfloat_1d_3 d_x;
+  typename AT::t_kkfloat_1d_3_lr d_x;
   typename AT::t_kkfloat_1d_3 d_v;
   typename AT::t_kkacc_1d_3_randomread d_f;
   typename AT::t_int_1d_randomread d_mask;
