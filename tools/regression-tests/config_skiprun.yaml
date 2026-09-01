@@ -58,6 +58,7 @@
       in.mliap.*.compute,
       in.reaxff.tatb*,
       in.pod.compute,
+      in.widom.spce,
     ]
 
   timeout: 120

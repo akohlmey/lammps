@@ -1,4 +1,4 @@
-LAMMPS (28 Mar 2023 - Development)
+LAMMPS (4 Jul 2026 - Development - patch_4Jul2026-1228-g4f50a6045e-modified)
   using 1 OpenMP thread(s) per MPI task
 units           real
 dimension       3
@@ -19,6 +19,8 @@ Reading data file ...
   2 = max bonds/atom
   scanning angles ...
   1 = max angles/atom
+  orthogonal box = (-0.031613 -0.023523 -0.085255) to (43.234352 44.939753 42.306533)
+  1 by 1 by 1 MPI processor grid
   reading bonds ...
   5760 bonds
   reading angles ...
@@ -30,13 +32,15 @@ Finding 1-2 1-3 1-4 neighbors ...
      1 = max # of 1-3 neighbors
      1 = max # of 1-4 neighbors
      2 = max # of special neighbors
-  special bonds CPU = 0.002 seconds
-  read_data CPU = 0.048 seconds
+  special bonds CPU = 0.001 seconds
+  read_data CPU = 0.024 seconds
 
 molecule        h2omol H2O.txt
 Read molecule template h2omol:
+# Water molecule. SPC/E model.
   1 molecules
   0 fragments
+  0 bodies
   3 atoms with max type 2
   2 bonds with max type 1
   1 angles with max type 1
@@ -69,19 +73,19 @@ thermo_style    custom step etotal pe temp press vol density f_mywidom[1] f_mywi
 
 run             100
 PPPM initialization ...
-  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  using 12-bit tables for long-range coulomb
   G vector (1/distance) = 0.2690183
   grid = 24 24 24
   stencil order = 5
   estimated absolute RMS force accuracy = 0.024843102
   estimated relative force accuracy = 7.4814263e-05
-  using double precision KISS FFT
+  using double precision FFTW3
   3d grid and FFT values/proc = 29791 13824
 Generated 0 of 1 mixed pair_coeff terms from geometric mixing rule
-WARNING: Fix widom using full_energy option (src/MC/fix_widom.cpp:320)
+WARNING: Fix widom using full_energy option (src/MC/fix_widom.cpp:345)
 0 atoms in group FixWidom:widom_exclusion_group:mywidom
 0 atoms in group FixWidom:rotation_gas_atoms:mywidom
-WARNING: Neighbor exclusions used with KSpace solver may give inconsistent Coulombic energies (src/neighbor.cpp:654)
+WARNING: Neighbor exclusions used with KSpace solver may give inconsistent Coulombic energies (src/neighbor.cpp:668)
 Neighbor list info ...
   update: every = 2 steps, delay = 10 steps, check = yes
   max neighbors/atom: 2000, page size: 100000
@@ -96,33 +100,33 @@ Neighbor list info ...
       bin: standard
 Per MPI rank memory allocation (min/avg/max) = 29.66 | 29.66 | 29.66 Mbytes
    Step         TotEng         PotEng          Temp          Press          Volume        Density      f_mywidom[1]   f_mywidom[2]   f_mywidom[3] 
-         0  -29703.973     -29703.973      0             -4764.5901      82468.116      1.0447118      0              0              82468.116    
-        10  -29718         -32598.944      111.87604     -498.88935      82468.116      1.0447118      200.15526      1.6274344e-147  82468.116    
-        20  -29698.227     -32625.357      113.6696      -3120.7115      82468.116      1.0447118     -1.0295764      5.6893637      82468.116    
-        30  -29668.463     -33188.922      136.71037     -8129.0179      82468.116      1.0447118      5.5971294      7.856256e-05   82468.116    
-        40  -29654.066     -34017.797      169.45726     -5730.6427      82468.116      1.0447118      128.14313      1.0550462e-94  82468.116    
-        50  -29627.714     -33214.549      139.28799     -3954.0179      82468.116      1.0447118      122.28545      2.0851209e-90  82468.116    
-        60  -29602.616     -32995.039      131.73836     -8099.2136      82468.116      1.0447118     -1.4752191      12.07497       82468.116    
-        70  -29591.096     -33872.451      166.25834     -7065.2821      82468.116      1.0447118      17.210054      2.3911575e-13  82468.116    
-        80  -29553.631     -32971.209      132.7152      -3535.4257      82468.116      1.0447118      11.148921      6.6631697e-09  82468.116    
-        90  -29530.109     -33346.146      148.18857     -5312.6414      82468.116      1.0447118      51.783293      1.055658e-38   82468.116    
-       100  -29505.327     -34074.801      177.4469      -5991.0034      82468.116      1.0447118      32.415523      1.6878187e-24  82468.116    
-Loop time of 55.4401 on 1 procs for 100 steps with 8640 atoms
+         0  -29703.972     -29703.972      0             -4764.59        82468.116      1.0447118      0              0              82468.116    
+        10  -29718         -32598.944      111.87604     -498.88928      82468.116      1.0447118      200.15527      1.6274064e-147  82468.116    
+        20  -29698.226     -32625.357      113.6696      -3120.7113      82468.116      1.0447118     -1.0295816      5.6894137      82468.116    
+        30  -29668.463     -33188.922      136.71037     -8129.018       82468.116      1.0447118      5.5971242      7.8563246e-05  82468.116    
+        40  -29654.065     -34017.796      169.45726     -5730.6425      82468.116      1.0447118      128.14312      1.0550558e-94  82468.116    
+        50  -29627.714     -33214.549      139.28799     -3954.0175      82468.116      1.0447118      122.28545      2.0851424e-90  82468.116    
+        60  -29602.615     -32995.038      131.73836     -8099.2134      82468.116      1.0447118     -1.4752158      12.074903      82468.116    
+        70  -29591.096     -33872.451      166.25834     -7065.2819      82468.116      1.0447118      17.210056      2.3911497e-13  82468.116    
+        80  -29553.63      -32971.208      132.7152      -3535.4252      82468.116      1.0447118      11.148924      6.6631303e-09  82468.116    
+        90  -29530.109     -33346.145      148.18857     -5312.6412      82468.116      1.0447118      51.783295      1.0556548e-38  82468.116    
+       100  -29505.327     -34074.8        177.4469      -5991.0035      82468.116      1.0447118      32.415514      1.6878455e-24  82468.116    
+Loop time of 26.0953 on 1 procs for 100 steps with 8640 atoms
 
-Performance: 0.078 ns/day, 308.000 hours/ns, 1.804 timesteps/s, 15.584 katom-step/s
-99.8% CPU use with 1 MPI tasks x 1 OpenMP threads
+Performance: 0.166 ns/day, 144.974 hours/ns, 3.832 timesteps/s, 33.109 katom-step/s
+99.7% CPU use with 1 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 5.4117     | 5.4117     | 5.4117     |   0.0 |  9.76
-Bond    | 0.029451   | 0.029451   | 0.029451   |   0.0 |  0.05
-Kspace  | 0.73758    | 0.73758    | 0.73758    |   0.0 |  1.33
-Neigh   | 1.4296     | 1.4296     | 1.4296     |   0.0 |  2.58
-Comm    | 0.018593   | 0.018593   | 0.018593   |   0.0 |  0.03
-Output  | 0.00069303 | 0.00069303 | 0.00069303 |   0.0 |  0.00
-Modify  | 47.81      | 47.81      | 47.81      |   0.0 | 86.24
-Other   |            | 0.002525   |            |       |  0.00
+Pair    | 2.6248     | 2.6248     | 2.6248     |   0.0 | 10.06
+Bond    | 0.012283   | 0.012283   | 0.012283   |   0.0 |  0.05
+Kspace  | 0.19668    | 0.19668    | 0.19668    |   0.0 |  0.75
+Neigh   | 0.70072    | 0.70072    | 0.70072    |   0.0 |  2.69
+Comm    | 0.0075035  | 0.0075035  | 0.0075035  |   0.0 |  0.03
+Output  | 0.00068291 | 0.00068291 | 0.00068291 |   0.0 |  0.00
+Modify  | 22.551     | 22.551     | 22.551     |   0.0 | 86.42
+Other   |            | 0.001166   |            |       |  0.00
 
 Nlocal:           8640 ave        8640 max        8640 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
@@ -136,4 +140,4 @@ Ave neighs/atom = 378.88426
 Ave special neighs/atom = 2
 Neighbor list builds = 220
 Dangerous builds = 0
-Total wall time: 0:00:55
+Total wall time: 0:00:26

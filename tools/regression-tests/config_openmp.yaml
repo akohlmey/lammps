@@ -34,6 +34,7 @@
       in.peptide-plumed,
       in.mliap.pytorch*,
       in.mliap.unified*,
+      in.widom.spce,
     ]
 
   timeout: 180
