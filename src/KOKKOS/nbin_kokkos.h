@@ -61,10 +61,6 @@ class NBinKokkos : public NBinStandard {
   int includegroup_nfirst;    // # of owned atoms in the include group
   int includegroup_nlocal;    // # of owned atoms
 
-  int includegroup_bitmask;   // bit of the include group, 0 if there is none
-  int includegroup_nfirst;    // # of owned atoms in the include group
-  int includegroup_nlocal;    // # of owned atoms
-
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void binatomsItem(const int &i) const;
