@@ -70,7 +70,7 @@ if(DOWNLOAD_RUNNER)
 
   ExternalProject_Add(runner_build
     GIT_REPOSITORY "https://gitlab.com/runner-suite/runner2.git"
-    GIT_TAG "2.0.4_20260610"
+    GIT_TAG "2.0.5_20260820"
     # do not contact the remote git repository on every build; it re-runs all subsequent
     # steps and re-links all dependents.  changing GIT_TAG still triggers an update
     # with CMake 3.21 and later.
