@@ -18,7 +18,15 @@
 #include "comm.h"
 #include "compute.h"
 #include "error.h"
+#include "angle.h"
+#include "bond.h"
+#include "dihedral.h"
+#include "fix.h"
 #include "force.h"
+#include "improper.h"
+#include "kspace.h"
+#include "modify.h"
+#include "pair.h"
 #include "memory_kokkos.h"
 #include "neigh_list_kokkos.h"
 #include "neighbor_kokkos.h"
@@ -926,4 +934,55 @@ void KokkosLMP::warn_nonkokkos_compute(LAMMPS *lmp, const std::string &parentsty
                         "host/device synchronization every step.  Use the '-sf kk' command-line "
                         "switch or a {} compute with a '/kk' suffix for best performance.",
                         parentstyle, role, c->id, role);
+}
+
+/* ----------------------------------------------------------------------
+   run_style respa keeps its own copies of the forces of each level and
+   clears and sums them through the plain host arrays, and it calls the
+   force computations without the host/device transfers that run_style
+   verlet/kk performs.  That is only correct while every participant works
+   on the host side of the atom data.  A style running in the device
+   execution space, or the atom communication, sorting or atom map running
+   on the device, leaves the host copies behind with nothing to say so and
+   the forces come out wrong.  A build without a device backend has no such
+   participants, and neither does a device build whose styles all carry the
+   /kk/host suffix and whose package settings keep comm, sort and atom/map
+   on the host.  Called from Respa::init().
+------------------------------------------------------------------------- */
+
+void KokkosLMP::respa_check()
+{
+#ifdef LMP_KOKKOS_GPU
+  auto refuse = [&](const std::string &what) {
+    error->all(FLERR, "Run style respa is not supported by the KOKKOS package with {} running "
+               "on the device; use the /kk/host suffix and package kokkos comm host, "
+               "sort no and atom/map no, or run_style verlet", what);
+  };
+
+  if (force->pair && (force->pair->execution_space == Device))
+    refuse(fmt::format("pair style {}", force->pair_style));
+  if (force->bond && (force->bond->execution_space == Device))
+    refuse(fmt::format("bond style {}", force->bond_style));
+  if (force->angle && (force->angle->execution_space == Device))
+    refuse(fmt::format("angle style {}", force->angle_style));
+  if (force->dihedral && (force->dihedral->execution_space == Device))
+    refuse(fmt::format("dihedral style {}", force->dihedral_style));
+  if (force->improper && (force->improper->execution_space == Device))
+    refuse(fmt::format("improper style {}", force->improper_style));
+  if (force->kspace && (force->kspace->execution_space == Device))
+    refuse(fmt::format("kspace style {}", force->kspace_style));
+
+  for (auto *fix : modify->get_fix_list())
+    if (fix->execution_space == Device) refuse(fmt::format("fix {} ({})", fix->id, fix->style));
+  for (auto *compute : modify->get_compute_list())
+    if (compute->execution_space == Device)
+      refuse(fmt::format("compute {} ({})", compute->id, compute->style));
+
+  if ((!exchange_comm_legacy && !exchange_comm_on_host) ||
+      (!forward_comm_legacy && !forward_comm_on_host) ||
+      (!reverse_comm_legacy && !reverse_comm_on_host))
+    refuse("the atom communication");
+  if (!sort_legacy) refuse("atom sorting");
+  if (!atom_map_legacy) refuse("the atom map");
+#endif
 }
