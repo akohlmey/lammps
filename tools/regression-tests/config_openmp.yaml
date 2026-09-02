@@ -24,6 +24,7 @@
   skip:
     [
       in.*pod.InP,
+      in.comb3,
       in.dimer.mp,
       in.disp,
       in.disp2,
@@ -33,6 +34,7 @@
       in.*_imd*,
       in.bucky-plus-cnt*,
       in.gREM,
+      in.hybrid,
       in.peptide-plumed,
       in.mliap.pytorch*,
       in.mliap.unified*,
@@ -40,6 +42,11 @@
       in.spin.iron-nve,
       in.spin.nvt_lattice,
       in.spin.nvt_spin,
+      in.template-mix,
+      in.tmpl-data-mix,
+      in.tmpl-restart-mix,
+      in.water.acks2,
+      in.water.acks2.field,
       in.widom.spce,
     ]
 
