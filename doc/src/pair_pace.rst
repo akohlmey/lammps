@@ -92,7 +92,7 @@ two passes (running on a single GPU).
 
 .. versionchanged:: TBD
 
-When *pace/kk* is used with the *product* keyword on a CPU backend
+When *pace/kk* is used with the *product* keyword on a CPU back end
 (KOKKOS built with the OpenMP or Serial back end), the calculation now
 runs in the KOKKOS kernels and uses all available threads.  Previously
 *pace/kk* stopped with an error when more than one thread was used on a
