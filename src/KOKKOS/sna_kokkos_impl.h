@@ -290,36 +290,15 @@ void SNAKokkos<DeviceType, real_type, accum_type, vector_length>::init()
 
 template<class DeviceType, typename real_type, typename accum_type, int vector_length>
 inline
-bigint SNAKokkos<DeviceType, real_type, accum_type, vector_length>::grow_rij(int newnatom, int newnmax, int padding_factor)
+void SNAKokkos<DeviceType, real_type, accum_type, vector_length>::grow_rij(int newnatom, int newnmax, int padding_factor)
 {
-  if (newnatom <= natom && newnmax <= nmax) return 0;
+  if (newnatom <= natom && newnmax <= nmax) return;
+  natom = newnatom;
 
   // Create padded structures
-  const int natom_div = (newnatom + (vector_length * padding_factor) - 1) / (vector_length * padding_factor);
-  const bigint new_natom_pad = (bigint) natom_div * vector_length * padding_factor;
-  const bigint new_nmax = newnmax;
+  const int natom_div = (natom + (vector_length * padding_factor) - 1) / (vector_length * padding_factor);
+  natom_pad = natom_div * vector_length * padding_factor;
 
-  // Kokkos works out where an element of a view lives from the extents and the
-  // index arguments, in the type those arguments share: for array(i,j,k) with
-  // plain integer indices, that is a 32-bit type.  An array holding more than
-  // MAXSMALLINT elements would then be indexed incorrectly, so report the size
-  // of the largest one instead of allocating anything, and leave it to the
-  // caller to turn a chunk size that is too large into an error message.  The
-  // three arrays that carry the largest factor on top of the chunk size --
-  // zlist, ulist_cpu and dulist_cpu -- are left out because they are declared
-  // with 64-bit indexing and can be addressed at any size.
-
-  bigint max_elements = 3 * new_natom_pad * new_nmax;              // rij, dedr, da_gpu, db_gpu
-  max_elements = MAX(max_elements, new_natom_pad * nelements * idxu_max);       // ulisttot
-  max_elements = MAX(max_elements, new_natom_pad * nelements * idxu_half_max);  // ulisttot_re, ylist_re
-  max_elements = MAX(max_elements, new_natom_pad * ntriples * idxb_max);        // blist
-  if (!host_flag && !legacy_on_gpu)
-    max_elements = MAX(max_elements, 4 * new_natom_pad * new_nmax);             // sfac_gpu
-
-  if (max_elements > MAXSMALLINT) return max_elements;
-
-  natom = newnatom;
-  natom_pad = new_natom_pad;
   nmax = newnmax;
 
   MemKK::realloc_kokkos(rij,"sna:rij",natom_pad,nmax,3);
@@ -358,8 +337,6 @@ bigint SNAKokkos<DeviceType, real_type, accum_type, vector_length>::grow_rij(int
     MemKK::realloc_kokkos(ulist_cpu,"sna:ulist_cpu", natom_pad, nmax, idxu_cache_max);
     MemKK::realloc_kokkos(dulist_cpu,"sna:dulist_cpu", natom_pad, nmax, idxu_cache_max);
   }
-
-  return max_elements;
 }
 
 /* ----------------------------------------------------------------------

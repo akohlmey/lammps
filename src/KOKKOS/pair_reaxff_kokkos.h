@@ -485,13 +485,12 @@ class PairReaxFFKokkos : public PairReaxFF {
 
   typename AT::t_kkfloat_1d d_bo_rij, d_hb_rsq, d_Deltap, d_Deltap_boc, d_total_bo, d_s;
   typename AT::t_kkfloat_1d d_Delta, d_Delta_boc, d_Delta_lp, d_dDelta_lp, d_Delta_lp_temp, d_CdDelta;
-  typename AT::t_kkfloat_2d_dl_big d_BO, d_BO_s, d_BO_pi, d_BO_pi2;
-  typename AT::t_kkfloat_2d_dl_big d_dln_BOp_pi, d_dln_BOp_pi2;
-  typename AT::t_kkfloat_2d_dl_big d_C1dbo, d_C2dbo, d_C3dbo;
-  typename AT::t_kkfloat_2d_dl_big d_C1dbopi, d_C2dbopi, d_C3dbopi, d_C4dbopi;
-  typename AT::t_kkfloat_2d_dl_big d_C1dbopi2, d_C2dbopi2, d_C3dbopi2, d_C4dbopi2;
-  typename AT::t_kkfloat_2d_dl_big d_Cdbo, d_Cdbopi, d_Cdbopi2;
-  typename AT::t_kkfloat_2d_dl d_dDeltap_self;
+  typename AT::t_kkfloat_2d_dl d_BO, d_BO_s, d_BO_pi, d_BO_pi2;
+  typename AT::t_kkfloat_2d_dl d_dln_BOp_pi, d_dln_BOp_pi2;
+  typename AT::t_kkfloat_2d_dl d_C1dbo, d_C2dbo, d_C3dbo;
+  typename AT::t_kkfloat_2d_dl d_C1dbopi, d_C2dbopi, d_C3dbopi, d_C4dbopi;
+  typename AT::t_kkfloat_2d_dl d_C1dbopi2, d_C2dbopi2, d_C3dbopi2, d_C4dbopi2;
+  typename AT::t_kkfloat_2d_dl d_dDeltap_self, d_Cdbo, d_Cdbopi, d_Cdbopi2;
 
   int need_dup;
 
@@ -526,13 +525,13 @@ class PairReaxFFKokkos : public PairReaxFF {
   typename AT::t_int_1d_randomread d_numneigh;
 
   typename AT::t_int_1d d_bo_num, d_hb_num;
-  typename AT::t_int_2d_big d_bo_list, d_hb_list;
+  typename AT::t_int_2d d_bo_list, d_hb_list;
 
   DAT::tdual_int_scalar k_resize_bo, k_resize_hb;
   typename AT::t_int_scalar d_resize_bo, d_resize_hb;
 
   typename AT::t_kkfloat_2d_dl d_sum_ovun;
-  typename AT::t_kkfloat_2d_dl_big d_dBOp;
+  typename AT::t_kkfloat_2d_dl d_dBOp;
 
   int neighflag, newton_pair, maxnumneigh, maxhb, maxbo;
   int nlocal,nn,NN,eflag,vflag,acks2_flag;
@@ -561,8 +560,8 @@ class PairReaxFFKokkos : public PairReaxFF {
   DAT::tdual_int_scalar k_error_flag;
 
   typename AT::t_int_1d d_numneigh_bonds;
-  typename AT::t_tagint_2d_big d_neighid;
-  typename AT::t_kkfloat_2d_big d_abo;
+  typename AT::t_tagint_2d d_neighid;
+  typename AT::t_kkfloat_2d d_abo;
 
   typename AT::t_double_1d d_buf;
   DAT::tdual_int_scalar k_nbuf_local;

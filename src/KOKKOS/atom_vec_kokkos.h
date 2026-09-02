@@ -185,37 +185,29 @@ class AtomVecKokkos : virtual public AtomVec {
 
   DAT::t_tagint_1d d_molecule;
   DAT::t_int_2d d_nspecial;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  DAT::t_tagint_2d_big d_special;
+  DAT::t_tagint_2d d_special;
   DAT::t_int_1d d_num_bond;
   DAT::t_int_2d d_bond_type;
   DAT::t_tagint_2d d_bond_atom;
 
   HAT::t_tagint_1d h_molecule;
   HAT::t_int_2d h_nspecial;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  HAT::t_tagint_2d_big h_special;
+  HAT::t_tagint_2d h_special;
   HAT::t_int_1d h_num_bond;
   HAT::t_int_2d h_bond_type;
   HAT::t_tagint_2d h_bond_atom;
 
   DAT::t_int_1d d_num_angle;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  DAT::t_int_2d_big d_angle_type;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  DAT::t_tagint_2d_big d_angle_atom1,d_angle_atom2,d_angle_atom3;
+  DAT::t_int_2d d_angle_type;
+  DAT::t_tagint_2d d_angle_atom1,d_angle_atom2,d_angle_atom3;
 
   HAT::t_int_1d h_num_angle;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  HAT::t_int_2d_big h_angle_type;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  HAT::t_tagint_2d_big h_angle_atom1,h_angle_atom2,h_angle_atom3;
+  HAT::t_int_2d h_angle_type;
+  HAT::t_tagint_2d h_angle_atom1,h_angle_atom2,h_angle_atom3;
 
   DAT::t_int_1d d_num_dihedral;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  DAT::t_int_2d_big d_dihedral_type;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  DAT::t_tagint_2d_big d_dihedral_atom1,d_dihedral_atom2,
+  DAT::t_int_2d d_dihedral_type;
+  DAT::t_tagint_2d d_dihedral_atom1,d_dihedral_atom2,
     d_dihedral_atom3,d_dihedral_atom4;
   DAT::t_int_1d d_num_improper;
   DAT::t_int_2d d_improper_type;
@@ -223,10 +215,8 @@ class AtomVecKokkos : virtual public AtomVec {
     d_improper_atom3,d_improper_atom4;
 
   HAT::t_int_1d h_num_dihedral;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  HAT::t_int_2d_big h_dihedral_type;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  HAT::t_tagint_2d_big h_dihedral_atom1,h_dihedral_atom2,
+  HAT::t_int_2d h_dihedral_type;
+  HAT::t_tagint_2d h_dihedral_atom1,h_dihedral_atom2,
     h_dihedral_atom3,h_dihedral_atom4;
   HAT::t_int_1d h_num_improper;
   HAT::t_int_2d h_improper_type;

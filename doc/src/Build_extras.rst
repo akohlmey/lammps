@@ -936,11 +936,21 @@ runtime bounds checking on Kokkos data structures.  As to be expected,
 enabling this option will negatively impact the performance and thus is
 only recommended when developing a Kokkos-enabled style in LAMMPS.
 
-The CMake option ``-DKokkos_ENABLE_CUDA_UVM=on`` enables the use of CUDA
-"Unified Virtual Memory" (UVM) in Kokkos.  UVM allows to transparently
-use RAM on the host to supplement the memory used on the GPU (with some
-performance penalty) and thus enables running larger problems that would
-otherwise not fit into the RAM on the GPU.
+.. versionchanged:: TBD
+
+The CMake option ``-D Kokkos_ENABLE_IMPL_CUDA_UNIFIED_MEMORY=on`` makes
+Kokkos allocate all GPU memory as CUDA managed memory, which the host can
+read and write directly.  This allows a simulation to use RAM on the host
+to supplement the memory on the GPU (with some performance penalty), so
+that larger problems can be run than would otherwise fit on the GPU, and
+it allows host code to access GPU data directly, which is useful when
+developing or debugging a Kokkos-enabled style.  It requires CUDA 12.2 or
+later and a GPU with support for concurrent managed access, which is any
+NVIDIA GPU since the Pascal generation running under Linux.  Kokkos
+classifies this as an internal option that may change in a future
+release.  It replaces the option ``-D Kokkos_ENABLE_CUDA_UVM=on``, which
+Kokkos no longer supports; configuring with that option now stops with
+an error.
 
 .. versionadded:: 10Sep2025
 

@@ -194,17 +194,6 @@ struct alignas(16) idxz_struct {
 };
 
 
-// largest chunk size that keeps every SNA array within MAXSMALLINT entries, given
-// the size of the largest array that a chunk of chunk_size atoms or grid points
-// needed.  Rounded down to a whole number of padding blocks, so that the padded
-// chunk fits as well.
-
-static inline bigint sna_suggested_chunk_size(int chunk_size, bigint max_elements, int block)
-{
-  const bigint fit = (bigint) chunk_size * MAXSMALLINT / max_elements;
-  return MAX((bigint) block, fit - fit % block);
-}
-
 template<class DeviceType, typename real_type_, typename accum_type_, int vector_length_>
 class SNAKokkos {
 
@@ -243,13 +232,9 @@ class SNAKokkos {
   typedef Kokkos::View<complex**, Kokkos::LayoutLeft, DeviceType> t_sna_2c_ll;
   typedef Kokkos::View<complex**, Kokkos::LayoutRight, DeviceType> t_sna_2c_lr;
   typedef Kokkos::View<complex***, DeviceType> t_sna_3c;
-  // zlist and the CPU u arrays are chunk_size by a potentially large product of
-  // the remaining dimensions, so they can pass 2^31 entries; see KKBigView
-  typedef KKBigView<complex, 3, typename DeviceType::array_layout, KKDeviceType> t_sna_3c_big;
   typedef Kokkos::View<complex***, Kokkos::LayoutLeft, DeviceType> t_sna_3c_ll;
   typedef Kokkos::View<complex***[3], DeviceType> t_sna_4c;
   typedef Kokkos::View<complex***[3], DeviceType> t_sna_4c3;
-  typedef KKBigViewFixedLast<complex, 3, 3, typename DeviceType::array_layout, KKDeviceType> t_sna_4c3_big;
   typedef Kokkos::View<complex****, Kokkos::LayoutLeft, DeviceType> t_sna_4c_ll;
   typedef Kokkos::View<complex**[3], DeviceType> t_sna_3c3;
   typedef Kokkos::View<complex*****, DeviceType> t_sna_5c;
@@ -419,11 +404,7 @@ class SNAKokkos {
   t_sna_accum_3d dedr;
   int natom, natom_pad, nmax;
 
-  // allocates the per-chunk arrays and returns the number of elements in the
-  // largest of them; when that exceeds MAXSMALLINT nothing is allocated, because
-  // Kokkos could not index such an array correctly, and the caller must report
-  // the chunk size as too large
-  bigint grow_rij(int newnatom, int newnmax, int padding_factor = 1);
+  void grow_rij(int newnatom, int newnmax, int padding_factor = 1);
 
   int twojmax, diagonalstyle;
 
@@ -440,15 +421,15 @@ class SNAKokkos {
   t_sna_3d ulisttot_im;
   t_sna_3c ulisttot; // un-folded ulisttot
 
-  t_sna_3c_big zlist;
+  t_sna_3c zlist;
   t_sna_3d blist;
 
   t_sna_3d ylist_re;
   t_sna_3d ylist_im;
 
   // Structures for the CPU backend only
-  t_sna_3c_big ulist_cpu;
-  t_sna_4c3_big dulist_cpu;
+  t_sna_3c ulist_cpu;
+  t_sna_4c3 dulist_cpu;
 
   // Modified structures for GPU backend
   t_sna_2c a_gpu; // Cayley-Klein `a`

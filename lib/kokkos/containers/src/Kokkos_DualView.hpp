@@ -99,36 +99,6 @@ struct is_dual_view<const DualView<DT, DP...>> : public std::true_type {};
 template <class T>
 inline constexpr bool is_dual_view_v = is_dual_view<T>::value;
 
-// LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-//
-// Local LAMMPS change, not present in Kokkos 5.2.1: build the device view from
-// DualView's own template arguments rather than from the view traits, so that a
-// dual view can be given the newer Kokkos::View template arguments and be
-// indexed with 64-bit arithmetic.  Every dual view spelled the classic way
-// keeps exactly the types it had.  Remove this, and the helper below, once a
-// released Kokkos carries the equivalent.  See src/KOKKOS/kokkos_type.h.
-
-namespace Impl {
-// The const device view of a DualView.  With the classic View template
-// arguments this is spelled from the traits, exactly as it always was.  With
-// the mdspan style arguments there is no data type to add const to -- the
-// element type and the accessor have to agree -- so ask the device view for its
-// own const type.  Written as a partial specialization rather than a
-// conditional so that only the selected one is ever instantiated.
-template <class TDev, class DataType, class... Properties>
-struct DualViewConstDevType {
-  using type = View<typename ViewTraits<DataType, Properties...>::const_data_type,
-                    Properties...>;
-};
-
-template <class TDev, class ElementType, class IndexType, size_t... Extents,
-          class LayoutType, class Accessor>
-struct DualViewConstDevType<TDev, ElementType, extents<IndexType, Extents...>,
-                            LayoutType, Accessor> {
-  using type = typename TDev::const_type;
-};
-}  // namespace Impl
-
 template <class DataType, class... Properties>
 class DualView : public ViewTraits<DataType, Properties...> {
   template <class, class...>
@@ -143,7 +113,7 @@ class DualView : public ViewTraits<DataType, Properties...> {
   using host_mirror_space = typename traits::host_mirror_space;
 
   //! The type of a Kokkos::View on the device.
-  using t_dev = View<DataType, Properties...>;
+  using t_dev = View<typename traits::data_type, Properties...>;
 
   /// \typedef t_host
   /// \brief The type of a Kokkos::View host mirror of \c t_dev.
@@ -151,8 +121,7 @@ class DualView : public ViewTraits<DataType, Properties...> {
 
   //! The type of a const View on the device.
   //! The type of a Kokkos::View on the device.
-  using t_dev_const =
-      typename Impl::DualViewConstDevType<t_dev, DataType, Properties...>::type;
+  using t_dev_const = View<typename traits::const_data_type, Properties...>;
 
   /// \typedef t_host_const
   /// \brief The type of a const View host mirror of \c t_dev_const.

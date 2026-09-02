@@ -45,6 +45,23 @@ message(STATUS "Using " ${KOKKOS_LAYOUT_LOWER} " view layout for KOKKOS package"
 ########################################################################
 # consistency checks and Kokkos options/settings required by LAMMPS
 
+# Kokkos 5.2 still provides the legacy view implementation, which computes
+# view offsets in 64-bit arithmetic; the newer one does not, and can index a
+# view of more than 2^31 entries incorrectly, e.g. a neighbor list.  Keep the
+# legacy views until the KOKKOS package is ready for the newer ones (Kokkos 5.3
+# removes them), and do not let the build be talked out of it.  The legacy
+# implementation is deprecated in 5.2, so silence the warnings about it.
+set(Kokkos_ENABLE_IMPL_VIEW_LEGACY ON CACHE BOOL "" FORCE)
+set(Kokkos_ENABLE_DEPRECATION_WARNINGS OFF CACHE BOOL "" FORCE)
+mark_as_advanced(Kokkos_ENABLE_IMPL_VIEW_LEGACY Kokkos_ENABLE_DEPRECATION_WARNINGS)
+
+# Kokkos removed Kokkos_ENABLE_CUDA_UVM in 5.2 (deprecated since 4.0); CMake
+# would otherwise accept the stale setting and silently do nothing with it
+if(Kokkos_ENABLE_CUDA_UVM)
+  message(FATAL_ERROR "The option Kokkos_ENABLE_CUDA_UVM is no longer supported by Kokkos. "
+    "Use -D Kokkos_ENABLE_IMPL_CUDA_UNIFIED_MEMORY=on instead, which requires CUDA 12.2 or later")
+endif()
+
 if(Kokkos_ENABLE_HIP)
   option(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS "Enable multiple kernel instantiations with HIP" ON)
   mark_as_advanced(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS)
@@ -126,8 +143,6 @@ elseif(EXTERNAL_KOKKOS)
 else()
   set(LAMMPS_LIB_KOKKOS_SRC_DIR ${LAMMPS_LIB_SOURCE_DIR}/kokkos)
   set(LAMMPS_LIB_KOKKOS_BIN_DIR ${LAMMPS_LIB_BINARY_DIR}/kokkos)
-  # Legacy views are no longer supported
-  set(Kokkos_ENABLE_IMPL_VIEW_LEGACY OFF CACHE BOOL "" FORCE)
   # build KOKKOS internal libraries as static libraries but with PIC, if needed
   if(BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS_WAS_ON YES)

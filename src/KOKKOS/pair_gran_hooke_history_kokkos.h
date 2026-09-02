@@ -85,8 +85,7 @@ class PairGranHookeHistoryKokkos : public PairGranHookeHistory {
   typename AT::t_int_1d_randomread d_numneigh;
 
   typename AT::t_int_2d d_firsttouch;
-  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-  typename AT::t_kkfloat_2d_big d_firstshear;
+  typename AT::t_kkfloat_2d d_firstshear;
 
   typename AT::t_neighbors_2d d_neighbors_touch;
   typename AT::t_int_1d d_numneigh_touch;

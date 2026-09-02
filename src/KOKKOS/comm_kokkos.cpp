@@ -1972,6 +1972,8 @@ void CommKokkos::forward_comm_array(int nsize, double **array)
 
 #ifdef LMP_KOKKOS_GPU
 namespace LAMMPS_NS {
+template void CommKokkos::forward_comm_device<LMPDeviceType>(Fix *, int);
+template void CommKokkos::reverse_comm_device<LMPDeviceType>(Fix *, int);
 template void CommKokkos::forward_comm_device<LMPHostType>(Fix *, int);
 template void CommKokkos::reverse_comm_device<LMPHostType>(Fix *, int);
 }

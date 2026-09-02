@@ -206,12 +206,7 @@ void ComputeSNAGridKokkos<DeviceType, real_type, accum_type, vector_length>::com
   // `total_range` is the number of grid points which may be larger than chunk size.
   chunk_size = MIN(chunksize, total_range);
   chunk_offset = 0;
-  const bigint max_elements = snaKK.grow_rij(chunk_size, max_neighs, padding_factor);
-  if (max_elements > MAXSMALLINT)
-    error->all(FLERR, "Compute sna/grid/kk: chunksize {} is too large for these settings, "
-               "it needs an internal array of {} entries and the limit is {}. Set the "
-               "chunksize keyword to {} or less", chunksize, max_elements, (bigint) MAXSMALLINT,
-               sna_suggested_chunk_size(chunk_size, max_elements, vector_length * padding_factor));
+  snaKK.grow_rij(chunk_size, max_neighs, padding_factor);
 
   // Pre-compute ceil(chunk_size / vector_length) for code cleanliness
   const int chunk_size_div = (chunk_size + vector_length - 1) / vector_length;

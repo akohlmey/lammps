@@ -198,96 +198,6 @@ class KKDevice {
 #endif
 };
 
-// view types that index with 64-bit integers
-//
-// Kokkos::View computes the offset of an element in the common type of the
-// index arguments, so view(i,j) with two int indices does the arithmetic in
-// 32-bit integers and wraps around once a view holds more than 2^31 elements.
-// That shortcut is only used for the padded memory layouts, which is what the
-// Kokkos::LayoutLeft and Kokkos::LayoutRight settings map to.  Requesting the
-// unpadded layouts and an explicit 64-bit index type instead (which requires
-// the newer style of Kokkos::View template arguments) makes Kokkos convert the
-// indices to that index type before computing the offset.  Use these types for
-// views that can grow beyond 2^31 elements, e.g. neighbor lists, and the
-// regular types everywhere else, since 32-bit indexing is faster on GPUs.
-
-template<class ArrayLayout> struct KKUnpaddedLayout;
-
-template<> struct KKUnpaddedLayout<Kokkos::LayoutLeft> {
-  typedef Kokkos::layout_left type;
-};
-
-template<> struct KKUnpaddedLayout<Kokkos::LayoutRight> {
-  typedef Kokkos::layout_right type;
-};
-
-template<class ValueType, int Rank, class ArrayLayout, class Device,
-         class MemoryTraits = Kokkos::MemoryTraits<>>
-using KKBigView =
-  Kokkos::View<ValueType,
-               Kokkos::dextents<int64_t,Rank>,
-               typename KKUnpaddedLayout<ArrayLayout>::type,
-               Kokkos::Experimental::Accessor<ValueType,
-                 typename Device::memory_space,MemoryTraits>>;
-
-// Extents with NDynamic leading dimensions set at run time and one trailing
-// dimension of Last fixed at compile time, for the KKBigViewFixedLast types
-// below.
-
-template<class IndexType, int NDynamic, std::size_t Last, std::size_t... Dynamic>
-struct KKBigExtents : KKBigExtents<IndexType,NDynamic-1,Last,Kokkos::dynamic_extent,Dynamic...> {};
-
-template<class IndexType, std::size_t Last, std::size_t... Dynamic>
-struct KKBigExtents<IndexType,0,Last,Dynamic...> {
-  typedef Kokkos::extents<IndexType,Dynamic...,Last> type;
-};
-
-// The same as KKBigView for a view whose last dimension is fixed at compile
-// time, such as the three components of a vector: Rank is the number of leading
-// dimensions set at run time, Last the fixed one, so that a view spelled
-// Kokkos::View<double**[3],...> becomes KKBigViewFixedLast<double,2,3,...>.
-
-template<class ValueType, int Rank, std::size_t Last, class ArrayLayout, class Device,
-         class MemoryTraits = Kokkos::MemoryTraits<>>
-using KKBigViewFixedLast =
-  Kokkos::View<ValueType,
-               typename KKBigExtents<int64_t,Rank,Last>::type,
-               typename KKUnpaddedLayout<ArrayLayout>::type,
-               Kokkos::Experimental::Accessor<ValueType,
-                 typename Device::memory_space,MemoryTraits>>;
-
-// A dual view whose device and host views are both indexed with 64-bit
-// arithmetic; its device view is the same type KKBigView gives.
-
-template<class ValueType, int Rank, class ArrayLayout, class Device,
-         class MemoryTraits = Kokkos::MemoryTraits<>>
-using KKBigDualView =
-  Kokkos::DualView<ValueType,
-                   Kokkos::dextents<int64_t,Rank>,
-                   typename KKUnpaddedLayout<ArrayLayout>::type,
-                   Kokkos::Experimental::Accessor<ValueType,
-                     typename Device::memory_space,MemoryTraits>>;
-
-// LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-//
-// The dual views built from KKBigDualView depend on a local change to the
-// bundled Kokkos: Kokkos_DualView.hpp built its device view from the view
-// traits rather than from its own template arguments, so it could not be given
-// the arguments above.  Two lines there now take the arguments directly, which
-// leaves every existing dual view type exactly as it was.
-//
-// LAMMPS's own TransformView needed the same treatment: it now takes the
-// dual view it wraps as a template argument and spells its pinned mirror from
-// that dual view's device view, so that KKBigTransformView can wrap a
-// KKBigDualView.  That part is LAMMPS code and stays.
-//
-// Everywhere that relies on this carries the name of this comment, so
-//
-//   grep -rn LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND src/ lib/kokkos/
-//
-// lists what to revisit once a released Kokkos carries the change: the local
-// change to lib/kokkos can be dropped, and these declarations stay as they are.
-
 // Helpers for readability
 
 using KKScatterSum = Kokkos::Experimental::ScatterSum;
@@ -784,15 +694,12 @@ struct dual_hash_type {
 };
 
 
-template<class KKType, class LegacyType, class KKLayout, class KKSpace = LMPDeviceType,
-         class KKDualView = Kokkos::DualView<KKType, KKLayout, KKSpace>>
+template<class KKType, class LegacyType, class KKLayout, class KKSpace = LMPDeviceType>
 struct TransformView {
 
   static constexpr int NEED_TRANSFORM = !(std::is_same<KKType,LegacyType>::value && std::is_same<KKLayout,Kokkos::LayoutRight>::value);
 
-  // the dual view being wrapped; KKBigTransformView below passes one with
-  // 64-bit indexing, the default is the ordinary one for KKType
-  typedef KKDualView kk_view;
+  typedef Kokkos::DualView<KKType, KKLayout, KKSpace> kk_view;
   typedef typename Kokkos::DualView<LegacyType, Kokkos::LayoutRight, KKSpace>::t_host legacy_view;
 
  private:
@@ -810,14 +717,11 @@ struct TransformView {
   typedef typename legacy_view::value_type value_type;
   typedef typename legacy_view::array_layout array_layout;
 
-  // spelled from the device view rather than the dual view's traits, so that
-  // it is right for a dual view built from the 64-bit view arguments too;
-  // whole-view copies between this and a 64-bit view work in both directions
-  typedef Kokkos::View<typename kk_view::t_dev::data_type,
-               typename kk_view::t_dev::array_layout,
+  typedef Kokkos::View<typename kk_view::data_type,
+               typename kk_view::array_layout,
                typename std::conditional<
-                 std::is_same_v<typename kk_view::t_dev::execution_space,LMPDeviceType>,
-                 LMPPinnedHostType,typename kk_view::t_dev::memory_space>::type,
+                 std::is_same_v<typename kk_view::execution_space,LMPDeviceType>,
+                 LMPPinnedHostType,typename kk_view::memory_space>::type,
                Kokkos::MemoryTraits<Kokkos::Unmanaged> > pinned_mirror_type;
 
   int modified_hostkk_legacy; // Kokkos host was modified wrt legacy host
@@ -990,7 +894,7 @@ struct TransformView {
 
       if (modified_legacy_device) {
         if (buffer) {
-          pinned_mirror_type tmp_view((typename kk_view::t_dev::value_type*)buffer, d_view.layout());
+          pinned_mirror_type tmp_view((typename kk_view::value_type*)buffer, d_view.layout());
           Kokkos::deep_copy(LMPHostType(),tmp_view,h_view);
           Kokkos::deep_copy(LMPHostType(),d_view,tmp_view);
 
@@ -1034,7 +938,7 @@ struct TransformView {
     }
 
     if (buffer && k_view.need_sync_device()) {
-      pinned_mirror_type tmp_view((typename kk_view::t_dev::value_type*)buffer, d_view.layout());
+      pinned_mirror_type tmp_view((typename kk_view::value_type*)buffer, d_view.layout());
       Kokkos::deep_copy(LMPHostType(),tmp_view,h_viewkk);
       Kokkos::deep_copy(LMPHostType(),d_view,tmp_view);
       k_view.clear_sync_state();
@@ -1082,7 +986,7 @@ struct TransformView {
     }
 
     if (buffer && k_view.need_sync_host()) {
-      pinned_mirror_type tmp_view((typename kk_view::t_dev::value_type*)buffer, d_view.layout());
+      pinned_mirror_type tmp_view((typename kk_view::value_type*)buffer, d_view.layout());
       Kokkos::deep_copy(LMPHostType(),tmp_view,d_view);
       Kokkos::deep_copy(LMPHostType(),h_viewkk,tmp_view);
       k_view.clear_sync_state();
@@ -1104,7 +1008,7 @@ struct TransformView {
 
       if (modified_device_legacy) {
         if (buffer) {
-          pinned_mirror_type tmp_view((typename kk_view::t_dev::value_type*)buffer, d_view.layout());
+          pinned_mirror_type tmp_view((typename kk_view::value_type*)buffer, d_view.layout());
           Kokkos::deep_copy(LMPHostType(),tmp_view,d_view);
           Kokkos::deep_copy(LMPHostType(),h_view,tmp_view);
 
@@ -1267,18 +1171,6 @@ struct TransformView {
 
 };
 
-// A TransformView around a dual view with 64-bit indexing: its device and
-// Kokkos-side host views are the KKBigView types, the legacy host view is as
-// before.  The element type and rank come from the classic data type, so the
-// arguments are spelled exactly like TransformView's.
-
-template<class KKType, class LegacyType, class KKLayout, class KKSpace = LMPDeviceType>
-using KKBigTransformView =
-  TransformView<KKType, LegacyType, KKLayout, KKSpace,
-                KKBigDualView<typename Kokkos::ViewTraits<KKType>::value_type,
-                              static_cast<int>(Kokkos::ViewTraits<KKType>::rank),
-                              KKLayout, typename KKDevice<KKSpace>::value>>;
-
 // --------------------------------------------------------------------------------
 
 // For device views with fully qualified types
@@ -1298,34 +1190,6 @@ typedef typename tdual_##SUFFIX::t_host_const t_##SUFFIX##_const; \
 typedef typename tdual_##SUFFIX::t_host_um t_##SUFFIX##_um; \
 typedef typename tdual_##SUFFIX::t_host_const_um t_##SUFFIX##_const_um; \
 typedef typename tdual_##SUFFIX::t_host_const_randomread t_##SUFFIX##_randomread;
-
-// Dual views whose device and host views are both indexed with 64-bit
-// arithmetic.  The device view is the same type KOKKOS_BIGVIEW gives, so the
-// two macros are used together: KOKKOS_DEVICE_BIGVIEW for the view names and
-// this for the dual view that holds them.
-
-#define KOKKOS_BIGDUALVIEW(TYPE, RANK, LAYOUT, DEVICE, SUFFIX) \
-typedef KKBigDualView<TYPE, RANK, LAYOUT, DEVICE> tdual_##SUFFIX;
-
-#define KOKKOS_DEVICE_BIGDUALVIEW(TYPE, RANK, LAYOUT, SUFFIX) \
-KOKKOS_BIGDUALVIEW(TYPE, RANK, LAYOUT, typename KKDevice<LMPDeviceType>::value, SUFFIX)
-
-#define KOKKOS_HOST_BIGDUALVIEW(TYPE, RANK, LAYOUT, SUFFIX) \
-KOKKOS_BIGDUALVIEW(TYPE, RANK, LAYOUT, typename KKDevice<LMPHostType>::value, SUFFIX)
-
-// For views that need 64-bit indexing, see KKBigView above.
-#define KOKKOS_BIGVIEW(TYPE, RANK, LAYOUT, DEVICE, SUFFIX) \
-typedef KKBigView<TYPE, RANK, LAYOUT, DEVICE> t_##SUFFIX; \
-typedef KKBigView<const TYPE, RANK, LAYOUT, DEVICE> t_##SUFFIX##_const; \
-typedef KKBigView<TYPE, RANK, LAYOUT, DEVICE, Kokkos::MemoryTraits<Kokkos::Unmanaged>> t_##SUFFIX##_um; \
-typedef KKBigView<const TYPE, RANK, LAYOUT, DEVICE, Kokkos::MemoryTraits<Kokkos::Unmanaged>> t_##SUFFIX##_const_um; \
-typedef KKBigView<const TYPE, RANK, LAYOUT, DEVICE, Kokkos::MemoryTraits<Kokkos::RandomAccess>> t_##SUFFIX##_randomread;
-
-#define KOKKOS_DEVICE_BIGVIEW(TYPE, RANK, LAYOUT, SUFFIX) \
-KOKKOS_BIGVIEW(TYPE, RANK, LAYOUT, typename KKDevice<LMPDeviceType>::value, SUFFIX)
-
-#define KOKKOS_HOST_BIGVIEW(TYPE, RANK, LAYOUT, SUFFIX) \
-KOKKOS_BIGVIEW(TYPE, RANK, LAYOUT, typename KKDevice<LMPHostType>::value, SUFFIX)
 
 using LAMMPS_NS::bigint;
 using LAMMPS_NS::tagint;
@@ -1388,12 +1252,6 @@ typedef TransformView<int**, int**, LMPDeviceLayout> ttransform_int_2d;
 typedef TransformView<LAMMPS_NS::tagint**, LAMMPS_NS::tagint**, LMPDeviceLayout> ttransform_tagint_2d;
 typedef TransformView<KK_FLOAT**, double**, LMPDeviceLayout> ttransform_kkfloat_2d;
 typedef TransformView<KK_FLOAT**, double**, Kokkos::LayoutRight> ttransform_kkfloat_2d_lr;
-
-// LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
-typedef KKBigTransformView<int**, int**, LMPDeviceLayout> ttransform_int_2d_big;
-typedef KKBigTransformView<LAMMPS_NS::tagint**, LAMMPS_NS::tagint**, LMPDeviceLayout> ttransform_tagint_2d_big;
-typedef KKBigTransformView<KK_FLOAT**, double**, LMPDeviceLayout> ttransform_kkfloat_2d_big;
-typedef KKBigTransformView<KK_FLOAT**, double**, Kokkos::LayoutRight> ttransform_kkfloat_2d_lr_big;
 typedef TransformView<KK_FLOAT*[2], double*[2], LMPDeviceLayout> ttransform_kkfloat_1d_2;
 typedef TransformView<KK_FLOAT*[3], double*[3], LMPDeviceLayout> ttransform_kkfloat_1d_3;
 typedef TransformView<KK_FLOAT*[3], double*[3], Kokkos::LayoutRight> ttransform_kkfloat_1d_3_lr;
@@ -1419,24 +1277,21 @@ KOKKOS_DEVICE_DUALVIEW(KK_FLOAT****, LMPDeviceLayout, kkfloat_4d)
 
 typedef TransformView<KK_FLOAT****, double****, LMPDeviceLayout> ttransform_kkfloat_4d;
 
-// 2D view types with 64-bit indexing
-
-KOKKOS_DEVICE_BIGVIEW(int, 2, LMPDeviceLayout, int_2d_big)
-KOKKOS_DEVICE_BIGVIEW(tagint, 2, LMPDeviceLayout, tagint_2d_big)
-KOKKOS_DEVICE_BIGVIEW(KK_FLOAT, 2, LMPDeviceLayout, kkfloat_2d_big)
-KOKKOS_DEVICE_BIGVIEW(KK_FLOAT, 2, LMPDeviceType::array_layout, kkfloat_2d_dl_big)
-KOKKOS_DEVICE_BIGVIEW(double, 2, Kokkos::LayoutRight, double_2d_lr_big)
-KOKKOS_DEVICE_BIGVIEW(KK_FLOAT, 2, Kokkos::LayoutRight, kkfloat_2d_lr_big)
-
-KOKKOS_DEVICE_BIGDUALVIEW(int, 2, LMPDeviceLayout, int_2d_big)
-KOKKOS_DEVICE_BIGDUALVIEW(tagint, 2, LMPDeviceLayout, tagint_2d_big)
-KOKKOS_DEVICE_BIGDUALVIEW(KK_FLOAT, 2, LMPDeviceLayout, kkfloat_2d_big)
-KOKKOS_DEVICE_BIGDUALVIEW(double, 2, Kokkos::LayoutRight, double_2d_lr_big)
-
 // Neighbor Types
 
-KOKKOS_DEVICE_BIGVIEW(int, 2, LMPDeviceType::array_layout, neighbors_2d)
-KOKKOS_DEVICE_BIGVIEW(int, 2, Kokkos::LayoutRight, neighbors_2d_lr)
+typedef tdual_int_2d_dl tdual_neighbors_2d;
+typedef tdual_neighbors_2d::t_dev t_neighbors_2d;
+typedef tdual_neighbors_2d::t_dev_const t_neighbors_2d_const;
+typedef tdual_neighbors_2d::t_dev_um t_neighbors_2d_um;
+typedef tdual_neighbors_2d::t_dev_const_um t_neighbors_2d_const_um;
+typedef tdual_neighbors_2d::t_dev_const_randomread t_neighbors_2d_randomread;
+
+typedef tdual_int_2d_lr tdual_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_dev t_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_dev_const t_neighbors_2d_const_lr;
+typedef tdual_neighbors_2d_lr::t_dev_um t_neighbors_2d_um_lr;
+typedef tdual_neighbors_2d_lr::t_dev_const_um t_neighbors_2d_const_um_lr;
+typedef tdual_neighbors_2d_lr::t_dev_const_randomread t_neighbors_2d_randomread_lr;
 
 };
 
@@ -1500,24 +1355,21 @@ KOKKOS_HOST_DUALVIEW(KK_FLOAT***, LMPDeviceLayout, kkfloat_3d)
 KOKKOS_HOST_DUALVIEW(double****, Kokkos::LayoutRight, double_4d_lr)
 KOKKOS_HOST_DUALVIEW(KK_FLOAT****, LMPDeviceLayout, kkfloat_4d)
 
-// 2D view types with 64-bit indexing
-
-KOKKOS_HOST_BIGVIEW(int, 2, LMPDeviceLayout, int_2d_big)
-KOKKOS_HOST_BIGVIEW(tagint, 2, LMPDeviceLayout, tagint_2d_big)
-KOKKOS_HOST_BIGVIEW(KK_FLOAT, 2, LMPDeviceLayout, kkfloat_2d_big)
-KOKKOS_HOST_BIGVIEW(KK_FLOAT, 2, LMPDeviceType::array_layout, kkfloat_2d_dl_big)
-KOKKOS_HOST_BIGVIEW(double, 2, Kokkos::LayoutRight, double_2d_lr_big)
-KOKKOS_HOST_BIGVIEW(KK_FLOAT, 2, Kokkos::LayoutRight, kkfloat_2d_lr_big)
-
-KOKKOS_HOST_BIGDUALVIEW(int, 2, LMPDeviceLayout, int_2d_big)
-KOKKOS_HOST_BIGDUALVIEW(tagint, 2, LMPDeviceLayout, tagint_2d_big)
-KOKKOS_HOST_BIGDUALVIEW(KK_FLOAT, 2, LMPDeviceLayout, kkfloat_2d_big)
-KOKKOS_HOST_BIGDUALVIEW(double, 2, Kokkos::LayoutRight, double_2d_lr_big)
-
 // Neighbor Types
 
-KOKKOS_HOST_BIGVIEW(int, 2, LMPDeviceType::array_layout, neighbors_2d)
-KOKKOS_HOST_BIGVIEW(int, 2, Kokkos::LayoutRight, neighbors_2d_lr)
+typedef tdual_int_2d_dl tdual_neighbors_2d;
+typedef tdual_neighbors_2d::t_host t_neighbors_2d;
+typedef tdual_neighbors_2d::t_host_const t_neighbors_2d_const;
+typedef tdual_neighbors_2d::t_host_um t_neighbors_2d_um;
+typedef tdual_neighbors_2d::t_host_const_um t_neighbors_2d_const_um;
+typedef tdual_neighbors_2d::t_host_const_randomread t_neighbors_2d_randomread;
+
+typedef tdual_int_2d_lr tdual_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_host t_neighbors_2d_lr;
+typedef tdual_neighbors_2d_lr::t_host_const t_neighbors_2d_lr_const;
+typedef tdual_neighbors_2d_lr::t_host_um t_neighbors_2d_lr_um;
+typedef tdual_neighbors_2d_lr::t_host_const_um t_neighbors_2d_lr_const_um;
+typedef tdual_neighbors_2d_lr::t_host_const_randomread t_neighbors_2d_lr_randomread;
 
 };
 #endif

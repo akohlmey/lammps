@@ -221,9 +221,8 @@ void FixNeighHistoryKokkos<DeviceType>::post_neighbor()
 
   if (maxatom < nlocal || k_list->maxneighs > (int)d_firstflag.extent(1)) {
     maxatom = atom->nmax;
-    k_firstflag = DAT::tdual_int_2d_big("neighbor_history:firstflag",maxatom,k_list->maxneighs);
-    k_firstvalue = DAT::tdual_kkfloat_2d_big("neighbor_history:firstvalue",maxatom,
-                                             (bigint) k_list->maxneighs*dnum);
+    k_firstflag = DAT::tdual_int_2d("neighbor_history:firstflag",maxatom,k_list->maxneighs);
+    k_firstvalue = DAT::tdual_kkfloat_2d("neighbor_history:firstvalue",maxatom,k_list->maxneighs*dnum);
     d_firstflag = k_firstflag.view<DeviceType>();
     d_firstvalue = k_firstvalue.view<DeviceType>();
   }

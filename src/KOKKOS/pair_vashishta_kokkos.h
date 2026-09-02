@@ -157,9 +157,9 @@ class PairVashishtaKokkos : public PairVashishta {
   int nlocal,nall,eflag,vflag;
 
   int inum;
-  typename AT::t_neighbors_2d d_neighbors_short_2body;
+  typename AT::t_int_2d_dl d_neighbors_short_2body;
   typename AT::t_int_1d d_numneigh_short_2body;
-  typename AT::t_neighbors_2d d_neighbors_short_3body;
+  typename AT::t_int_2d_dl d_neighbors_short_3body;
   typename AT::t_int_1d d_numneigh_short_3body;
   friend void pair_virial_fdotr_compute<PairVashishtaKokkos>(PairVashishtaKokkos*);
 };
