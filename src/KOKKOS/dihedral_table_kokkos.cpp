@@ -36,10 +36,6 @@ using namespace MathConst;
 
 static constexpr int LINEAR_STYLE = 0;
 
-static constexpr double TOLERANCE = 0.05;
-static constexpr double SMALL =     0.001;
-static constexpr double SMALLER =   0.00001;
-
 /* ---------------------------------------------------------------------- */
 
 template<class DeviceType>
