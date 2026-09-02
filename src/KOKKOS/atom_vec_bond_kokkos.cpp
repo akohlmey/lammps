@@ -245,7 +245,7 @@ void AtomVecBondKokkos::sync_pinned(ExecutionSpace space, uint64_t mask, int asy
       if (atomKK->k_nspecial.need_sync_device())
         perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_nspecial,space,async_flag);
       if (atomKK->k_special.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_special,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_special,space,async_flag);
     }
     if (mask & BOND_MASK) {
       if (atomKK->k_num_bond.need_sync_device())
@@ -276,7 +276,7 @@ void AtomVecBondKokkos::sync_pinned(ExecutionSpace space, uint64_t mask, int asy
       if (atomKK->k_nspecial.need_sync_host())
         perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_nspecial,space,async_flag);
       if (atomKK->k_special.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_special,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_special,space,async_flag);
     }
     if (mask & BOND_MASK) {
       if (atomKK->k_num_bond.need_sync_host())

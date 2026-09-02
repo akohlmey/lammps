@@ -230,7 +230,7 @@ void PairTersoffZBLKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
 
   if (((int)d_neighbors_short.extent(1) < max_neighs) ||
      ((int)d_neighbors_short.extent(0) < ignum)) {
-    d_neighbors_short = typename AT::t_int_2d_dl("Tersoff::neighbors_short",ignum*1.2,max_neighs);
+    d_neighbors_short = typename AT::t_neighbors_2d("Tersoff::neighbors_short",ignum*1.2,max_neighs);
   }
   if ((int)d_numneigh_short.extent(0) < ignum)
     d_numneigh_short = typename AT::t_int_1d("Tersoff::numneighs_short",ignum*1.2);

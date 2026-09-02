@@ -79,8 +79,10 @@ template <class DeviceType> class MLIAPDataKokkos : public MLIAPData {
   DAT::tdual_int_1d k_pair_i;           // index of each i atom for each ij pair
   DAT::tdual_int_1d k_jelems;           // element of each neighbor
   DAT::tdual_int_1d k_ij;               // Start location for each particle
-  DAT::tdual_double_2d_lr k_betas;          // betas for all atoms in list
-  DAT::tdual_double_2d_lr k_descriptors;    // descriptors for all atoms in list
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  DAT::tdual_double_2d_lr_big k_betas;      // betas for all atoms in list
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  DAT::tdual_double_2d_lr_big k_descriptors; // descriptors for all atoms in list
   DAT::tdual_double_1d k_eatoms;         // energies for all atoms in list
   DAT::tdual_double_2d_lr k_rij;            // distance vector of each neighbor
   DAT::tdual_double_2d_lr k_gradforce;

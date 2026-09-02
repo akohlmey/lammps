@@ -45,10 +45,6 @@ message(STATUS "Using " ${KOKKOS_LAYOUT_LOWER} " view layout for KOKKOS package"
 ########################################################################
 # consistency checks and Kokkos options/settings required by LAMMPS
 
-# temporarily enable Kokkos legacy view implementation to prevent integer overflows when indexing neighborlist views
-option(Kokkos_ENABLE_IMPL_VIEW_LEGACY "Enable legacy Kokkos view implementation" ON)
-mark_as_advanced(Kokkos_ENABLE_IMPL_VIEW_LEGACY)
-
 if(Kokkos_ENABLE_HIP)
   option(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS "Enable multiple kernel instantiations with HIP" ON)
   mark_as_advanced(Kokkos_ENABLE_HIP_MULTIPLE_KERNEL_INSTANTIATIONS)
@@ -99,8 +95,8 @@ if(DOWNLOAD_KOKKOS)
   list(APPEND KOKKOS_LIB_BUILD_ARGS "-DCMAKE_CXX_EXTENSIONS=${CMAKE_CXX_EXTENSIONS}")
   list(APPEND KOKKOS_LIB_BUILD_ARGS "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}")
   include(ExternalProject)
-  set(KOKKOS_URL "https://github.com/kokkos/kokkos/archive/5.1.0.tar.gz" CACHE STRING "URL for KOKKOS tarball")
-  set(KOKKOS_SHA256 "66b2526569a70a21b2aeaed8dbb1cbe8b475f3c33719eac13bc7eed02e8c6590" CACHE STRING "SHA256 checksum of KOKKOS tarball")
+  set(KOKKOS_URL "https://github.com/kokkos/kokkos/archive/5.2.1.tar.gz" CACHE STRING "URL for KOKKOS tarball")
+  set(KOKKOS_SHA256 "2b94b8db0ab093f0a3cacc282c737e4ba590542b783e6785a9209004ba9842a3" CACHE STRING "SHA256 checksum of KOKKOS tarball")
   mark_as_advanced(KOKKOS_URL)
   mark_as_advanced(KOKKOS_SHA256)
   GetFallbackURL(KOKKOS_URL KOKKOS_FALLBACK)
@@ -125,11 +121,13 @@ if(DOWNLOAD_KOKKOS)
   add_dependencies(LAMMPS::KOKKOSCORE kokkos_build)
   add_dependencies(LAMMPS::KOKKOSCONTAINERS kokkos_build)
 elseif(EXTERNAL_KOKKOS)
-  find_package(Kokkos 5.1.0 REQUIRED CONFIG)
+  find_package(Kokkos 5.2.1 REQUIRED CONFIG)
   target_link_libraries(lammps PRIVATE Kokkos::kokkos)
 else()
   set(LAMMPS_LIB_KOKKOS_SRC_DIR ${LAMMPS_LIB_SOURCE_DIR}/kokkos)
   set(LAMMPS_LIB_KOKKOS_BIN_DIR ${LAMMPS_LIB_BINARY_DIR}/kokkos)
+  # Legacy views are no longer supported
+  set(Kokkos_ENABLE_IMPL_VIEW_LEGACY OFF CACHE BOOL "" FORCE)
   # build KOKKOS internal libraries as static libraries but with PIC, if needed
   if(BUILD_SHARED_LIBS)
     set(BUILD_SHARED_LIBS_WAS_ON YES)

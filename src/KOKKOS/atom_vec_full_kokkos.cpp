@@ -435,7 +435,7 @@ void AtomVecFullKokkos::sync_pinned(ExecutionSpace space, uint64_t mask, int asy
       if (atomKK->k_nspecial.need_sync_device())
         perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_nspecial,space,async_flag);
       if (atomKK->k_special.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_special,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_special,space,async_flag);
     }
     if (mask & BOND_MASK) {
       if (atomKK->k_num_bond.need_sync_device())
@@ -449,25 +449,25 @@ void AtomVecFullKokkos::sync_pinned(ExecutionSpace space, uint64_t mask, int asy
       if (atomKK->k_num_angle.need_sync_device())
         perform_pinned_copy<DAT::tdual_int_1d>(atomKK->k_num_angle,space,async_flag);
       if (atomKK->k_angle_type.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_angle_type,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_int_2d_big>(atomKK->k_angle_type,space,async_flag);
       if (atomKK->k_angle_atom1.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_angle_atom1,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_angle_atom1,space,async_flag);
       if (atomKK->k_angle_atom2.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_angle_atom2,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_angle_atom2,space,async_flag);
       if (atomKK->k_angle_atom3.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_angle_atom3,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_angle_atom3,space,async_flag);
     }
     if (mask & DIHEDRAL_MASK) {
       if (atomKK->k_num_dihedral.need_sync_device())
         perform_pinned_copy<DAT::tdual_int_1d>(atomKK->k_num_dihedral,space,async_flag);
       if (atomKK->k_dihedral_type.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_dihedral_type,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_int_2d_big>(atomKK->k_dihedral_type,space,async_flag);
       if (atomKK->k_dihedral_atom1.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom1,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom1,space,async_flag);
       if (atomKK->k_dihedral_atom2.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom2,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom2,space,async_flag);
       if (atomKK->k_dihedral_atom3.need_sync_device())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom3,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom3,space,async_flag);
     }
     if (mask & IMPROPER_MASK) {
       if (atomKK->k_num_improper.need_sync_device())
@@ -506,7 +506,7 @@ void AtomVecFullKokkos::sync_pinned(ExecutionSpace space, uint64_t mask, int asy
       if (atomKK->k_nspecial.need_sync_host())
         perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_nspecial,space,async_flag);
       if (atomKK->k_special.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_special,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_special,space,async_flag);
     }
     if (mask & BOND_MASK) {
       if (atomKK->k_num_bond.need_sync_host())
@@ -520,27 +520,27 @@ void AtomVecFullKokkos::sync_pinned(ExecutionSpace space, uint64_t mask, int asy
       if (atomKK->k_num_angle.need_sync_host())
         perform_pinned_copy<DAT::tdual_int_1d>(atomKK->k_num_angle,space,async_flag);
       if (atomKK->k_angle_type.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_angle_type,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_int_2d_big>(atomKK->k_angle_type,space,async_flag);
       if (atomKK->k_angle_atom1.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_angle_atom1,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_angle_atom1,space,async_flag);
       if (atomKK->k_angle_atom2.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_angle_atom2,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_angle_atom2,space,async_flag);
       if (atomKK->k_angle_atom3.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_angle_atom3,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_angle_atom3,space,async_flag);
     }
     if (mask & DIHEDRAL_MASK) {
       if (atomKK->k_num_dihedral.need_sync_host())
         perform_pinned_copy<DAT::tdual_int_1d>(atomKK->k_num_dihedral,space,async_flag);
       if (atomKK->k_dihedral_type.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_int_2d>(atomKK->k_dihedral_type,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_int_2d_big>(atomKK->k_dihedral_type,space,async_flag);
       if (atomKK->k_dihedral_atom1.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom1,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom1,space,async_flag);
       if (atomKK->k_dihedral_atom2.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom2,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom2,space,async_flag);
       if (atomKK->k_dihedral_atom3.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom3,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom3,space,async_flag);
       if (atomKK->k_dihedral_atom4.need_sync_host())
-        perform_pinned_copy_transform<DAT::ttransform_tagint_2d>(atomKK->k_dihedral_atom4,space,async_flag);
+        perform_pinned_copy_transform<DAT::ttransform_tagint_2d_big>(atomKK->k_dihedral_atom4,space,async_flag);
     }
     if (mask & IMPROPER_MASK) {
       if (atomKK->k_num_improper.need_sync_host())

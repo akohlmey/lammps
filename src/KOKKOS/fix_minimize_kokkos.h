@@ -46,9 +46,12 @@ class FixMinimizeKokkos : public FixMinimize, public KokkosBase {
   DAT::t_kkfloat_1d request_vector_kokkos(int);
   void reset_coords();
 
-  DAT::ttransform_kkfloat_2d_lr k_vectors;
-  DAT::t_kkfloat_2d_lr d_vectors;
-  HAT::t_double_2d_lr h_vectors;
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  DAT::ttransform_kkfloat_2d_lr_big k_vectors;
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  DAT::t_kkfloat_2d_lr_big d_vectors;
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  HAT::t_double_2d_lr_big h_vectors;
 };
 
 }

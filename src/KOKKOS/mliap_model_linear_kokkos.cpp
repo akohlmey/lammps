@@ -42,10 +42,14 @@ void MLIAPModelLinearKokkos<DeviceType>::compute_gradients(class MLIAPData *data
 
   // read
   auto d_ielems = k_data->k_ielems.template view<DeviceType>();
-  auto d_descriptors = k_data->k_descriptors.template view<DeviceType>();
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  typename ArrayTypes<DeviceType>::t_double_2d_lr_big d_descriptors =
+    k_data->k_descriptors.template view<DeviceType>();
 
   // written
-  auto d_betas = k_data->k_betas.template view<DeviceType>();
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  typename ArrayTypes<DeviceType>::t_double_2d_lr_big d_betas =
+    k_data->k_betas.template view<DeviceType>();
   auto d_eatoms = k_data->k_eatoms.template view<DeviceType>();
 
   const auto eflag = data->eflag;

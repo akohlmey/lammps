@@ -695,18 +695,6 @@ They must be specified in uppercase.
    *  - RISCV_U74MC
       - HOST
       - U74MC (RISC-V) CPUs
-   *  - KEPLER30
-      - GPU
-      - NVIDIA Kepler generation CC 3.0
-   *  - KEPLER32
-      - GPU
-      - NVIDIA Kepler generation CC 3.2
-   *  - KEPLER35
-      - GPU
-      - NVIDIA Kepler generation CC 3.5
-   *  - KEPLER37
-      - GPU
-      - NVIDIA Kepler generation CC 3.7
    *  - MAXWELL50
       - GPU
       - NVIDIA Maxwell generation CC 5.0
@@ -785,9 +773,21 @@ They must be specified in uppercase.
    *  - AMD_GFX1100
       - GPU
       - AMD GPU RX7900XTX
+   *  - AMD_GFX1101
+      - GPU
+      - AMD GPU RX7800XT/RX7700XT
    *  - AMD_GFX1103
       - GPU
       - AMD APU Phoenix
+   *  - AMD_GFX1151
+      - GPU
+      - AMD APU Strix Halo
+   *  - AMD_GFX1152
+      - GPU
+      - AMD GPU Radeon 860M
+   *  - AMD_GFX1201
+      - GPU
+      - AMD GPU RX9070XT
    *  - INTEL_GEN
       - GPU
       - SPIR64-based devices, e.g. Intel GPUs, using JIT
@@ -813,7 +813,7 @@ They must be specified in uppercase.
       - GPU
       - Intel GPU DG2
 
-This list was last updated for version 5.1.0 of the Kokkos library.
+This list was last updated for version 5.2.1 of the Kokkos library.
 
 .. tabs::
 

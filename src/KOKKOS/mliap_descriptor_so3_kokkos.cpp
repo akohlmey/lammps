@@ -76,7 +76,9 @@ void MLIAPDescriptorSO3Kokkos<DeviceType>::compute_forces(class MLIAPData *data_
 
   auto d_iatoms = data->k_iatoms.template view<DeviceType>();
   auto d_jatoms = data->k_jatoms.template view<DeviceType>();
-  auto d_betas = data->k_betas.template view<DeviceType>();
+  // LMP_KOKKOS_DUALVIEW_64BIT_WORKAROUND
+  typename ArrayTypes<DeviceType>::t_double_2d_lr_big d_betas =
+    data->k_betas.template view<DeviceType>();
   auto d_rij = data->k_rij.template view<DeviceType>();
   auto d_ij = data->k_ij.template view<DeviceType>();
   auto ndescriptors = data->ndescriptors;

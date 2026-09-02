@@ -176,7 +176,7 @@ template <class DeviceType> class PairUF3Kokkos : public PairUF3 {
   int nlocal, nall, eflag, vflag;
 
   int inum;
-  Kokkos::View<int **, DeviceType> d_neighbors_short;
+  typename AT::t_neighbors_2d d_neighbors_short;
   Kokkos::View<int *, DeviceType> d_numneigh_short;
 
   friend void pair_virial_fdotr_compute<PairUF3Kokkos>(PairUF3Kokkos *);
