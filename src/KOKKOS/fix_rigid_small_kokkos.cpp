@@ -796,7 +796,9 @@ void FixRigidSmallKokkos<DeviceType>::initial_integrate(int vflag)
 
   // virial setup before call to set_xv
 
-  v_init(vflag);
+  // the per-atom virial is a dual view grown in grow_arrays(), so the plain
+  // base-class array must not be allocated (alloc = 0)
+  v_init(vflag,0);
 
   // forward communicate updated info of all bodies
 

@@ -1181,7 +1181,7 @@ struct PairEAMKokkos<Kokkos::HIP>::policyInstance {
 
     auto policy = Kokkos::TeamPolicy<Kokkos::HIP,TAG>((inum+1023)/1024, 1024)
                            .set_scratch_size(0,
-                                Kokkos::PerTeam(MAX_CACHE_ROWS*7*sizeof(double)));
+                                Kokkos::PerTeam(MAX_CACHE_ROWS*7*sizeof(KK_FLOAT)));
     return policy;
   }
 };

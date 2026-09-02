@@ -55,7 +55,9 @@ void ComputeInertiaKokkos<DeviceType>::compute_vector()
 
   if (atom->style_match("ellipsoid") || atom->style_match("line") ||
       atom->style_match("tri") || atom->style_match("body")) {
-    atomKK->sync(Host,MASK_MASK|RMASS_MASK|TYPE_MASK);
+    // inertia_extended() also reads the radius, the ellipsoid indices and the
+    // bonus data through the plain host pointers
+    atomKK->sync(Host,MASK_MASK|RMASS_MASK|TYPE_MASK|RADIUS_MASK|ELLIPSOID_MASK|BONUS_MASK);
     group->inertia_extended(igroup,itensor);
   }
 

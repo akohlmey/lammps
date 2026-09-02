@@ -519,7 +519,6 @@ void FixShakeKokkos<DeviceType>::operator()(TagFixShakeMinPostForce<NEIGHFLAG,EV
 
   const int m = d_list[i];
   const int flag = d_shake_flag[m];
-  const int i0 = d_closest_list(i, 0);
 
   // slot0 and slot1 index the cluster, so that both the (possibly image)
   // atom positions and the global atom IDs can be looked up
@@ -2159,13 +2158,14 @@ template<class DeviceType>
 int FixShakeKokkos<DeviceType>::pack_forward_comm(int n, int *list, double *buf,
                                 int pbc_flag, int *pbc)
 {
+  // packing only reads the host copy, so bring it up to date but do not
+  // claim it: with correct_coordinates() this packs the coordinates through
+  // xshake = x, and a claim here would leave both sides of k_xshake claimed
+  // once unconstrained_update() writes the device side again
+
   k_xshake.sync_host();
 
-  int m = FixShake::pack_forward_comm(n,list,buf,pbc_flag,pbc);
-
-  k_xshake.modify_host();
-
-  return m;
+  return FixShake::pack_forward_comm(n,list,buf,pbc_flag,pbc);
 }
 
 /* ---------------------------------------------------------------------- */

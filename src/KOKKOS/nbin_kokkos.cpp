@@ -117,9 +117,11 @@ void NBinKokkos<DeviceType>::bin_atoms()
     bboxlo_[0] = bboxlo[0]; bboxlo_[1] = bboxlo[1]; bboxlo_[2] = bboxlo[2];
     bboxhi_[0] = bboxhi[0]; bboxhi_[1] = bboxhi[1]; bboxhi_[2] = bboxhi[2];
 
+    copymode = 1;
     NPairKokkosBinAtomsFunctor<DeviceType> f(*this);
 
     Kokkos::parallel_for(atom->nlocal+atom->nghost, f);
+    copymode = 0;
 
     Kokkos::deep_copy(h_resize, d_resize);
     if (h_resize()) {
