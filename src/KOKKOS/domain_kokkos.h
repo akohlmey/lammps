@@ -49,6 +49,8 @@ class DomainKokkos : public Domain {
 
   int closest_image(const int, int) const;
 
+  int detached_atom_x() const;
+
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagDomain_remap_all, const int&) const;

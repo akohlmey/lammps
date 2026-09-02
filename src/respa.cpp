@@ -292,11 +292,25 @@ void Respa::init()
   // rRESPA keeps its own copy of the forces of each level and clears and sums
   // them through the plain LAMMPS arrays, and it calls the force computations
   // without the transfers between the host and the device that run_style
-  // verlet does for the KOKKOS package.  On a GPU that silently gives the
-  // wrong forces, so refuse the combination rather than run it.
+  // verlet does for the KOKKOS package.  A force style that runs on a device
+  // therefore works from stale coordinates and its forces are never summed,
+  // which silently gives the wrong forces, so refuse such a style.  Styles
+  // that run on the host are fine, including the KOKKOS styles of a build
+  // without a device backend, where the two sides share their memory.
 
-  if (lmp->kokkos)
-    error->all(FLERR, "Run style respa is not supported by the KOKKOS package");
+  if (lmp->kokkos) {
+    auto check = [&](auto *style, const char *what, const char *name) {
+      if (style && (style->execution_space == Device))
+        error->all(FLERR, "Run style respa does not support {} style {} running on a device",
+                   what, name);
+    };
+    check(force->pair, "pair", force->pair_style);
+    check(force->bond, "bond", force->bond_style);
+    check(force->angle, "angle", force->angle_style);
+    check(force->dihedral, "dihedral", force->dihedral_style);
+    check(force->improper, "improper", force->improper_style);
+    check(force->kspace, "kspace", force->kspace_style);
+  }
 
   // warn if no fixes
 

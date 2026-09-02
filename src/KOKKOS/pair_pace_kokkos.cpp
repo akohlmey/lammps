@@ -350,6 +350,9 @@ PairPACEKokkos<DeviceType>::PairPACEKokkos(LAMMPS *lmp) : PairPACE(lmp)
   datamask_modify = EMPTY_MASK;
 
   host_fallback = 0;
+
+  neigh_scratch_level = 0;
+  neigh_scratch_warned = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -918,6 +921,38 @@ double PairPACEKokkos<DeviceType>::init_one(int i, int j)
 }
 
 /* ----------------------------------------------------------------------
+   select the team scratch memory level for the ComputeNeigh short neighbor
+   list build; falls back from level 0 (fast on-chip shared memory) to level 1
+   (global memory) when the request does not fit into the available shared
+   memory, unless the user forced a level
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+int PairPACEKokkos<DeviceType>::neigh_scratch_level_select(int scratch_size, int max_level0)
+{
+  // honor an explicit user request
+  if (neigh_scratch_request == NEIGH_SCRATCH_SHARED) return 0;
+  if (neigh_scratch_request == NEIGH_SCRATCH_GLOBAL) return 1;
+
+  // automatic: use fast level-0 (shared) scratch when it fits, otherwise fall
+  // back to level-1 (global) scratch. max_level0 is queried from Kokkos rather
+  // than hard-coded, so larger shared-memory limits (e.g. the opt-in >48 KiB
+  // shared memory available in newer Kokkos) are used automatically.
+  if (scratch_size <= max_level0) return 0;
+
+  if (!neigh_scratch_warned && comm->me == 0) {
+    error->warning(FLERR,
+      "Pair pace/kk short neighbor list needs {} bytes of team scratch memory "
+      "but only {} bytes of on-chip (level-0) shared memory are available; "
+      "falling back to slower global (level-1) memory. Reduce the neighbor "
+      "count or use the pair_style 'neigh global' keyword to silence this "
+      "warning.", scratch_size, max_level0);
+    neigh_scratch_warned = 1;
+  }
+  return 1;
+}
+
+/* ----------------------------------------------------------------------
    set coeffs for one or more type pairs
 ------------------------------------------------------------------------- */
 
@@ -1085,7 +1120,16 @@ void PairPACEKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
       check_team_size_for<TagPairPACEComputeNeigh>(chunk_size,team_size,vector_length);
       int scratch_size = scratch_size_helper<int>(team_size * maxneigh);
       typename Kokkos::TeamPolicy<DeviceType, TagPairPACEComputeNeigh> policy_neigh(chunk_size,team_size,vector_length);
-      policy_neigh = policy_neigh.set_scratch_size(0, Kokkos::PerTeam(scratch_size));
+
+      // The ComputeNeigh kernel caches the short neighbor list in team scratch
+      // memory. On GPUs level-0 scratch is fast on-chip shared memory but is a
+      // scarce resource: with many neighbors and/or atom types the request can
+      // exceed what the device provides and abort the run (see
+      // https://github.com/lammps/lammps/issues/5063). Query the level-0 limit
+      // from Kokkos (never hard-coded) and transparently fall back to level-1
+      // (global memory) scratch when the request does not fit.
+      neigh_scratch_level = neigh_scratch_level_select(scratch_size, policy_neigh.scratch_size_max(0));
+      policy_neigh = policy_neigh.set_scratch_size(neigh_scratch_level, Kokkos::PerTeam(scratch_size));
       Kokkos::parallel_for("ComputeNeigh",policy_neigh,*this);
     }
 
@@ -1174,7 +1218,10 @@ void PairPACEKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
     if (flag_corerep_factor) {
       h_corerep = Kokkos::create_mirror_view(d_corerep);
       Kokkos::deep_copy(h_corerep,d_corerep);
-      memcpy(corerep_factor+chunk_offset, (void *) h_corerep.data(), sizeof(double)*chunk_size);
+      // element-wise rather than memcpy: the mirror is KK_FLOAT, which is
+      // float in single/mixed precision builds, while corerep_factor is double
+      for (int i = 0; i < chunk_size; i++)
+        corerep_factor[chunk_offset+i] = h_corerep(i);
     }
 
     chunk_offset += chunk_size;
@@ -1239,7 +1286,7 @@ void PairPACEKokkos<DeviceType>::operator() (TagPairPACEComputeNeigh,const typen
   // If it is, inside is assigned to 1, otherwise -1
   const int team_rank = team.team_rank();
   const int scratch_shift = team_rank * maxneigh; // offset into pointer for entire team
-  int* inside = (int*)team.team_shmem().get_shmem(team.team_size() * maxneigh * sizeof(int), 0) + scratch_shift;
+  int* inside = (int*)team.team_shmem().get_shmem(team.team_size() * maxneigh * sizeof(int), neigh_scratch_level) + scratch_shift;
 
   // loop over list of all neighbors within force cutoff
   // distsq[] = distance sq to each
@@ -2427,11 +2474,13 @@ void PairPACEKokkos<DeviceType>::operator() (TagPairPACEComputeDerivativeCPU, co
     const int jj_min = is_zbl ? (int) d_jj_min(ii) : -1;
     const KK_FLOAT dfc = is_zbl ? dF_dfcut(ii) : 0.0;
 
-    double rxb[V], ryb[V], rzb[V], rinvb[V];
-    double fr_b[PACE_BATCH_NRL_MAX * V];
-    double dfr_b[PACE_BATCH_NRL_MAX * V];
-    double dgr_b[PACE_BATCH_NRB_MAX * V];
-    double fxb[V], fyb[V], fzb[V];
+    // lane buffers in the precision of the views they are gathered from and
+    // of pace_batched_derivative(), which is float in single/mixed builds
+    KK_FLOAT rxb[V], ryb[V], rzb[V], rinvb[V];
+    KK_FLOAT fr_b[PACE_BATCH_NRL_MAX * V];
+    KK_FLOAT dfr_b[PACE_BATCH_NRL_MAX * V];
+    KK_FLOAT dgr_b[PACE_BATCH_NRB_MAX * V];
+    KK_FLOAT fxb[V], fyb[V], fzb[V];
     int jidx[V];
 
     for (int mu = 0; mu < nelements; mu++) {

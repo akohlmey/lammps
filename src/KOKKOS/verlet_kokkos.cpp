@@ -72,6 +72,12 @@ struct Zero {
    again when the two sides are brought together.  Each call takes the same
    range as the device loop it goes with, so that the atoms the plain code
    leaves alone -- those outside an include group -- are left alone here too.
+
+   needed says whether any force style runs on the host side at all, see
+   host_force_styles().  When none does, nothing accumulates into the host
+   copies and nothing reads them without syncing them from the (zeroed)
+   device copy first, so the pass over them is skipped: on a GPU it would
+   otherwise write the whole host force array twice on every step.
 ------------------------------------------------------------------------- */
 
 template<class View>
@@ -81,9 +87,9 @@ static void zero_host_view(const View &v, int first, int count)
 }
 
 template<class DualView>
-static void zero_host(const DualView &k, int first, int count)
+static void zero_host(const DualView &k, int first, int count, int needed)
 {
-  if (count <= 0) return;
+  if (!needed || (count <= 0)) return;
   zero_host_view(k.view_hostkk(),first,count);
   zero_host_view(k.view_host(),first,count);
 }
@@ -411,53 +417,10 @@ void VerletKokkos::run(int n)
     bool execute_on_host = false;
     uint64_t datamask_read_host = 0;
     uint64_t datamask_exclude = 0;
-    int allow_overlap = lmp->kokkos->allow_overlap;
 
-    if (allow_overlap && atomKK->k_f.view_hostkk().data() != atomKK->k_f.view_device().data()) {
+    if (overlap_possible()) {
       datamask_exclude = (F_MASK | ENERGY_MASK | VIRIAL_MASK);
-
-      if (pair_compute_flag) {
-        if (force->pair->execution_space == HostKK ||
-            force->pair->execution_space == Host) {
-          execute_on_host = true;
-          datamask_read_host |= force->pair->datamask_read;
-        }
-      }
-      if (atomKK->molecular && force->bond) {
-        if (force->bond->execution_space == HostKK ||
-            force->bond->execution_space == Host) {
-          execute_on_host = true;
-          datamask_read_host |= force->bond->datamask_read;
-        }
-      }
-      if (atomKK->molecular && force->angle) {
-        if (force->angle->execution_space == HostKK ||
-            force->angle->execution_space == Host) {
-          execute_on_host = true;
-          datamask_read_host |= force->angle->datamask_read;
-        }
-      }
-      if (atomKK->molecular && force->dihedral) {
-        if (force->dihedral->execution_space == HostKK ||
-            force->dihedral->execution_space == Host) {
-          execute_on_host = true;
-          datamask_read_host |= force->dihedral->datamask_read;
-        }
-      }
-      if (atomKK->molecular && force->improper) {
-        if (force->improper->execution_space == HostKK ||
-            force->improper->execution_space == Host) {
-          execute_on_host = true;
-          datamask_read_host |= force->improper->datamask_read;
-        }
-      }
-      if (kspace_compute_flag) {
-        if (force->kspace->execution_space == HostKK ||
-            force->kspace->execution_space == Host) {
-          execute_on_host = true;
-          datamask_read_host |= force->kspace->datamask_read;
-        }
-      }
+      execute_on_host = host_force_styles(&datamask_read_host);
     }
 
     // when a non-KOKKOS style runs inside a KOKKOS run, enable auto_sync for
@@ -615,6 +578,11 @@ void VerletKokkos::force_clear()
     atomKK->k_fm_long.clear_sync_state();
   }
 
+  // the host sides only need clearing when a force style accumulates into
+  // them, see zero_host() and host_force_styles()
+
+  const int clear_host = host_force_styles();
+
   // clear force on all particles
   // if either newton flag is set, also include ghosts
   // when using threads always clear all forces.
@@ -624,12 +592,12 @@ void VerletKokkos::force_clear()
     if (force->newton) nall += atomKK->nghost;
 
     Kokkos::parallel_for(nall, Zero<DAT::t_kkacc_1d_3>(atomKK->k_f.view_device()));
-    zero_host(atomKK->k_f,0,nall);
+    zero_host(atomKK->k_f,0,nall,clear_host);
     atomKK->modified(Device,F_MASK);
 
     if (torqueflag) {
       Kokkos::parallel_for(nall, Zero<DAT::t_kkacc_1d_3>(atomKK->k_torque.view_device()));
-      zero_host(atomKK->k_torque,0,nall);
+      zero_host(atomKK->k_torque,0,nall,clear_host);
       atomKK->modified(Device,TORQUE_MASK);
     }
 
@@ -637,10 +605,10 @@ void VerletKokkos::force_clear()
 
     if (extraflag) {
       Kokkos::parallel_for(nall, Zero<DAT::t_kkacc_1d_3>(atomKK->k_fm.view_device()));
-      zero_host(atomKK->k_fm,0,nall);
+      zero_host(atomKK->k_fm,0,nall,clear_host);
       atomKK->modified(Device,FM_MASK);
       Kokkos::parallel_for(nall, Zero<DAT::t_kkacc_1d_3>(atomKK->k_fm_long.view_device()));
-      zero_host(atomKK->k_fm_long,0,nall);
+      zero_host(atomKK->k_fm_long,0,nall,clear_host);
       atomKK->modified(Device,FML_MASK);
     }
 
@@ -650,12 +618,12 @@ void VerletKokkos::force_clear()
 
   } else {
     Kokkos::parallel_for(atomKK->nfirst, Zero<DAT::t_kkacc_1d_3>(atomKK->k_f.view_device()));
-    zero_host(atomKK->k_f,0,atomKK->nfirst);
+    zero_host(atomKK->k_f,0,atomKK->nfirst,clear_host);
     atomKK->modified(Device,F_MASK);
 
     if (torqueflag) {
       Kokkos::parallel_for(atomKK->nfirst, Zero<DAT::t_kkacc_1d_3>(atomKK->k_torque.view_device()));
-      zero_host(atomKK->k_torque,0,atomKK->nfirst);
+      zero_host(atomKK->k_torque,0,atomKK->nfirst,clear_host);
       atomKK->modified(Device,TORQUE_MASK);
     }
 
@@ -663,22 +631,22 @@ void VerletKokkos::force_clear()
 
     if (extraflag) {
       Kokkos::parallel_for(atomKK->nfirst, Zero<DAT::t_kkacc_1d_3>(atomKK->k_fm.view_device()));
-      zero_host(atomKK->k_fm,0,atomKK->nfirst);
+      zero_host(atomKK->k_fm,0,atomKK->nfirst,clear_host);
       atomKK->modified(Device,FM_MASK);
       Kokkos::parallel_for(atomKK->nfirst, Zero<DAT::t_kkacc_1d_3>(atomKK->k_fm_long.view_device()));
-      zero_host(atomKK->k_fm_long,0,atomKK->nfirst);
+      zero_host(atomKK->k_fm_long,0,atomKK->nfirst,clear_host);
       atomKK->modified(Device,FML_MASK);
     }
 
     if (force->newton) {
       auto range = Kokkos::RangePolicy<LMPDeviceType>(atomKK->nlocal, atomKK->nlocal + atomKK->nghost);
       Kokkos::parallel_for(range, Zero<DAT::t_kkacc_1d_3>(atomKK->k_f.view_device()));
-      zero_host(atomKK->k_f,atomKK->nlocal,atomKK->nghost);
+      zero_host(atomKK->k_f,atomKK->nlocal,atomKK->nghost,clear_host);
       atomKK->modified(Device,F_MASK);
 
       if (torqueflag) {
         Kokkos::parallel_for(range, Zero<DAT::t_kkacc_1d_3>(atomKK->k_torque.view_device()));
-        zero_host(atomKK->k_torque,atomKK->nlocal,atomKK->nghost);
+        zero_host(atomKK->k_torque,atomKK->nlocal,atomKK->nghost,clear_host);
         atomKK->modified(Device,TORQUE_MASK);
       }
 
@@ -686,14 +654,63 @@ void VerletKokkos::force_clear()
 
       if (extraflag) {
         Kokkos::parallel_for(range, Zero<DAT::t_kkacc_1d_3>(atomKK->k_fm.view_device()));
-        zero_host(atomKK->k_fm,atomKK->nlocal,atomKK->nghost);
+        zero_host(atomKK->k_fm,atomKK->nlocal,atomKK->nghost,clear_host);
         atomKK->modified(Device,FM_MASK);
         Kokkos::parallel_for(range, Zero<DAT::t_kkacc_1d_3>(atomKK->k_fm_long.view_device()));
-        zero_host(atomKK->k_fm_long,atomKK->nlocal,atomKK->nghost);
+        zero_host(atomKK->k_fm_long,atomKK->nlocal,atomKK->nghost,clear_host);
         atomKK->modified(Device,FML_MASK);
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   can the force computation overlap host and device work at all?
+
+   only when it is allowed and the two sides have separate memory; in a
+   build without a device backend the views alias and there is nothing
+   to overlap or to merge
+------------------------------------------------------------------------- */
+
+int VerletKokkos::overlap_possible()
+{
+  if (!lmp->kokkos->allow_overlap) return 0;
+  return atomKK->k_f.view_hostkk().data() != atomKK->k_f.view_device().data();
+}
+
+/* ----------------------------------------------------------------------
+   does any force style run on the host side?
+
+   returns 1 when at least one of the pair, bonded and kspace styles has
+   Host or HostKK as its execution space and overlap_possible() holds.
+   Those styles accumulate their forces into the host copies of the force
+   array, which run() merges into the device copy after the force
+   computation, so the host copies are live only in that case.  When a
+   mask pointer is given, what those styles read is ORed into it.
+------------------------------------------------------------------------- */
+
+int VerletKokkos::host_force_styles(uint64_t *datamask_read_host)
+{
+  if (!overlap_possible()) return 0;
+
+  int flag = 0;
+  auto check = [&](auto *style) {
+    if (!style) return;
+    if ((style->execution_space != HostKK) && (style->execution_space != Host)) return;
+    flag = 1;
+    if (datamask_read_host) *datamask_read_host |= style->datamask_read;
+  };
+
+  if (pair_compute_flag) check(force->pair);
+  if (atomKK->molecular) {
+    check(force->bond);
+    check(force->angle);
+    check(force->dihedral);
+    check(force->improper);
+  }
+  if (kspace_compute_flag) check(force->kspace);
+
+  return flag;
 }
 
 /* ----------------------------------------------------------------------
