@@ -384,7 +384,7 @@ calls the force computations without the transfers between the host and
 the device that the *verlet* style performs for KOKKOS.  On a device this
 gives wrong forces with no indication that anything is amiss, so the
 combination is refused.  It can be used when everything stays on the host:
-a KOKKOS build without a device backend, or a device build with the
+a KOKKOS build without a device back end, or a device build with the
 */kk/host* suffix on every style and *comm host*, *sort no*, and
 *atom/map no* package settings.
 

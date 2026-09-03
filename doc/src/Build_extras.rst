@@ -1358,6 +1358,8 @@ then load this plugin at runtime with the :doc:`plugin command
       ``MBXLIB_SHA256`` variable to the corresponding checksum
       (e.g. computed with ``sha256sum``) if you provide a different
       library version than what is downloaded automatically.
+      Both settings are cached and thus retained in the build folder
+      (see :ref:`this explanation <err0039>` for details).
 
 
    .. tab:: Traditional make
@@ -1400,6 +1402,8 @@ folder and then load this plugin at runtime with the :doc:`plugin command <plugi
       ``PACELIB_SHA256`` variable to the corresponding checksum
       (e.g. computed with ``sha256sum``) if you provide a different
       library version than what is downloaded automatically.
+      Both settings are cached and thus retained in the build folder
+      (see :ref:`this explanation <err0039>` for details).
 
    .. tab:: Traditional make
 
