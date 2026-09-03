@@ -70,7 +70,7 @@ do \
 done
 
 echo "Add additional plugins for Qt"
-for dir in styles imageformats
+for dir in styles imageformats tls iconengines
 do \
     cp -r  ${QTDIR}/plugins/${dir} ${DESTDIR}/qtplugins/
     chmod +x ${DESTDIR}/qtplugins/*/*.so
