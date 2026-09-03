@@ -83,7 +83,7 @@ static int AtomicNumberByName_pace(char *elname)
 
 /* ---------------------------------------------------------------------- */
 PairPACE::PairPACE(LAMMPS *lmp) :
-    Pair(lmp), aceimple(nullptr), corerep_factor(nullptr), scale(nullptr),
+    Pair(lmp), aceimpl(nullptr), corerep_factor(nullptr), scale(nullptr)
 {
   single_enable = 0;
   restartinfo = 0;
