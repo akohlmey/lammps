@@ -94,7 +94,7 @@ For example if there are 8192 atoms in the simulation and the
 *chunksize* is set to 4096, the ACE calculation will be broken up into
 two passes (running on a single GPU).
 
-.. versionadded:: TBD
+.. versionadded:: 2Sep2026
 
 The keyword *neigh* is only applicable when using the pair styles *pace*
 and *pace/extrapolation* with the KOKKOS package on GPUs and is ignored
@@ -118,7 +118,7 @@ level 1 (global) scratch memory; the latter can be used to silence the
 fallback warning or to force global memory when the automatic heuristic
 is too conservative.
 
-.. versionchanged:: TBD
+.. versionchanged:: 2Sep2026
 
 When *pace/kk* is used with the *product* keyword on a CPU back end
 (KOKKOS built with the OpenMP or Serial back end), the calculation now

@@ -986,7 +986,7 @@ Additional dump styles that are less commonly used.  This includes the
 `VTK format <vtk_>`_ for visualization by `ParaView <paraview_>`_ or
 other tools that read it.
 
-.. versionchanged:: TBD
+.. versionchanged:: 2Sep2026
 
 The *vtk* dump style used to be a package of its own and required the
 VTK library to be installed.  It now writes the files itself and does
@@ -1074,7 +1074,7 @@ This is accomplished with the :doc:`fenix <fenix>` command.
 
 **Author:** Matthew Whitlock (Sandia)
 
-.. versionadded:: TBD
+.. versionadded:: 2Sep2026
 
 **Install:**
 
