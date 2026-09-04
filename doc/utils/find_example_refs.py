@@ -8,7 +8,20 @@ Modes:
                      inserting one "Example input scripts available: ..."
                      line right after the first Examples code block.
   --check            Verify every examples/ path mentioned in doc/src/*.rst
-                     resolves to a real file or directory.
+                     resolves to a real file or directory.  Problems are
+                     reported as "file:line:col: warning: ..." so the output
+                     can be used from an editor's compilation mode (e.g.
+                     Emacs M-x compile) to jump to the offending location.
+  --count            Count in how many example input scripts each style or
+                     command from the Commands_*.rst index pages is used and
+                     list them with the most frequently used first.  Useful
+                     for tuning the TRIVIAL skip list below.
+  --update           Like --check, but try to find where a missing example
+                     file or folder went (git rename history, then the same
+                     or an equivalently spelled name elsewhere in examples/)
+                     and rewrite the doc/src/*.rst references accordingly.
+                     Ambiguous or unresolvable references are reported as
+                     warnings for manual follow-up.
 
 Mapping (curated) file format -- one entry per non-comment line:
     rst_basename: <path> [<path> ...]
@@ -25,8 +38,10 @@ Conventions enforced:
 """
 
 import argparse
+import glob
 import os
 import re
+import subprocess
 import sys
 from collections import defaultdict, Counter
 from pathlib import Path
@@ -159,6 +174,9 @@ DOC_ENTRY = re.compile(
 )
 
 EXAMPLES_REF = re.compile(r'examples/[A-Za-z0-9_./+-]+')
+
+# Editor backup and patch leftovers; never proposed as replacement targets.
+JUNK_SUFFIXES = ('~', '.bak', '.orig', '.rej')
 
 HEADING_UNDERLINE = re.compile(r'^[\"\-=^~+*#`\']+$')
 
@@ -504,20 +522,264 @@ def cmd_apply(repo_root, mapping_file):
                      f'NoSection: {failed}  BadPath: {bad_path}\n')
 
 
+def iter_example_refs(doc_dir):
+    """Yield (rst_path, lineno, start, end, ref) for every examples/ path
+    mentioned in doc/src/*.rst.  lineno is 1-based; start/end delimit the
+    reference within the line (0-based, half-open) so that it can be
+    replaced in place.  A trailing '*' is kept (glob pattern); trailing
+    sentence punctuation is dropped.  Paths inside URLs (e.g. links to the
+    examples section of the LAMMPS website) are not repository paths and
+    are skipped."""
+    for rst in sorted(doc_dir.glob('*.rst')):
+        try:
+            lines = rst.read_text(errors='ignore').splitlines()
+        except OSError:
+            continue
+        for lineno, line in enumerate(lines, 1):
+            for m in EXAMPLES_REF.finditer(line):
+                word = re.split(r'[\s`<]', line[:m.start()])[-1]
+                if '://' in word:
+                    continue
+                ref = m.group(0)
+                end = m.end()
+                if end < len(line) and line[end] == '*':
+                    ref += '*'
+                    end += 1
+                else:
+                    stripped = ref.rstrip('.,;:')
+                    end -= len(ref) - len(stripped)
+                    ref = stripped
+                yield rst, lineno, m.start(), end, ref
+
+
+def ref_exists(repo_root, ref):
+    """True if the referenced file, folder, or glob pattern exists."""
+    if '*' in ref:
+        return bool(glob.glob(str(repo_root / ref)))
+    return (repo_root / ref).exists()
+
+
+def location(rst, lineno, start):
+    """Compiler-style 'file:line:col' message prefix.  The file name is
+    given relative to the current directory, which is what editors resolve
+    such messages against (e.g. Emacs compilation-mode)."""
+    try:
+        fname = os.path.relpath(rst)
+    except ValueError:
+        fname = str(rst)
+    return f'{fname}:{lineno}:{start + 1}'
+
+
 def cmd_check(repo_root):
     doc_dir = repo_root / 'doc' / 'src'
-    missing = []
-    for rst in sorted(doc_dir.glob('*.rst')):
-        text = rst.read_text(errors='ignore')
-        for m in EXAMPLES_REF.finditer(text):
-            p = m.group(0).rstrip('.,;:)')
-            if not (repo_root / p).exists():
-                missing.append((rst.name, p))
-    for fname, p in missing:
-        print(f'MISSING: {p}  (in {fname})')
+    missing = 0
+    for rst, lineno, start, end, ref in iter_example_refs(doc_dir):
+        if ref_exists(repo_root, ref):
+            continue
+        missing += 1
+        print(f'{location(rst, lineno, start)}: warning: '
+              f'example path not found: {ref}')
     if missing:
+        print(f'{missing} example reference(s) do not resolve.')
         sys.exit(1)
     print('All examples/ paths in doc/src/*.rst resolve.')
+
+
+def cmd_count(repo_root, output):
+    doc_dir = repo_root / 'doc' / 'src'
+    ex_dir = repo_root / 'examples'
+
+    mapping, _ = build_mapping(doc_dir)
+    counts = Counter()
+    nscripts = 0
+    for script in find_input_scripts(ex_dir):
+        nscripts += 1
+        counts.update(parse_input_script(script, mapping))
+
+    out = []
+    out.append(f'# Number of example input scripts (out of {nscripts}) '
+               f'using each of the {len(mapping)}')
+    out.append('# styles/commands listed in Commands_*.rst; most frequently '
+               'used first.')
+    out.append('# T marks entries in the TRIVIAL skip list of '
+               'find_example_refs.py.')
+    out.append(f'# {"count":>5}  {"category":<9} {"style":<32} page')
+    for key in sorted(mapping, key=lambda k: (-counts[k], k)):
+        cat, name = key
+        flag = '  T' if key in TRIVIAL else ''
+        out.append(f'{counts[key]:7d}  {cat:<9} {name:<32} '
+                   f'{mapping[key]}{flag}')
+
+    text = '\n'.join(out) + '\n'
+    if output:
+        Path(output).write_text(text)
+        sys.stderr.write(f'Wrote counts for {len(mapping)} styles/commands '
+                         f'to {output}\n')
+    else:
+        sys.stdout.write(text)
+
+
+def git_renames(repo_root):
+    """Return {old_path: new_path} for every rename git recorded below
+    examples/; the most recent rename wins for each old path.  Empty when
+    git or the history is not available."""
+    cmd = ['git', '-C', str(repo_root), 'log', '--diff-filter=R',
+           '--name-status', '--format=', '-M', '--', 'examples/']
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True,
+                              check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return {}
+    renames = {}
+    for line in proc.stdout.splitlines():
+        parts = line.split('\t')
+        if len(parts) == 3 and parts[0].startswith('R'):
+            renames.setdefault(parts[1], parts[2])
+    return renames
+
+
+def normalized_name(name):
+    """Fold the spelling variants seen in example renames: letter case,
+    the separators '-', '_', '.', and a trailing '.lmp' extension."""
+    if name.endswith('.lmp'):
+        name = name[:-4]
+    return re.sub(r'[-_.]+', '.', name.lower())
+
+
+class ExampleTree:
+    """Index of the examples/ tree plus git rename history, used to find
+    the new location of a moved or renamed example file or folder."""
+
+    def __init__(self, repo_root):
+        self.root = repo_root
+        self.by_name = defaultdict(list)
+        self.by_norm = defaultdict(list)
+        for dirpath, dirnames, filenames in os.walk(repo_root / 'examples'):
+            rel = Path(dirpath).relative_to(repo_root)
+            for name in dirnames + filenames:
+                if name.endswith(JUNK_SUFFIXES):
+                    continue
+                self.by_name[name].append(str(rel / name))
+                self.by_norm[normalized_name(name)].append(str(rel / name))
+        self.renames = git_renames(repo_root)
+
+    def resolve(self, ref):
+        """Return (new_ref, candidates).  new_ref is the unique replacement
+        for the missing reference or None; candidates lists the alternatives
+        when the search was ambiguous (empty when nothing was found)."""
+        trailing = '/' if ref.endswith('/') else ''
+        path = ref.rstrip('/')
+        for finder in (self._via_git, self._via_name):
+            cands = finder(path)
+            if len(cands) == 1:
+                return cands[0] + trailing, []
+            if cands:
+                return None, cands
+        return None, []
+
+    def _via_git(self, path, depth=0):
+        """Follow git rename records: directly for a file, or for a folder
+        via the files that were renamed below it."""
+        if depth > 5 or not self.renames:
+            return []
+        seen = set()
+        p = path
+        while p in self.renames and p not in seen:
+            seen.add(p)
+            p = self.renames[p]
+        if p != path and (self.root / p).exists():
+            return [p]
+        prefix = path + '/'
+        cands = Counter()
+        for old, new in self.renames.items():
+            if old.startswith(prefix):
+                rest = old[len(prefix):]
+                if new.endswith('/' + rest):
+                    cands[new[:-len(rest) - 1]] += 1
+        found = []
+        for cand, _ in cands.most_common():
+            if (self.root / cand).is_dir():
+                found.append(cand)
+            else:
+                found.extend(self._via_git(cand, depth + 1))
+        return list(dict.fromkeys(found))
+
+    def _via_name(self, path):
+        """Same file or folder name elsewhere in the examples/ tree; failing
+        that, one that differs only in separators, case, or a .lmp suffix
+        (e.g. in.bpm.fracture -> in.bpm-fracture)."""
+        name = os.path.basename(path)
+        cands = self.by_name.get(name)
+        if not cands:
+            cands = self.by_norm.get(normalized_name(name), [])
+        return self._closest(path, cands)
+
+    @staticmethod
+    def _closest(path, cands):
+        """Keep the candidates whose parent folders share the longest
+        trailing run of folder names with the old path."""
+        if len(cands) < 2:
+            return cands
+        old_parts = path.split('/')[:-1]
+
+        def score(cand):
+            parts = cand.split('/')[:-1]
+            n = 0
+            while (n < min(len(parts), len(old_parts))
+                   and parts[-1 - n] == old_parts[-1 - n]):
+                n += 1
+            return n
+
+        best = max(score(c) for c in cands)
+        return [c for c in cands if score(c) == best]
+
+
+def cmd_update(repo_root):
+    doc_dir = repo_root / 'doc' / 'src'
+    tree = ExampleTree(repo_root)
+    if not tree.renames:
+        sys.stderr.write('NOTE: git rename history not available, using '
+                         'file name heuristics only\n')
+
+    edits = defaultdict(list)
+    updated = 0
+    unresolved = 0
+    for rst, lineno, start, end, ref in iter_example_refs(doc_dir):
+        if ref_exists(repo_root, ref):
+            continue
+        loc = location(rst, lineno, start)
+        if '*' in ref:
+            print(f'{loc}: warning: no files match pattern: {ref}')
+            unresolved += 1
+            continue
+        new, cands = tree.resolve(ref)
+        if new:
+            edits[rst].append((lineno, start, end, new))
+            updated += 1
+            print(f'{loc}: note: {ref} -> {new}')
+        else:
+            unresolved += 1
+            hint = ''
+            if cands:
+                hint = '; candidates: ' + ', '.join(cands[:5])
+                if len(cands) > 5:
+                    hint += f' (+{len(cands) - 5} more)'
+            print(f'{loc}: warning: example path not found: {ref}{hint}')
+
+    for rst, items in edits.items():
+        with open(rst, newline='') as f:
+            lines = f.readlines()
+        # Replace from the end so earlier offsets stay valid.
+        for lineno, start, end, new in sorted(items, reverse=True):
+            line = lines[lineno - 1]
+            lines[lineno - 1] = line[:start] + new + line[end:]
+        with open(rst, 'w', newline='') as f:
+            f.writelines(lines)
+
+    print(f'Updated: {updated} reference(s) in {len(edits)} file(s)  '
+          f'Unresolved: {unresolved}')
+    if unresolved:
+        sys.exit(1)
 
 
 def main():
@@ -532,9 +794,18 @@ def main():
                            'in place.')
     mode.add_argument('--check', action='store_true',
                       help='Verify all examples/ paths in doc/src/*.rst '
-                           'exist.')
+                           'exist; report problems compiler-style as '
+                           'file:line:col: warning: ...')
+    mode.add_argument('--count', action='store_true',
+                      help='Count the example input scripts using each '
+                           'style/command; most frequently used first.')
+    mode.add_argument('--update', action='store_true',
+                      help='Find where missing examples/ paths in '
+                           'doc/src/*.rst were moved or renamed to and '
+                           'rewrite the references in place.')
     parser.add_argument('-o', '--output', metavar='FILE',
-                        help='Write report to FILE (default stdout).')
+                        help='Write report or counts to FILE '
+                             '(default stdout).')
     parser.add_argument('--repo', metavar='PATH',
                         help='Repo root (default: auto-detect from script '
                              'location).')
@@ -550,6 +821,10 @@ def main():
 
     if args.check:
         cmd_check(repo_root)
+    elif args.count:
+        cmd_count(repo_root, args.output)
+    elif args.update:
+        cmd_update(repo_root)
     elif args.apply:
         cmd_apply(repo_root, args.apply)
     else:
