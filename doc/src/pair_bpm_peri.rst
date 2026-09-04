@@ -18,6 +18,8 @@ Examples
    pair_style bpm/peri
    pair_coeff * * 1.6863e22 0.0015001
 
+Example input scripts available: examples/bpm/peri
+
 Description
 """""""""""
 

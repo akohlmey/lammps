@@ -24,6 +24,8 @@ Examples
    fix 10 all set 1 0 group all i_dump v_new
    fix 10 all set 1 0 group all i_dump v_turnoff
 
+Example input scripts available: examples/PACKAGES/shock/nemd/in.nemd
+
 Description
 """""""""""
 

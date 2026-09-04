@@ -33,6 +33,8 @@ Examples
    compute def all frenkel drvac 1.6 drint 1.9 rescale yes
    compute sub all frenkel region inner site_file sites.txt
 
+Example input scripts available: examples/PACKAGES/frenkel/in.frenkel
+
 Description
 """""""""""
 

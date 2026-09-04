@@ -22,6 +22,8 @@ Examples
    angle_style cosine/squared
    angle_coeff 2*4 75.0 100.0
 
+Example input scripts available: examples/PACKAGES/ilves/in.cg-polymers
+
 Description
 """""""""""
 
