@@ -87,7 +87,7 @@ files to render bond data.
 
 The :doc:`compute bond/local <compute_bond_local>` property can also be
 visualized using :doc:`dump image <dump_image>` to color bonds by
-property using a color map.  The ``/examples/GRAPHICS/in.bpm.fracture``
+property using a color map.  The ``/examples/GRAPHICS/in.bpm-fracture``
 example file shows how such a visualization can be constructed.
 
  .. image:: img/bpm-fracture.png

@@ -55,7 +55,7 @@ Examples
    dump 1 all local 1000 dump.local f_myfix[1] f_myfix[2] f_myfix[3]
    dump_modify 1 write_header no
 
-Example input scripts available: examples/tracker/in.track
+Example input scripts available: examples/PACKAGES/tracker/in.track
 
 Description
 """""""""""

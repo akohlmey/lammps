@@ -2948,8 +2948,8 @@ a material.
 * :doc:`fix msst <fix_msst>`
 * :doc:`fix nphug <fix_nphug>`
 * :doc:`fix wall/piston <fix_wall_piston>`
-* ``examples/hugoniostat``
-* ``examples/msst``
+* ``examples/PACKAGES/shock/hugoniostat``
+* ``examples/PACKAGES/shock/msst``
 
 ----------
 

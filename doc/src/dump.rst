@@ -183,7 +183,7 @@ Examples
    dump snap all cfg 100 dump.config.*.cfg mass type xs ys zs id type c_Stress[2]
    dump 1 all xtc 1000 file.xtc
 
-Example input scripts available: examples/tracker/in.track, examples/reaxff/in.reaxff.tatb, examples/snap/in.gaussian.grid
+Example input scripts available: examples/PACKAGES/tracker/in.track, examples/reaxff/in.reaxff.tatb, examples/snap/in.gaussian.grid
 
 Description
 """""""""""

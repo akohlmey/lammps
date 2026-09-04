@@ -244,7 +244,7 @@ Example scripts
 """""""""""""""
 
 There are example scripts for using all these pair styles in
-examples/PACKAGES/mesodpd.  The example for an eDPD simulation models heat
+examples/PACKAGES/dpd-meso.  The example for an eDPD simulation models heat
 conduction with source terms analog of periodic Poiseuille flow
 problem. The setup follows Fig.12 in :ref:`(Li2014) <Li2014_JCP>`. The
 output of the short eDPD simulation (about 2 minutes on a single core)

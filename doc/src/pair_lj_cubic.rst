@@ -23,7 +23,7 @@ Examples
    pair_style lj/cubic
    pair_coeff * * 1.0 0.8908987
 
-Example input scripts available: examples/gjf/in.gjf.vfull, examples/gjf/in.gjf.vhalf, examples/hugoniostat/in.hugoniostat
+Example input scripts available: examples/PACKAGES/gjf/in.gjf.vfull, examples/PACKAGES/gjf/in.gjf.vhalf, examples/PACKAGES/shock/hugoniostat/in.hugoniostat
 
 Description
 """""""""""
