@@ -1,7 +1,10 @@
 .. index:: fix baoab
+.. index:: fix baoab/kk
 
 fix baoab command
 =================
+
+Accelerator Variants: *baoab/kk*
 
 Syntax
 """"""
@@ -35,7 +38,7 @@ Examples
 
 Example input scripts available: examples/PACKAGES/baoab/in.baoab_lj
 
-.. versionadded:: TBD
+.. versionadded:: 4Jul2026
 
 Description
 """""""""""
@@ -114,6 +117,12 @@ This fix supports both per-type masses (``mass`` command) and per-atom
 masses (atom styles such as ``sphere``).
 
 This fix can be used with dynamic atom groups.
+
+----------
+
+.. include:: accel_styles.rst
+
+----------
 
 Restart, fix_modify, output, run start/stop, minimize info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""

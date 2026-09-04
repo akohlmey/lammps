@@ -83,7 +83,7 @@ Example input scripts available: examples/PACKAGES/ml-runner/in.ml-runner.H2O
 Description
 -----------
 
-.. versionadded:: TBD
+.. versionadded:: 4Jul2026
 
 This pair style provides an interface to the `RuNNer 2
 <https://gitlab.com/runner-suite/runner2>`_ (Ruhr University Neural

@@ -1,7 +1,10 @@
 .. index:: fix propel/self
+.. index:: fix propel/self/kk
 
 fix propel/self command
 =======================
+
+Accelerator Variants: *propel/self/kk*
 
 Syntax
 """"""
@@ -125,6 +128,10 @@ in pressure computations.
    the *virial* flag is used in the
    :doc:`compute pressure <compute_pressure>` command (turning
    off temperature contributions).
+
+----------
+
+.. include:: accel_styles.rst
 
 ----------
 

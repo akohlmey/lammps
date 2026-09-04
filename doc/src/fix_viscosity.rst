@@ -170,7 +170,7 @@ The option defaults are swap = 1 and vtarget = INF.
 
 .. _Muller-Plathe2:
 
-**(Muller-Plathe)** Muller-Plathe, Phys Rev E, 59, 4894-4898 (1999).
+**(Muller-Plathe2)** Muller-Plathe, Phys Rev E, 59, 4894-4898 (1999).
 
 .. _Maginn:
 

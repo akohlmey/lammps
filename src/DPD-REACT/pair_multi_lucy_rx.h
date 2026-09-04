@@ -44,11 +44,14 @@ class PairMultiLucyRX : public Pair {
   void unpack_reverse_comm(int, int *, double *) override;
   void computeLocalDensity();
   double rho_0;
+  double memory_usage() override;
 
  protected:
+  class FixRX *rx_fix;
   enum { LOOKUP, LINEAR };
 
   int nmax;
+  double *mixWtSite1old, *mixWtSite2old, *mixWtSite1, *mixWtSite2;
 
   int tabstyle, tablength;
   struct Table {
