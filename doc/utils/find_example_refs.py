@@ -8,8 +8,10 @@ Modes:
                      inserting one "Example input scripts available: ..."
                      line right after the first Examples code block.
   --check            Verify every examples/ path mentioned in doc/src/*.rst
-                     resolves to a real file or directory.  Problems are
-                     reported as "file:line:col: warning: ..." so the output
+                     resolves to a real file or directory and is not nested
+                     more deeply than examples/PACKAGES/<package>/<case>
+                     (see MAX_DEPTH below).  Problems are reported as
+                     "file:line:col: warning: ..." so the output
                      can be used from an editor's compilation mode (e.g.
                      Emacs M-x compile) to jump to the offending location.
   --count            Count in how many example input scripts each style or
@@ -177,6 +179,13 @@ EXAMPLES_REF = re.compile(r'examples/[A-Za-z0-9_./+-]+')
 
 # Editor backup and patch leftovers; never proposed as replacement targets.
 JUNK_SUFFIXES = ('~', '.bak', '.orig', '.rej')
+
+# Deepest folder nesting a documented example path may have, counted in
+# path components including "examples" itself: examples/PACKAGES/<package>/
+# <test-case> or examples/<package>/<test-case>.  Deeper paths make the
+# documentation hard to read; the examples tree should be flattened instead,
+# typically by combining several folder names into one longer name.
+MAX_DEPTH = 4
 
 HEADING_UNDERLINE = re.compile(r'^[\"\-=^~+*#`\']+$')
 
@@ -559,6 +568,16 @@ def ref_exists(repo_root, ref):
     return (repo_root / ref).exists()
 
 
+def excess_depth(repo_root, ref):
+    """Return the number of folder levels of an existing examples/ reference
+    if it exceeds MAX_DEPTH, else 0.  A file name or glob pattern at the
+    end does not count as a folder level."""
+    parts = ref.rstrip('/').split('/')
+    if '*' in parts[-1] or (repo_root / ref).is_file():
+        parts = parts[:-1]
+    return len(parts) if len(parts) > MAX_DEPTH else 0
+
+
 def location(rst, lineno, start):
     """Compiler-style 'file:line:col' message prefix.  The file name is
     given relative to the current directory, which is what editors resolve
@@ -572,15 +591,20 @@ def location(rst, lineno, start):
 
 def cmd_check(repo_root):
     doc_dir = repo_root / 'doc' / 'src'
-    missing = 0
+    problems = 0
     for rst, lineno, start, end, ref in iter_example_refs(doc_dir):
-        if ref_exists(repo_root, ref):
-            continue
-        missing += 1
-        print(f'{location(rst, lineno, start)}: warning: '
-              f'example path not found: {ref}')
-    if missing:
-        print(f'{missing} example reference(s) do not resolve.')
+        loc = location(rst, lineno, start)
+        if not ref_exists(repo_root, ref):
+            problems += 1
+            print(f'{loc}: warning: example path not found: {ref}')
+        elif depth := excess_depth(repo_root, ref):
+            problems += 1
+            print(f'{loc}: warning: example path has {depth} folder levels '
+                  f'(max {MAX_DEPTH}), the examples tree should be '
+                  f'flattened: {ref}')
+    if problems:
+        print(f'{problems} problem(s) with examples/ paths in '
+              'doc/src/*.rst.')
         sys.exit(1)
     print('All examples/ paths in doc/src/*.rst resolve.')
 
@@ -745,15 +769,25 @@ def cmd_update(repo_root):
     updated = 0
     unresolved = 0
     for rst, lineno, start, end, ref in iter_example_refs(doc_dir):
-        if ref_exists(repo_root, ref):
-            continue
         loc = location(rst, lineno, start)
+        if ref_exists(repo_root, ref):
+            if depth := excess_depth(repo_root, ref):
+                unresolved += 1
+                print(f'{loc}: warning: example path has {depth} folder '
+                      f'levels (max {MAX_DEPTH}), the examples tree should '
+                      f'be flattened: {ref}')
+            continue
         if '*' in ref:
             print(f'{loc}: warning: no files match pattern: {ref}')
             unresolved += 1
             continue
         new, cands = tree.resolve(ref)
-        if new:
+        if new and (depth := excess_depth(repo_root, new)):
+            unresolved += 1
+            print(f'{loc}: warning: {ref} moved to {new}, which has {depth} '
+                  f'folder levels (max {MAX_DEPTH}); not updated, the '
+                  'examples tree should be flattened instead')
+        elif new:
             edits[rst].append((lineno, start, end, new))
             updated += 1
             print(f'{loc}: note: {ref} -> {new}')
