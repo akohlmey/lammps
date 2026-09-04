@@ -93,6 +93,7 @@ folder.  The following ``make`` commands are available:
    make package_check # check for complete and consistent package lists
    make char_check    # check for non-ASCII characters
    make role_check    # check for misformatted role keywords
+   make example_check # check for broken or missing links to examples
 
    make link_check    # check for broken external URLs
    make spelling      # spell-check the manual
@@ -305,6 +306,9 @@ be multiple tests run automatically:
      Pair style entry new is missing or incomplete in pair_style.rst
      Found 6 issue(s) with style lists
 
+- A test if references to files or folders in the examples tree have
+  become broken or are too deeply nested.  The test will examine the git
+  history to detect possible renames.
 
 In addition, there is the option to run a spellcheck on the entire
 manual with ``make spelling``.  This requires `a library called enchant
@@ -314,3 +318,17 @@ the file ``lammps/doc/utils/sphinx-config/false_positives.txt``.
 
 .. _lws: https://www.lammps.org
 .. _rst: https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html
+
+Adding new references to examples can be done by first running (in the doc folder):
+
+.. code-block:: bash
+
+   python3 utils/find_example_refs.py -o updates.dat
+
+The resulting ``updates.dat`` file contains suggested edits to link to
+examples from the documentation of commands.  The file may be edited as
+needed and the changes can then be applied with:
+
+.. code-block:: bash
+
+   python3 utils/find_example_refs.py --apply updates.dat
