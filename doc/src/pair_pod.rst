@@ -74,7 +74,8 @@ the *hybrid* pair style.  The NULL values are placeholders for atom
 types that will be used with other potentials.
 
 Examples about training and using POD potentials are found in the
-directory lammps/examples/PACKAGES/pod and the Github repo https://github.com/cesmix-mit/pod-examples.
+directory ``examples/PACKAGES/pod`` and the Github repo
+https://github.com/cesmix-mit/pod-examples.
 
 ----------
 
