@@ -106,7 +106,7 @@ It can be used as a stand-alone code, launched at the same time as
 LAMMPS.  Or it can be used as a plugin library, which LAMMPS loads.  See
 the :doc:`mdi plugin <mdi>` command for how to trigger LAMMPS to load a
 plugin library.  The ``examples/mdi/README`` file and
-``examples/QUANTUM/QM-code/README`` files explain how to launch the two
+``examples/QUANTUM/<QM-code>/README`` files explain how to launch the two
 codes in either mode.
 
 ----------
