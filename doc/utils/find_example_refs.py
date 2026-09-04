@@ -330,12 +330,12 @@ def scan_examples(examples_dir, mapping):
 
 
 def has_existing_ref(rst_path):
-    """True if the .rst already mentions examples/ in any form."""
+    """True if the .rst already mentions an examples/ path."""
     try:
         text = Path(rst_path).read_text(errors='ignore')
     except OSError:
         return True
-    return bool(EXAMPLES_REF.search(text))
+    return any(True for line in text.splitlines() for _ in refs_in_line(line))
 
 
 def rank_candidates(candidates, repo_root):
@@ -531,34 +531,43 @@ def cmd_apply(repo_root, mapping_file):
                      f'NoSection: {failed}  BadPath: {bad_path}\n')
 
 
+def refs_in_line(line):
+    """Yield (start, end, ref) for every examples/ path mentioned in one
+    line of text.  start/end delimit the reference within the line
+    (0-based, half-open) so that it can be replaced in place.  A trailing
+    '*' is kept (glob pattern); trailing sentence punctuation is dropped.
+    Two kinds of matches are not paths in the examples/ tree and are
+    skipped: paths inside URLs (e.g. links to the examples section of the
+    LAMMPS website) and the python/examples/ folder of the LAMMPS Python
+    module, which holds Python scripts and Jupyter notebooks."""
+    for m in EXAMPLES_REF.finditer(line):
+        word = re.split(r'[\s`<]', line[:m.start()])[-1]
+        if ('://' in word) or word.endswith('python/'):
+            continue
+        ref = m.group(0)
+        end = m.end()
+        if end < len(line) and line[end] == '*':
+            ref += '*'
+            end += 1
+        else:
+            stripped = ref.rstrip('.,;:')
+            end -= len(ref) - len(stripped)
+            ref = stripped
+        yield m.start(), end, ref
+
+
 def iter_example_refs(doc_dir):
     """Yield (rst_path, lineno, start, end, ref) for every examples/ path
-    mentioned in doc/src/*.rst.  lineno is 1-based; start/end delimit the
-    reference within the line (0-based, half-open) so that it can be
-    replaced in place.  A trailing '*' is kept (glob pattern); trailing
-    sentence punctuation is dropped.  Paths inside URLs (e.g. links to the
-    examples section of the LAMMPS website) are not repository paths and
-    are skipped."""
+    mentioned in doc/src/*.rst; lineno is 1-based, the rest is as returned
+    by refs_in_line()."""
     for rst in sorted(doc_dir.glob('*.rst')):
         try:
             lines = rst.read_text(errors='ignore').splitlines()
         except OSError:
             continue
         for lineno, line in enumerate(lines, 1):
-            for m in EXAMPLES_REF.finditer(line):
-                word = re.split(r'[\s`<]', line[:m.start()])[-1]
-                if '://' in word:
-                    continue
-                ref = m.group(0)
-                end = m.end()
-                if end < len(line) and line[end] == '*':
-                    ref += '*'
-                    end += 1
-                else:
-                    stripped = ref.rstrip('.,;:')
-                    end -= len(ref) - len(stripped)
-                    ref = stripped
-                yield rst, lineno, m.start(), end, ref
+            for start, end, ref in refs_in_line(line):
+                yield rst, lineno, start, end, ref
 
 
 def ref_exists(repo_root, ref):
