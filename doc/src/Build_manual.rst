@@ -310,6 +310,8 @@ be multiple tests run automatically:
   become broken or are too deeply nested.  The test will examine the git
   history to detect possible renames.
 
+------
+
 In addition, there is the option to run a spellcheck on the entire
 manual with ``make spelling``.  This requires `a library called enchant
 <https://github.com/rrthomas/enchant>`_.  To avoid printing out *false
@@ -318,6 +320,8 @@ the file ``lammps/doc/utils/sphinx-config/false_positives.txt``.
 
 .. _lws: https://www.lammps.org
 .. _rst: https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html
+
+------
 
 Adding new references to examples can be done by first running (in the doc folder):
 

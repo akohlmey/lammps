@@ -40,6 +40,8 @@ Examples
    special_bonds lj/coul 0.0 0.0 0.5 angle yes dihedral yes
    special_bonds lj 0.0 0.0 0.5 coul 0.0 0.0 0.0 dihedral yes
 
+Example input scripts available: examples/micelle/in.micelle, examples/charmmfsw/in.charmmfsw, examples/dreiding/in.dreiding
+
 Description
 """""""""""
 
