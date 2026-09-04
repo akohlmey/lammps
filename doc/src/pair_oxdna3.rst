@@ -149,11 +149,10 @@ for a detailed description of the oxDNA3 force field.
    binary restart files produced with :doc:`write_restart <write_restart>`.
 
 Example input and data files for DNA duplexes can be found in
-``examples/PACKAGES/cgdna/examples/lj_units/oxDNA3/`` or in the
-corresponding folder for real units.
-A simple python setup tool which creates single straight or helical DNA
-strands, DNA duplexes or arrays of DNA duplexes can be found in
-``examples/PACKAGES/cgdna/util/``.
+``examples/PACKAGES/cgdna/examples/`` or in the corresponding folder for
+real units.  A simple python setup tool which creates single straight or
+helical DNA strands, DNA duplexes or arrays of DNA duplexes can be found
+in ``examples/PACKAGES/cgdna/util/``.
 
 ----------
 
