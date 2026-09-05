@@ -46,6 +46,30 @@ if(BUILD_TOOLS)
   add_dependencies(tools msi2lmp phana)
 endif()
 
+#########################################################################
+# add custom target nsis to build LAMMPS installer packages for Windows #
+#########################################################################
+
+find_program(MINGW_CMAKE mingw64-cmake)
+find_program(MINGW_CXX x86_64-w64-mingw32-g++)
+find_package(Python COMPONENTS Interpreter QUIET)
+if(MINGW_CMAKE AND MINGW_CXX AND Python_EXECUTABLE)
+  add_custom_target(nsis
+    COMMAND ${Python_EXECUTABLE} "${LAMMPS_PACKAGING_DIR}/cmake-win-on-linux.py" -p no -y no
+    COMMAND ${Python_EXECUTABLE} "${LAMMPS_PACKAGING_DIR}/cmake-win-on-linux.py" -p no -y yes
+    COMMAND ${Python_EXECUTABLE} "${LAMMPS_PACKAGING_DIR}/cmake-win-on-linux.py" -p ms -y no
+    COMMAND ${Python_EXECUTABLE} "${LAMMPS_PACKAGING_DIR}/cmake-win-on-linux.py" -p ms -y yes
+    COMMAND ${Python_EXECUTABLE} "${LAMMPS_PACKAGING_DIR}/cmake-win-on-linux.py" -p no -y no -u yes
+  )
+else()
+  add_custom_target(nsis
+    ${CMAKE_COMMAND} -E echo "The Mingw64 cross-compiler build environment required to build Windows installer packages is not available. Skipping.")
+endif()
+
+#########################################################################
+# add custom targets to build LAMMPS-GUI and packages with it and LAMMPS#
+#########################################################################
+
 if(BUILD_LAMMPS_GUI)
   include(ExternalProject)
   if(NOT BUILD_SHARED_LIBS)
