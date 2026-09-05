@@ -516,7 +516,9 @@ def cmd_apply(repo_root, mapping_file):
             sys.stderr.write(f'WARN {rst}: missing paths {missing}\n')
             bad_path += 1
             continue
-        ref = ', '.join(paths)
+        # wrap each path string in double backticks
+        ref = ', '.join([f"``{p}``" for p in paths])
+
         if insert_reference(rst_path, ref):
             applied += 1
         else:
