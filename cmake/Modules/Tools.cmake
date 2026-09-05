@@ -52,7 +52,7 @@ if(BUILD_LAMMPS_GUI)
     message(FATAL_ERROR "Building LAMMPS-GUI currently requires setting -D BUILD_SHARED_LIBS=ON")
   endif()
   # hack to support multi-arch builds for external project
-  if("${CMAKE_SYSTEM_NAME}" STEQUAL "Darwin")
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     list(JOIN CMAKE_OSX_ARCHITECTURES , MACOSX_ARCHS)
   endif()
   # When building LAMMPS-GUI with LAMMPS we don't support plugin mode and don't include docs.
