@@ -102,13 +102,9 @@ TRIVIAL = {
 
     # Bond/angle/dihedral/improper boilerplate
     ('bond', 'harmonic'), ('bond', 'none'), ('bond', 'zero'),
-    ('bond', 'hybrid'),
     ('angle', 'harmonic'), ('angle', 'none'), ('angle', 'zero'),
-    ('angle', 'hybrid'),
     ('dihedral', 'harmonic'), ('dihedral', 'none'), ('dihedral', 'zero'),
-    ('dihedral', 'hybrid'),
     ('improper', 'harmonic'), ('improper', 'none'), ('improper', 'zero'),
-    ('improper', 'hybrid'),
 
     # KSpace
     ('kspace', 'pppm'),
