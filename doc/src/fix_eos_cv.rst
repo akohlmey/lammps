@@ -21,7 +21,7 @@ Examples
 
    fix 1 all eos/cv 0.01
 
-Example input scripts available: examples/PACKAGES/dpd-react/dpde-shardlow/in.dpde-shardlow, examples/PACKAGES/dpd-react/dpdh-shardlow/in.dpdh-shardlow, examples/PACKAGES/dpd-react/dpde-vv/in.dpde-vv
+Example input scripts available: ``examples/PACKAGES/dpd-react/dpde-shardlow/in.dpde-shardlow``, ``examples/PACKAGES/dpd-react/dpdh-shardlow/in.dpdh-shardlow``, ``examples/PACKAGES/dpd-react/dpde-vv/in.dpde-vv``
 
 Description
 """""""""""

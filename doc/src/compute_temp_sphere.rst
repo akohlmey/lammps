@@ -35,7 +35,7 @@ Examples
    compute myTemp mobile temp/sphere bias tempCOM
    compute myTemp mobile temp/sphere dof rotate
 
-Example input scripts available: examples/granregion/in.granregion.box, examples/pour/in.pour.2d.molecule, examples/ASPHERE/dimer/in.dimer
+Example input scripts available: ``examples/granregion/in.granregion.box``, ``examples/pour/in.pour.2d.molecule``, ``examples/ASPHERE/dimer/in.dimer``
 
 Description
 """""""""""

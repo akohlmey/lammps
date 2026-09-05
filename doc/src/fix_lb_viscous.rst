@@ -20,7 +20,7 @@ Examples
 
    fix 1 flow lb/viscous
 
-Example input scripts available: examples/PACKAGES/latboltz/planewall/in.planewall, examples/PACKAGES/latboltz/confined_colloid/in.confined_colloids, examples/PACKAGES/latboltz/polymer/in.polymer
+Example input scripts available: ``examples/PACKAGES/latboltz/planewall/in.planewall``, ``examples/PACKAGES/latboltz/confined_colloid/in.confined_colloids``, ``examples/PACKAGES/latboltz/polymer/in.polymer``
 
 Description
 """""""""""

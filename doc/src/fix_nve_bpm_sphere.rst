@@ -30,7 +30,7 @@ Examples
    fix 1 all nve/bpm/sphere
    fix 1 all nve/bpm/sphere disc
 
-Example input scripts available: examples/bpm/pour/in.bpm.pour, examples/bpm/metamaterial/in.bpm.metamaterial, examples/bpm/impact/in.bpm.impact.rotational
+Example input scripts available: ``examples/bpm/pour/in.bpm.pour``, ``examples/bpm/metamaterial/in.bpm.metamaterial``, ``examples/bpm/impact/in.bpm.impact.rotational``
 
 Description
 """""""""""

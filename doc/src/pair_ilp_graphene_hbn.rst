@@ -32,7 +32,7 @@ Examples
    pair_coeff  1 2 coul/shield 0.695
    pair_coeff  2 2 coul/shield 0.69
 
-Example input scripts available: examples/PACKAGES/interlayer/ilp_graphene_hbn
+Example input scripts available: ``examples/PACKAGES/interlayer/ilp_graphene_hbn``
 
 Description
 """""""""""

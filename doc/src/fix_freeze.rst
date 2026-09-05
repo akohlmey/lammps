@@ -23,7 +23,7 @@ Examples
 
    fix 2 bottom freeze
 
-Example input scripts available: examples/granular/in.sync_verlet, examples/ASPHERE/superellipsoid_gran/in.ellipsoid_gran
+Example input scripts available: ``examples/granular/in.sync_verlet``, ``examples/ASPHERE/superellipsoid_gran/in.ellipsoid_gran``
 
 Description
 """""""""""

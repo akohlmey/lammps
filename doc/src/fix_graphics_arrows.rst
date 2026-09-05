@@ -54,7 +54,7 @@ Examples
    fix vec all graphics/arrows 100 variable v_xnorm v_znorm 0.0 0.066
    fix vec all graphics/arrows 100 chunk molchunk com dip 1.0 0.05
 
-Example input scripts available: examples/GRAPHICS/in.water-arrows
+Example input scripts available: ``examples/GRAPHICS/in.water-arrows``
 
 Description
 """""""""""

@@ -54,7 +54,7 @@ Examples
    fix 4 sol ilves 1.0e-8 25 0 t 1 m 1.008 store yes
    fix 5 co2 ilves 1.0e-8 25 0 b 1 a 1 linearangle restrain 170 kbond 2000
 
-Example input scripts available: examples/PACKAGES/ilves
+Example input scripts available: ``examples/PACKAGES/ilves``
 
 Description
 """""""""""

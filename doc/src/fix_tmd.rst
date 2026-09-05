@@ -25,7 +25,7 @@ Examples
    fix 1 all nve
    fix 2 tmdatoms tmd 1.0 target_file 100 tmd_dump_file
 
-Example input scripts available: examples/PACKAGES/tmd/in.tmd
+Example input scripts available: ``examples/PACKAGES/tmd/in.tmd``
 
 Description
 """""""""""

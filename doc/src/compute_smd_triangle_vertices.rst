@@ -20,7 +20,7 @@ Examples
 
    compute 1 all smd/triangle/vertices
 
-Example input scripts available: examples/PACKAGES/machdyn/funnel_flow/in.funnel_flow
+Example input scripts available: ``examples/PACKAGES/machdyn/funnel_flow/in.funnel_flow``
 
 Description
 """""""""""

@@ -33,7 +33,7 @@ Examples
    compute mliap model linear descriptor sna Ta06A.mliap.descriptor
    compute mliap model linear descriptor ace H_N_O_ccs.yace gradgradflag 1
 
-Example input scripts available: examples/mliap
+Example input scripts available: ``examples/mliap``
 
 Description
 """""""""""

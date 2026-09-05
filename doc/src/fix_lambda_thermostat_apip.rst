@@ -34,7 +34,7 @@ Examples
    fix 2 all lambda_thermostat/apip seed 42
    fix 2 all lambda_thermostat/apip seed 42 store_atomic_forces 1000
 
-Example input scripts available: examples/PACKAGES/apip/in.surface.balance, examples/PACKAGES/apip/in.vacancy.dynamic.lambda
+Example input scripts available: ``examples/PACKAGES/apip/in.surface.balance``, ``examples/PACKAGES/apip/in.vacancy.dynamic.lambda``
 
 Description
 """""""""""

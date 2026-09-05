@@ -34,7 +34,7 @@ Examples
    fix 1 all qeq/rel/reaxff 1 0.0 10.0 1.0e-6 reaxff exp.qeqr
    fix 1 all qeq/rel/reaxff 1 0.0 10.0 1.0e-6 params.qeqr exp.qeqr scale 1.5 maxiter 500 nowarn
 
-Example input scripts available: examples/reaxff/water/in.water.qeqr, examples/reaxff/water/in.water.qeqr.field
+Example input scripts available: ``examples/reaxff/water/in.water.qeqr``, ``examples/reaxff/water/in.water.qeqr.field``
 
 Description
 """""""""""

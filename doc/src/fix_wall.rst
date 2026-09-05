@@ -156,7 +156,7 @@ Examples
    fix xwalls mobile wall/lepton xlo -5.0 "k*(r-rc)^2;k=100.0" 4.0 xhi 5.0 "k*(r-rc)^2;k=100.0" 4.0
 
 
-Example input scripts available: examples/controller/in.controller.wall, examples/balance/in.balance, examples/wall/in.wall.harmonic.outside.2d
+Example input scripts available: ``examples/controller/in.controller.wall``, ``examples/balance/in.balance``, ``examples/wall/in.wall.harmonic.outside.2d``
 
 Description
 """""""""""

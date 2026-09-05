@@ -80,7 +80,7 @@ Examples
    pair_style eam/he
    pair_coeff * * PdHHe.eam.he Pd H He
 
-Example input scripts available: examples/ttm/in.ttm.thermal, examples/streitz/in.ctip, examples/ttm/in.ttm
+Example input scripts available: ``examples/ttm/in.ttm.thermal``, ``examples/streitz/in.ctip``, ``examples/ttm/in.ttm``
 
 Description
 """""""""""

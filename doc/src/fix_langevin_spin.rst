@@ -23,7 +23,7 @@ Examples
 
    fix 2 all langevin/spin 300.0 0.01 21
 
-Example input scripts available: examples/SPIN/read_restart/in.spin.read_data, examples/SPIN/gneb/skyrmion/in.gneb.skyrmion, examples/SPIN/read_restart/in.spin.restart
+Example input scripts available: ``examples/SPIN/read_restart/in.spin.read_data``, ``examples/SPIN/gneb/skyrmion/in.gneb.skyrmion``, ``examples/SPIN/read_restart/in.spin.restart``
 
 Description
 """""""""""

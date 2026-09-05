@@ -32,7 +32,7 @@ Examples
    fix vec all graphics/periodic 10 ylo zhi zlo yhi xlo
    fix vec all graphics/periodic 1000 ylo zhi zlo yhi bonds no radius 0.5
 
-Example input scripts available: examples/GRAPHICS/in.peptide-depth
+Example input scripts available: ``examples/GRAPHICS/in.peptide-depth``
 
 Description
 """""""""""

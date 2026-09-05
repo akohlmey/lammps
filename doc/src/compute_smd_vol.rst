@@ -20,7 +20,7 @@ Examples
 
    compute 1 all smd/vol
 
-Example input scripts available: examples/PACKAGES/machdyn/fluid_structure_interaction/in.fluid_structure_interaction
+Example input scripts available: ``examples/PACKAGES/machdyn/fluid_structure_interaction/in.fluid_structure_interaction``
 
 Description
 """""""""""

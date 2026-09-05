@@ -34,7 +34,7 @@ Examples
    compute 1 all property/grid 10 10 20 id ix iy iz
    compute 1 all property/grid 100 100 1 id xc yc zc
 
-Example input scripts available: examples/grid/in.grid.3d, examples/grid/in.grid.2d
+Example input scripts available: ``examples/grid/in.grid.3d``, ``examples/grid/in.grid.2d``
 
 Description
 """""""""""

@@ -59,7 +59,7 @@ Examples
    delete_atoms random count 500 no ions NULL 482793
    delete_atoms variable checkers
 
-Example input scripts available: examples/multi/in.granular, examples/multi/in.colloid, examples/fire/in.neb.sivac.abcfire_mod
+Example input scripts available: ``examples/multi/in.granular``, ``examples/multi/in.colloid``, ``examples/fire/in.neb.sivac.abcfire_mod``
 
 Description
 """""""""""

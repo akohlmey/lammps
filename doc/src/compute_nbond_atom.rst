@@ -28,7 +28,7 @@ Examples
    compute 1 all nbond/atom
    compute 1 all nbond/atom bond/type 2
 
-Example input scripts available: examples/bpm/pour/in.bpm.pour, examples/bpm/impact/in.bpm.impact.rotational, examples/bpm/impact/in.bpm.impact.spring
+Example input scripts available: ``examples/bpm/pour/in.bpm.pour``, ``examples/bpm/impact/in.bpm.impact.rotational``, ``examples/bpm/impact/in.bpm.impact.spring``
 
 Description
 """""""""""

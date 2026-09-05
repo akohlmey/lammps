@@ -30,7 +30,7 @@ Examples
    pair_coeff 2 2 78.0 4.5 yes
 
 
-Example input scripts available: examples/PACKAGES/dpd-basic/dpd_coul_slater_long/in.dpd_coul_slater_long
+Example input scripts available: ``examples/PACKAGES/dpd-basic/dpd_coul_slater_long/in.dpd_coul_slater_long``
 
 Description
 """""""""""

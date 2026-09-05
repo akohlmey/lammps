@@ -30,7 +30,7 @@ Examples
    labelmap atom 2 H
    pair_coeff C H 1.0 1.0 2.5
 
-Example input scripts available: examples/melt/in.melt, examples/tersoff/in.tersoff, examples/rdf-adf/in.spce
+Example input scripts available: ``examples/melt/in.melt``, ``examples/tersoff/in.tersoff``, ``examples/rdf-adf/in.spce``
 
 Description
 """""""""""

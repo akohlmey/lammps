@@ -38,7 +38,7 @@ Examples
    fix 2 water box/relax aniso 0.0 dilate partial
    fix 2 ice box/relax tri 0.0 couple xy nreset 100
 
-Example input scripts available: examples/streitz/in.ctip, examples/comb/in.comb.HfO2, examples/streitz/in.gan
+Example input scripts available: ``examples/streitz/in.ctip``, ``examples/comb/in.comb.HfO2``, ``examples/streitz/in.gan``
 
 Description
 """""""""""

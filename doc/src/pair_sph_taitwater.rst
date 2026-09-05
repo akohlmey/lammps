@@ -21,7 +21,7 @@ Examples
    pair_style sph/taitwater
    pair_coeff * * 1000.0 1430.0 1.0 2.4
 
-Example input scripts available: examples/grid/in.sph
+Example input scripts available: ``examples/grid/in.sph``
 
 Description
 """""""""""

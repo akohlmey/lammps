@@ -20,7 +20,7 @@ Examples
 
    compute 1 all smd/ulsph/num/neighs
 
-Example input scripts available: examples/PACKAGES/machdyn/funnel_flow/in.funnel_flow, examples/PACKAGES/machdyn/fluid_structure_interaction/in.fluid_structure_interaction
+Example input scripts available: ``examples/PACKAGES/machdyn/funnel_flow/in.funnel_flow``, ``examples/PACKAGES/machdyn/fluid_structure_interaction/in.fluid_structure_interaction``
 
 Description
 """""""""""

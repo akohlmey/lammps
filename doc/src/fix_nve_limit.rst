@@ -24,7 +24,7 @@ Examples
 
    fix 1 all nve/limit 0.1
 
-Example input scripts available: examples/PACKAGES/gauss_diel
+Example input scripts available: ``examples/PACKAGES/gauss_diel``
 
 Description
 """""""""""

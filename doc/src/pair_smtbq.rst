@@ -18,7 +18,7 @@ Examples
    pair_style smtbq
    pair_coeff * * ffield.smtbq.Al2O3 O Al
 
-Example input scripts available: examples/PACKAGES/smtbq
+Example input scripts available: ``examples/PACKAGES/smtbq``
 
 Description
 """""""""""

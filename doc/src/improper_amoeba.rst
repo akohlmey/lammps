@@ -18,7 +18,7 @@ Examples
    improper_style amoeba
    improper_coeff 1 49.6
 
-Example input scripts available: examples/amoeba/in.ubiquitin
+Example input scripts available: ``examples/amoeba/in.ubiquitin``
 
 Description
 """""""""""

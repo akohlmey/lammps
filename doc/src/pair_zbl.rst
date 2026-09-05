@@ -27,7 +27,7 @@ Examples
    pair_coeff * * 73.0 73.0
    pair_coeff 1 1 14.0 14.0
 
-Example input scripts available: examples/snap/in.C_SNAP, examples/snap/in.snap.WBe.PRB2019, examples/snap/in.snap.hybrid.WSNAP.HePair
+Example input scripts available: ``examples/snap/in.C_SNAP``, ``examples/snap/in.snap.WBe.PRB2019``, ``examples/snap/in.snap.hybrid.WSNAP.HePair``
 
 Description
 """""""""""

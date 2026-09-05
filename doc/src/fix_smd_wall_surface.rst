@@ -28,7 +28,7 @@ Examples
 
    fix stl_surf all smd/wall_surface tool.stl 2 65535
 
-Example input scripts available: examples/PACKAGES/machdyn/funnel_flow/in.funnel_flow
+Example input scripts available: ``examples/PACKAGES/machdyn/funnel_flow/in.funnel_flow``
 
 Description
 """""""""""

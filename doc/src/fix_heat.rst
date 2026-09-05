@@ -35,7 +35,7 @@ Examples
    fix 3 qin heat 10 v_flux
    fix 4 qout heat 1 -1.0 region top
 
-Example input scripts available: examples/KAPPA/in.heat
+Example input scripts available: ``examples/KAPPA/in.heat``
 
 Description
 """""""""""

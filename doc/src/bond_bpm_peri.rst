@@ -36,7 +36,7 @@ Examples
    bond_coeff 1 ves 14.9e9 14.9e9 0.5 0.001 0.0015001 0.0005 0.25
    bond_coeff 1 eps 14.9e9 14.9e9 118.43 0.0015001 0.0005 0.25
 
-Example input scripts available: examples/bpm/peri
+Example input scripts available: ``examples/bpm/peri``
 
 Description
 """""""""""

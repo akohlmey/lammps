@@ -46,7 +46,7 @@ Examples
    pair_coeff * *
    pair_coeff 1 1 5.0
 
-Example input scripts available: examples/PACKAGES/slater/in.slater
+Example input scripts available: ``examples/PACKAGES/slater/in.slater``
 
 Description
 """""""""""

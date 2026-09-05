@@ -47,7 +47,7 @@ Examples
    pair_style peri/eps
    pair_coeff * * 14.9e9 14.9e9 0.0015001 0.0005 0.25 118.43
 
-Example input scripts available: examples/peri
+Example input scripts available: ``examples/peri``
 
 Description
 """""""""""

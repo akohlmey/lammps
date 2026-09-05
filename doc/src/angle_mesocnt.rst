@@ -21,7 +21,7 @@ Examples
    angle_coeff 2 buckling custom 400.0 50.0 5.0
    angle_coeff 1 harmonic custom 300.0
 
-Example input scripts available: examples/PACKAGES/mesont/in.film_mesocnt
+Example input scripts available: ``examples/PACKAGES/mesont/in.film_mesocnt``
 
 Description
 """""""""""

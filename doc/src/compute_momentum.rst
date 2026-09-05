@@ -20,7 +20,7 @@ Examples
 
    compute 1 all momentum
 
-Example input scripts available: examples/PACKAGES/momentum/in.momentum
+Example input scripts available: ``examples/PACKAGES/momentum/in.momentum``
 
 Description
 """""""""""

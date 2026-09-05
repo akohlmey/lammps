@@ -31,7 +31,7 @@ Examples
    pair_coeff * * PO.nb3b.screened P NULL O
    pair_coeff * * SiOH.nb3b.screened Si O H
 
-Example input scripts available: examples/nb3b/in.nb3b.screened, examples/nb3b/in.nb3b
+Example input scripts available: ``examples/nb3b/in.nb3b.screened``, ``examples/nb3b/in.nb3b``
 
 Description
 """""""""""

@@ -32,7 +32,7 @@ Examples
    compute myTemp mobile temp/asphere bias tempCOM
    compute myTemp mobile temp/asphere dof rotate
 
-Example input scripts available: examples/ASPHERE/vesicle/in.vesicle, examples/ellipse/in.ellipse.gayberne, examples/ellipse/in.ellipse.resquared
+Example input scripts available: ``examples/ASPHERE/vesicle/in.vesicle``, ``examples/ellipse/in.ellipse.gayberne``, ``examples/ellipse/in.ellipse.resquared``
 
 Description
 """""""""""

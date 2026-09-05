@@ -24,7 +24,7 @@ Examples
    fix 1 all rheo/oxidation 1.5 2 0.0
    fix 1 all rheo/oxidation 1.0 1 2.0
 
-Example input scripts available: examples/rheo/oxidation/in.rheo.oxidation
+Example input scripts available: ``examples/rheo/oxidation/in.rheo.oxidation``
 
 Description
 """""""""""

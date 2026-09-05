@@ -25,7 +25,7 @@ Examples
    compute 1 all ptm/atom fcc-hcp-dcub-dhex 0.15 all
    compute 1 all ptm/atom all 0
 
-Example input scripts available: examples/PACKAGES/ptm/in.ptm
+Example input scripts available: ``examples/PACKAGES/ptm/in.ptm``
 
 Description
 """""""""""
