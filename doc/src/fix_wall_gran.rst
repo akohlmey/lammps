@@ -79,6 +79,8 @@ Examples
    variable zhi equal ramp(20.0,15.0)
    fix 7 all wall/gran hooke 200000.0 NULL 50.0 NULL 0.5 0 zplane 0.0 v_zhi
 
+Example input scripts available: examples/granular/in.sync_verlet, examples/bpm/pour/in.bpm.pour, examples/pour/in.pour
+
 Description
 """""""""""
 

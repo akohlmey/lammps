@@ -112,6 +112,8 @@ Examples
                                      transcolor none framecolor white backcolor darkgray tics 12
    fix bnd all graphics/labels 200 colorscale viz "Bond Strain" 20.0 6.5 -13.0 map bond size 32 length 1000
 
+Example input scripts available: examples/GRAPHICS/in.peptide-hbonds, examples/GRAPHICS/in.breakable
+
 Description
 """""""""""
 

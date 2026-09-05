@@ -25,6 +25,8 @@ Examples
    labelmap dihedral 1 backbone
    dihedral_coeff backbone 80.0 1 3
 
+Example input scripts available: examples/template/in.molecular-mix, examples/PACKAGES/mofff/in.hkust1
+
 Description
 """""""""""
 

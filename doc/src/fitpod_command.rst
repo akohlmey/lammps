@@ -228,7 +228,7 @@ After training the POD potential, ``Ta_param.pod`` and
 ``<basename>_coefficients.pod`` are the two files needed to use the POD
 potential in LAMMPS.  See :doc:`pair_style pod <pair_pod>` for using the
 POD potential. Examples about training and using POD potentials are
-found in the directory lammps/examples/PACKAGES/pod and the Github repo
+found in the directory ``examples/PACKAGES/pod`` and the Github repo
 https://github.com/cesmix-mit/pod-examples.
 
 Loss Function Group Weights

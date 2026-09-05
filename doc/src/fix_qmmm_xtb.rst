@@ -42,6 +42,8 @@ Examples
    kspace_style pppm/xtb 1.0e-7
    fix qmmm qm qmmm/xtb elements H O Na Cl cutoff 8.0 charge 0 uhf 0
 
+Example input scripts available: examples/PACKAGES/qmmm-xtb
+
 Description
 """""""""""
 

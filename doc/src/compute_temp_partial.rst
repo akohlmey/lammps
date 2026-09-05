@@ -24,6 +24,8 @@ Examples
 
    compute newT flow temp/partial 1 1 0
 
+Example input scripts available: examples/meam/in.meam.shear, examples/shear/in.shear, examples/shear/in.shear.void
+
 Description
 """""""""""
 

@@ -117,7 +117,7 @@ control variable.  The format of the control file is described below.
    control file, the results from LAMMPS and the serial code will
    not agree.
 
-Examples using *pair_style reaxff* are provided in the examples/reax
+Examples using *pair_style reaxff* are provided in the examples/reaxff
 directory and its subdirectories.
 
 Use of this pair style requires using an :doc:`atom_style <atom_style>`
