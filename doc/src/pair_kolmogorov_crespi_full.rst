@@ -26,7 +26,7 @@ Examples
    pair_coeff * * rebo                    CH.rebo      C H
    pair_coeff * * kolmogorov/crespi/full  CH_taper.KC  C H
 
-Example input scripts available: examples/PACKAGES/interlayer/kolmogorov_crespi_full/in.bilayer-graphene
+Example input scripts available: ``examples/PACKAGES/interlayer/kolmogorov_crespi_full/in.bilayer-graphene``
 
 Description
 """""""""""

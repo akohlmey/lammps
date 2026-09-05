@@ -32,7 +32,7 @@ Examples
 
    fix 1 surface qeq/comb 10 0.0001
 
-Example input scripts available: examples/comb
+Example input scripts available: ``examples/comb``
 
 Description
 """""""""""

@@ -20,7 +20,7 @@ Examples
 
    compute 1 all dpd
 
-Example input scripts available: examples/PACKAGES/dpd-react/dpde-shardlow/in.dpde-shardlow, examples/PACKAGES/dpd-react/dpdh-shardlow/in.dpdh-shardlow, examples/PACKAGES/dpd-react/dpde-vv/in.dpde-vv
+Example input scripts available: ``examples/PACKAGES/dpd-react/dpde-shardlow/in.dpde-shardlow``, ``examples/PACKAGES/dpd-react/dpdh-shardlow/in.dpdh-shardlow``, ``examples/PACKAGES/dpd-react/dpde-vv/in.dpde-vv``
 
 Description
 """""""""""

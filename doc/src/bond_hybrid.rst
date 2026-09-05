@@ -24,6 +24,8 @@ Examples
    bond_coeff 1 harmonic 80.0 1.2
    bond_coeff 2* fene 30.0 1.5 1.0 1.0
 
+Example input scripts available: ``examples/rheo/oxidation/in.rheo.oxidation``, ``examples/PACKAGES/cgdna``
+
 Description
 """""""""""
 

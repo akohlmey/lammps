@@ -29,7 +29,7 @@ Examples
    fix 2 all atom_weight/apip 50 1e-05 0.0004 4e-06 4e-06 all
    fix 2 all atom_weight/apip 50 ace ace 4e-06 4e-06 all no_rescale
 
-Example input scripts available: examples/PACKAGES/apip
+Example input scripts available: ``examples/PACKAGES/apip``
 
 Description
 """""""""""

@@ -44,7 +44,7 @@ Examples
    rerun dump.bp dump x y z box no format adios
    rerun dump.bp dump x y z vx vy vz format adios timeout 10.0
 
-Example input scripts available: examples/rerun/in.rerun, examples/rerun/in.rdf.rerun, examples/PACKAGES/adios/rerun/in.rerun
+Example input scripts available: ``examples/rerun/in.rerun``, ``examples/rerun/in.rdf.rerun``, ``examples/PACKAGES/adios/rerun/in.rerun``
 
 Description
 """""""""""

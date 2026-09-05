@@ -30,7 +30,7 @@ Examples
    compute 1 fluid com/chunk molchunk
    compute 1 all com/chunk molchunk wrap on
 
-Example input scripts available: examples/GRAPHICS/in.water-arrows
+Example input scripts available: ``examples/GRAPHICS/in.water-arrows``
 
 Description
 """""""""""

@@ -21,7 +21,7 @@ Examples
 
    compute 1 all event/displace 0.5
 
-Example input scripts available: examples/hyper/in.hyper.global, examples/prd/in.prd, examples/tad/in.tad
+Example input scripts available: ``examples/hyper/in.hyper.global``, ``examples/prd/in.prd``, ``examples/tad/in.tad``
 
 Description
 """""""""""

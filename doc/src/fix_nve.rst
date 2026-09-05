@@ -26,7 +26,7 @@ Examples
 
    fix 1 all nve
 
-Example input scripts available: examples/melt/in.melt
+Example input scripts available: ``examples/melt/in.melt``
 
 Description
 """""""""""

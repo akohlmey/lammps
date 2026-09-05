@@ -60,7 +60,7 @@ Examples
    fix 1 all adapt/fep 1 pair soft a c1 c1 v_prefactor
 
 
-Example input scripts available: examples/PACKAGES/fep
+Example input scripts available: ``examples/PACKAGES/fep``
 
 Description
 """""""""""

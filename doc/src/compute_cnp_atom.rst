@@ -24,7 +24,7 @@ Examples
 
    compute 1 all cnp/atom 3.08
 
-Example input scripts available: examples/PACKAGES/cnp/in.cnp
+Example input scripts available: ``examples/PACKAGES/cnp/in.cnp``
 
 Description
 """""""""""

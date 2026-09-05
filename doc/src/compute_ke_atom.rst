@@ -24,7 +24,7 @@ Examples
 
    compute 1 all ke/atom
 
-Example input scripts available: examples/ttm/in.ttm.mod, examples/ttm/in.ttm.thermal, examples/ttm/in.ttm
+Example input scripts available: ``examples/ttm/in.ttm.mod``, ``examples/ttm/in.ttm.thermal``, ``examples/ttm/in.ttm``
 
 Description
 """""""""""

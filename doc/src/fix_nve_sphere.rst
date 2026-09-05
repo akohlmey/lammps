@@ -36,7 +36,7 @@ Examples
    fix 1 all nve/sphere disc
    fix 1 all nve/sphere update dipole/dlm
 
-Example input scripts available: examples/granular/in.sync_verlet, examples/multi/in.powerlaw, examples/dipole/in.dipole
+Example input scripts available: ``examples/granular/in.sync_verlet``, ``examples/multi/in.powerlaw``, ``examples/dipole/in.dipole``
 
 Description
 """""""""""

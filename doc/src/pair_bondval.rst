@@ -58,7 +58,7 @@ A three-element perovskite BaTiO3 system:
    pair_coeff 2 3 bondval/vec 1.7980000 5.2000000 0.0000000 0.0000000
    pair_coeff 3 3 bondval/vec 0.0000000 5.0000000 0.2800600 0.3165100
 
-Example input scripts available: examples/PACKAGES/bondval/in.hexbto
+Example input scripts available: ``examples/PACKAGES/bondval/in.hexbto``
 
 Description
 """""""""""

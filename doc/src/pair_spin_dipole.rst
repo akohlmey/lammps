@@ -31,7 +31,7 @@ Examples
    pair_coeff * * 10.0
    pair_coeff 2 3 6.0
 
-Example input scripts available: examples/SPIN/dipole_spin
+Example input scripts available: ``examples/SPIN/dipole_spin``
 
 Description
 """""""""""

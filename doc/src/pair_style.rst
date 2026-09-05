@@ -24,7 +24,7 @@ Examples
    pair_style table linear 1000
    pair_style none
 
-Example input scripts available: examples/melt/in.melt, examples/peptide/in.peptide, examples/tersoff/in.tersoff
+Example input scripts available: ``examples/melt/in.melt``, ``examples/peptide/in.peptide``, ``examples/tersoff/in.tersoff``
 
 Description
 """""""""""

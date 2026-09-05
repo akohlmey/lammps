@@ -41,7 +41,7 @@ Examples
    pair_coeff * * lj/cut 1.0 1.0
    pair_coeff * * 4.5 4.5 0.5 0.5 1.2
 
-Example input scripts available: examples/PACKAGES/dpd-basic/dpdext_tstat/in.dpdext_tstat, examples/PACKAGES/dpd-basic/dpdext/in.dpdext
+Example input scripts available: ``examples/PACKAGES/dpd-basic/dpdext_tstat/in.dpdext_tstat``, ``examples/PACKAGES/dpd-basic/dpdext/in.dpdext``
 
 Description
 """""""""""

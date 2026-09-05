@@ -49,7 +49,7 @@ Examples
    compute 1 all bond/local dist fx fy fz b1 b2
    compute 1 all bond/local dist v_distsq set dist d
 
-Example input scripts available: examples/bpm/pour/in.bpm.pour
+Example input scripts available: ``examples/bpm/pour/in.bpm.pour``
 
 Description
 """""""""""

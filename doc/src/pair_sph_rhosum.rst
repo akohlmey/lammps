@@ -20,7 +20,7 @@ Examples
    pair_style sph/rhosum 10
    pair_coeff * * 2.4
 
-Example input scripts available: examples/grid/in.sph
+Example input scripts available: ``examples/grid/in.sph``
 
 Description
 """""""""""

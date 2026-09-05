@@ -25,7 +25,7 @@ Examples
    pair_coeff * * 1.0 1.0
    pair_coeff 1 1 0.3 3.0 9.0
 
-Example input scripts available: examples/PACKAGES/hma/in.hma
+Example input scripts available: ``examples/PACKAGES/hma/in.hma``
 
 Description
 """""""""""

@@ -29,7 +29,7 @@ Examples
 
    fix 2 all gemc 100 10 20 30 1.1 0.5 100.0 29494
 
-Example input scripts available: examples/mc/in.gemc.lj
+Example input scripts available: ``examples/mc/in.gemc.lj``
 
 Description
 """""""""""

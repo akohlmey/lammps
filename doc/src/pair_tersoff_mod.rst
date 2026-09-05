@@ -42,7 +42,7 @@ Examples
    pair_style tersoff/mod/c
    pair_coeff * * Si.tersoff.modc Si Si
 
-Example input scripts available: examples/streitz/in.gan, examples/tersoff/in.tersoff
+Example input scripts available: ``examples/streitz/in.gan``, ``examples/tersoff/in.tersoff``
 
 Description
 """""""""""

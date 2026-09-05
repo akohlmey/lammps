@@ -35,7 +35,7 @@ Examples
    fix 1 damp viscous/sphere 0.5 scale 3 2.5
    fix 1 damp viscous/sphere 0.5 scale v_radscale
 
-Example input scripts available: examples/bpm/metamaterial/in.bpm.metamaterial
+Example input scripts available: ``examples/bpm/metamaterial/in.bpm.metamaterial``
 
 Description
 """""""""""

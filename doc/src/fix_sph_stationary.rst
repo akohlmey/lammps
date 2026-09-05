@@ -20,7 +20,7 @@ Examples
 
    fix 1 boundary sph/stationary
 
-Example input scripts available: examples/grid/in.sph
+Example input scripts available: ``examples/grid/in.sph``
 
 Description
 """""""""""

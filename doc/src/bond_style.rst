@@ -25,7 +25,7 @@ Examples
    bond_style fene
    bond_style hybrid harmonic fene
 
-Example input scripts available: examples/peptide/in.peptide, examples/rdf-adf/in.spce
+Example input scripts available: ``examples/peptide/in.peptide``, ``examples/rdf-adf/in.spce``
 
 Description
 """""""""""

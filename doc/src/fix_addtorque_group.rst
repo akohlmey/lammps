@@ -26,7 +26,7 @@ Examples
    fix kick bead addtorque/group 2.0 3.0 5.0
    fix kick bead addtorque/group 0.0 0.0 v_oscillate
 
-Example input scripts available: examples/PACKAGES/addtorque_group/in.addtorque
+Example input scripts available: ``examples/PACKAGES/addtorque_group/in.addtorque``
 
 Description
 """""""""""

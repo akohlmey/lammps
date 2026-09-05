@@ -21,7 +21,7 @@ Examples
    angle_style charmm
    angle_style hybrid harmonic cosine
 
-Example input scripts available: examples/peptide/in.peptide, examples/rdf-adf/in.spce
+Example input scripts available: ``examples/peptide/in.peptide``, ``examples/rdf-adf/in.spce``
 
 Description
 """""""""""

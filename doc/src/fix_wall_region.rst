@@ -43,7 +43,7 @@ Examples
    fix wall all wall/region mySphere harmonic 1.0 0.0 2.5
    fix wall all wall/region box_top morse 1.0 1.0 1.5 3.0
 
-Example input scripts available: examples/wall/in.wall.block, examples/wall/in.wall.sphere, examples/rheo/ice-cubes/in.rheo.ice.cubes
+Example input scripts available: ``examples/wall/in.wall.block``, ``examples/wall/in.wall.sphere``, ``examples/rheo/ice-cubes/in.rheo.ice.cubes``
 
 Description
 """""""""""

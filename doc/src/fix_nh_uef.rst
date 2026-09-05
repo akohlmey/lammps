@@ -41,7 +41,7 @@ Examples
    fix uniax_npt all npt/uef temp 400 400 300 iso 1 1 3000 erate 0.00001 -0.000005 ext yz
    fix biax_npt all npt/uef temp 400 400 100 erate -0.00001 0.000005 x 1 1 3000
 
-Example input scripts available: examples/PACKAGES/uef/nvt_uniaxial/in.nvt_uniaxial, examples/PACKAGES/uef/npt_biaxial/in.npt_biaxial
+Example input scripts available: ``examples/PACKAGES/uef/nvt_uniaxial/in.nvt_uniaxial``, ``examples/PACKAGES/uef/npt_biaxial/in.npt_biaxial``
 
 Description
 """""""""""

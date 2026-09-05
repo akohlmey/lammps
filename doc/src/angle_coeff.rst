@@ -25,7 +25,7 @@ Examples
    labelmap angle 1 hydroxyl
    angle_coeff hydroxyl 300.0 107.0
 
-Example input scripts available: examples/rdf-adf/in.spce, examples/template/in.molecular-mix
+Example input scripts available: ``examples/rdf-adf/in.spce``, ``examples/template/in.molecular-mix``
 
 Description
 """""""""""

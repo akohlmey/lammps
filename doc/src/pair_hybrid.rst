@@ -77,6 +77,8 @@ Examples
    pair_coeff 1 1 lj/cut 1.0 1.0 2.5
    pair_coeff 1 1 morse 1.0 1.0 1.0 2.5
 
+Example input scripts available: ``examples/reaxff/ci-reaxFF/in.ci-reax.CH``, ``examples/python/in.pair_python_spce``, ``examples/atm/in.atm``
+
 Description
 """""""""""
 

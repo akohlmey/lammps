@@ -39,7 +39,7 @@ Examples
    fix 1 edge setforce/spin 0.0 0.0 0.0
    fix 2 edge setforce NULL 0.0 v_oscillate
 
-Example input scripts available: examples/SPIN/setforce_spin/in.spin.setforce
+Example input scripts available: ``examples/SPIN/setforce_spin/in.spin.setforce``
 
 Description
 """""""""""

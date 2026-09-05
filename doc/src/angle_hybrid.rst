@@ -24,6 +24,8 @@ Examples
    angle_coeff 1 harmonic 80.0 30.0
    angle_coeff 2* cosine 50.0
 
+Example input scripts available: ``examples/PACKAGES/yaff/mof5/in.mof5``, ``examples/PACKAGES/yaff/mil53al/in.mil53a``, ``examples/PACKAGES/mofff/in.hkust1``
+
 Description
 """""""""""
 

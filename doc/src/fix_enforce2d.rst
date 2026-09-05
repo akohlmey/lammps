@@ -23,7 +23,7 @@ Examples
 
    fix 5 all enforce2d
 
-Example input scripts available: examples/body/in.body, examples/multi/in.powerlaw, examples/dipole/in.dipole
+Example input scripts available: ``examples/body/in.body``, ``examples/multi/in.powerlaw``, ``examples/dipole/in.dipole``
 
 Description
 """""""""""

@@ -85,7 +85,7 @@ Examples
    pair_coeff * * 100.0 1.5 200.0
    pair_coeff 1 1 100.0 1.5 200.0 9.0
 
-Example input scripts available: examples/nb3b/in.nb3b.screened, examples/qeq/in.qeq.buck, examples/QUANTUM/NWChem/in.zeolite.qmmm
+Example input scripts available: ``examples/nb3b/in.nb3b.screened``, ``examples/qeq/in.qeq.buck``, ``examples/QUANTUM/NWChem/in.zeolite.qmmm``
 
 Description
 """""""""""

@@ -37,7 +37,7 @@ Examples
 
    compute 1 all reaxff/atom bonds yes
 
-Example input scripts available: examples/reaxff/in.reaxff.tatb
+Example input scripts available: ``examples/reaxff/in.reaxff.tatb``
 
 Description
 """""""""""

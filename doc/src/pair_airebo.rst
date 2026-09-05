@@ -61,7 +61,7 @@ Examples
    pair_style rebo
    pair_coeff * * ../potentials/CH.rebo H C
 
-Example input scripts available: examples/airebo/in.airebo, examples/airebo/in.airebo-0-0, examples/airebo/in.airebo-m
+Example input scripts available: ``examples/airebo/in.airebo``, ``examples/airebo/in.airebo-0-0``, ``examples/airebo/in.airebo-m``
 
 Description
 """""""""""

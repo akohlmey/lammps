@@ -39,7 +39,7 @@ Examples
    compute 1 all orientorder/atom wl/hat yes
    compute 1 all orientorder/atom components 6
 
-Example input scripts available: examples/steinhardt
+Example input scripts available: ``examples/steinhardt``
 
 Description
 """""""""""

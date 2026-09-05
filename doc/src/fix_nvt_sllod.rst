@@ -41,7 +41,7 @@ Examples
    fix 1 all nvt/sllod temp 300.0 300.0 100.0
    fix 1 all nvt/sllod temp 300.0 300.0 100.0 drag 0.2
 
-Example input scripts available: examples/nemd/in.nemd, examples/VISCOSITY/in.nemd.2d
+Example input scripts available: ``examples/nemd/in.nemd``, ``examples/VISCOSITY/in.nemd.2d``
 
 Description
 """""""""""

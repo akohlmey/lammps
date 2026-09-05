@@ -41,7 +41,7 @@ Examples
    fix longitudinal pore spring couple ion 100.0 NULL NULL -20.0 0.0
    fix radial pore spring couple ion 100.0 0.0 0.0 NULL 5.0
 
-Example input scripts available: examples/PACKAGES/colvars/in.peptide-spring2, examples/PACKAGES/colvars/in.peptide-spring
+Example input scripts available: ``examples/PACKAGES/colvars/in.peptide-spring2``, ``examples/PACKAGES/colvars/in.peptide-spring``
 
 Description
 """""""""""

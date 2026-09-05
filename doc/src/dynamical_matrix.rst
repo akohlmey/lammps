@@ -34,7 +34,7 @@ Examples
    dynamical_matrix 3 regular 0.00004 file dynmat.dat
    dynamical_matrix 5 eskm 0.00000001 file dynamical.dat binary yes
 
-Example input scripts available: examples/PACKAGES/phonon/dynamical_matrix_command/
+Example input scripts available: ``examples/PACKAGES/phonon/dynamical_matrix_command/``
 
 Description
 """""""""""

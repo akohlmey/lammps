@@ -20,7 +20,7 @@ Examples
 
    compute 1 all smd/tlsph/shape
 
-Example input scripts available: examples/PACKAGES/machdyn/aluminum_strip_pull/in.aluminum_strip_pull
+Example input scripts available: ``examples/PACKAGES/machdyn/aluminum_strip_pull/in.aluminum_strip_pull``
 
 Description
 """""""""""

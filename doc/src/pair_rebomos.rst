@@ -23,7 +23,7 @@ Examples
    pair_style rebomos
    pair_coeff * * ../potentials/MoS.rebomos Mo S
 
-Example input scripts available: examples/threebody/
+Example input scripts available: ``examples/threebody/``
 
 Description
 """""""""""

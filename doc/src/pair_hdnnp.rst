@@ -41,7 +41,7 @@ Examples
    pair_style hdnnp 6.01 dir "./" showewsum 10000
    pair_coeff * * S Cu NULL Cu
 
-Example input scripts available: examples/PACKAGES/hdnnp/in.hdnnp, examples/PACKAGES/hdnnp/in.hybrid
+Example input scripts available: ``examples/PACKAGES/hdnnp/in.hdnnp``, ``examples/PACKAGES/hdnnp/in.hybrid``
 
 Description
 """""""""""

@@ -25,7 +25,7 @@ Examples
    labelmap improper 1 benzene
    improper_coeff benzene 300.0 0.0
 
-Example input scripts available: examples/PACKAGES/mofff/in.hkust1
+Example input scripts available: ``examples/PACKAGES/mofff/in.hkust1``
 
 Description
 """""""""""

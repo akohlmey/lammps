@@ -35,7 +35,7 @@ Examples
    pair_style comb3 polar_off
    pair_coeff * * ../potentials/ffield.comb3 O Cu N C O
 
-Example input scripts available: examples/comb
+Example input scripts available: ``examples/comb``
 
 Description
 """""""""""

@@ -24,7 +24,7 @@ Examples
    pair_style surf/granular
    pair_coeff * * hooke 1000.0 50.0 tangential linear_history 500.0 1.0 0.4 damping mass_velocity
 
-Example input scripts available: examples/gransurf
+Example input scripts available: ``examples/gransurf``
 
 Description
 """""""""""

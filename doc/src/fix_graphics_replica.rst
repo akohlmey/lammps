@@ -27,7 +27,7 @@ Examples
 
    fix sf1 water graphics/replica 200 display 1.0 average 0
 
-Example input scripts available: examples/GRAPHICS/in.peptide-pimd
+Example input scripts available: ``examples/GRAPHICS/in.peptide-pimd``
 
 Description
 """""""""""

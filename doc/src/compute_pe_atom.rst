@@ -24,7 +24,7 @@ Examples
    compute 1 all pe/atom pair
    compute 1 all pe/atom pair bond
 
-Example input scripts available: examples/meam/msmeam/in.msmeam, examples/ttm/in.ttm.mod, examples/ttm/in.ttm.thermal
+Example input scripts available: ``examples/meam/msmeam/in.msmeam``, ``examples/ttm/in.ttm.mod``, ``examples/ttm/in.ttm.thermal``
 
 Description
 """""""""""

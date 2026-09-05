@@ -22,7 +22,7 @@ Examples
    angle_style cosine
    angle_coeff * 75.0
 
-Example input scripts available: examples/mc/in.mixed, examples/mc/in.pure
+Example input scripts available: ``examples/mc/in.mixed``, ``examples/mc/in.pure``
 
 Description
 """""""""""

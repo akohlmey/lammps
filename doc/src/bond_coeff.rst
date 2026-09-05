@@ -26,7 +26,7 @@ Examples
    labelmap bond 5 carbonyl
    bond_coeff carbonyl 80.0 1.2
 
-Example input scripts available: examples/rdf-adf/in.spce, examples/template/in.molecular-mix
+Example input scripts available: ``examples/rdf-adf/in.spce``, ``examples/template/in.molecular-mix``
 
 Description
 """""""""""
