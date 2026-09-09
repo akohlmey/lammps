@@ -32,8 +32,6 @@ Examples
    fenix spares 10 restart_label restart
    fenix universal restart_label restart
 
-Example input scripts available: ``examples/PACKAGES/fenix/in.universe``, ``examples/PACKAGES/fenix/in.file``
-
 ----------
 
 Description

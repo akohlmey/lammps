@@ -22,8 +22,6 @@ Examples
    improper_style fourier
    improper_coeff 1 100.0 0.0 1.0 0.5 1
 
-Example input scripts available: ``examples/PACKAGES/drude/toluene/in.toluene.lang``, ``examples/PACKAGES/drude/toluene/in.toluene.nh``
-
 Description
 """""""""""
 

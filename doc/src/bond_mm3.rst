@@ -22,8 +22,6 @@ Examples
    bond_style mm3
    bond_coeff 1 100.0 107.0
 
-Example input scripts available: ``examples/PACKAGES/yaff/mof5/in.mof5``
-
 Description
 """""""""""
 

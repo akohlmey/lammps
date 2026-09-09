@@ -47,8 +47,6 @@ Examples
    fix 1 all ave/moments 1 1000 100 v_volume mean stddev
    fix 1 all ave/moments 1 200 1000 v_volume variance kurtosis history 10
 
-Example input scripts available: ``examples/PACKAGES/moments``
-
 Description
 """""""""""
 

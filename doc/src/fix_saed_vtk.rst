@@ -47,8 +47,6 @@ Examples
    fix 2 all saed/vtk 1 1 1 c_2 file Ni_000.saed
    fix 3 all saed/vtk 1 1 1 c_2 file Ni_000.saed format xml binary yes
 
-Example input scripts available: ``examples/PACKAGES/diffraction/in.BulkNi``
-
 Description
 """""""""""
 

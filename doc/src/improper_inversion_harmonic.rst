@@ -22,8 +22,6 @@ Examples
    improper_style inversion/harmonic
    improper_coeff 1 18.776340 0.000000
 
-Example input scripts available: ``examples/PACKAGES/mofff/in.hkust1``, ``examples/PACKAGES/mofff/in.hkust1_long``
-
 Description
 """""""""""
 

@@ -22,8 +22,6 @@ Examples
    pair_style snap
    pair_coeff * * InP.snapcoeff InP.snapparam In In P P
 
-Example input scripts available: ``examples/snap``
-
 Description
 """""""""""
 

@@ -21,8 +21,6 @@ Examples
    improper_style cvff
    improper_style hybrid cvff harmonic
 
-Example input scripts available: ``examples/peptide/in.peptide``
-
 Description
 """""""""""
 

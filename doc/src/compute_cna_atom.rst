@@ -24,8 +24,6 @@ Examples
 
    compute 1 all cna/atom 3.08
 
-Example input scripts available: ``examples/PACKAGES/cnp/in.cnp``, ``examples/PACKAGES/cauchy/in.cauchystat``
-
 Description
 """""""""""
 

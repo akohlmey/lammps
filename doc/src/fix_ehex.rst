@@ -33,7 +33,7 @@ Examples
 
 .. code-block:: LAMMPS
 
-   # Lennard-Jones, from examples/HEAT/in.lj.ehex
+   # Lennard-Jones, from examples/in.ehex.lj
 
    fix fnve all nve
    # specify regions rhot and rcold
@@ -41,7 +41,7 @@ Examples
    fix fhot all ehex 1 0.15 region rhot
    fix fcold all ehex 1 -0.15 region rcold
 
-   # SPC/E water, from examples/HEAT/in.spce.ehex
+   # SPC/E water, from examples/in.ehex.spce
    fix fnve all nve
    # specify regions rhot and rcold
    ...

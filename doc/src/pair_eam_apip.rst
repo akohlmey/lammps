@@ -31,8 +31,6 @@ Examples
    pair_coeff * * lambda/zone/apip
 
 
-Example input scripts available: ``examples/PACKAGES/apip``
-
 Description
 """""""""""
 Style *eam* computes pairwise interactions for metals and metal alloys

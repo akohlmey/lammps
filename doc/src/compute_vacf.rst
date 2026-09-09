@@ -27,8 +27,6 @@ Examples
    compute 1 all vacf
    compute 1 upper vacf
 
-Example input scripts available: ``examples/DIFFUSE/in.vacf.2d``
-
 Description
 """""""""""
 

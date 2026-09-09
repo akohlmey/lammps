@@ -42,8 +42,6 @@ Examples
    fix kick external-field efield 0.0 0.0 v_oscillate
    fix kick external-field efield/tip4p 1.0 0.0 0.0
 
-Example input scripts available: ``examples/reaxff/water``
-
 Description
 """""""""""
 

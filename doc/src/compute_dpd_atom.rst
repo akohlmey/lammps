@@ -20,8 +20,6 @@ Examples
 
    compute 1 all dpd/atom
 
-Example input scripts available: ``examples/PACKAGES/dpd-react/dpdrx-shardlow/in.dpdrx-shardlow``
-
 Description
 """""""""""
 

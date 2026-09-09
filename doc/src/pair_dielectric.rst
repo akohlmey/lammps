@@ -69,8 +69,8 @@ Used in input scripts:
 
    .. parsed-literal::
 
-      examples/PACKAGES/dielectric/confined.inc
-      examples/PACKAGES/dielectric/nopbc.inc
+      examples/PACKAGES/dielectric/in.confined
+      examples/PACKAGES/dielectric/in.nopbc
 
 Description
 """""""""""

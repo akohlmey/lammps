@@ -20,8 +20,6 @@ Examples
 
    compute 1 all bond
 
-Example input scripts available: ``examples/PACKAGES/cgdna/``
-
 Description
 """""""""""
 

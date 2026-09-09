@@ -40,8 +40,6 @@ Examples
    pair_style mliap unified mliap_unified_lj_Ar.pkl 0
    pair_coeff * * In P
 
-Example input scripts available: ``examples/mliap``
-
 Description
 """""""""""
 

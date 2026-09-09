@@ -35,8 +35,6 @@ Examples
 
    compute 1 all centro/atom 8
 
-Example input scripts available: ``examples/PACKAGES/cnp/in.cnp``, ``examples/PACKAGES/basal/in.basal``
-
 Description
 """""""""""
 

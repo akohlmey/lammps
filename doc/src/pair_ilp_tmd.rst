@@ -29,8 +29,6 @@ Examples
    pair_coeff  * * sw/mod 2  tmd.sw.mod NULL NULL NULL W Se Se
    pair_coeff  * * ilp/tmd   TMD.ILP   Mo S S W Se Se
 
-Example input scripts available: ``examples/PACKAGES/interlayer/ilp_tmds/in.mos2``
-
 Description
 """""""""""
 

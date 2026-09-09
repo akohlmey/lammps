@@ -46,8 +46,6 @@ Examples
    pair_coeff * * lambda/zone/apip
 
 
-Example input scripts available: ``examples/PACKAGES/apip``
-
 Description
 """""""""""
 

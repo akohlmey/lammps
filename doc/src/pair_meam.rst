@@ -34,8 +34,6 @@ Examples
    pair_style meam/ms
    pair_coeff * * ../potentials/library.msmeam H Ga ../potentials/HGa.meam H Ga
 
-Example input scripts available: ``examples/fire/in.meam.fire``, ``examples/fire/in.meam.abcfire``, ``examples/meam/msmeam/in.msmeam``
-
 Description
 """""""""""
 

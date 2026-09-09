@@ -20,8 +20,6 @@ Examples
 
    pair_style lambda/zone/apip 12.0
 
-Example input scripts available: ``examples/PACKAGES/apip/in.surface.balance``, ``examples/PACKAGES/apip/in.vacancy.dynamic.lambda``
-
 Description
 """""""""""
 

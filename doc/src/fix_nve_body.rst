@@ -20,8 +20,6 @@ Examples
 
    fix 1 all nve/body
 
-Example input scripts available: ``examples/body/in.body``, ``examples/body/in.pour3d``
-
 Description
 """""""""""
 

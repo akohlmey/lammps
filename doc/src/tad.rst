@@ -51,8 +51,6 @@ Examples
        neb_style fire &
        neb_log log.neb
 
-Example input scripts available: ``examples/tad/in.tad``
-
 Description
 """""""""""
 

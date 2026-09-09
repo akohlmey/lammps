@@ -45,8 +45,6 @@ Examples
    compute 1 subregion heat/flux/tally all
    compute 1 liquid heat/flux/virial/tally solid
 
-Example input scripts available: ``examples/PACKAGES/tally``
-
 Description
 """""""""""
 

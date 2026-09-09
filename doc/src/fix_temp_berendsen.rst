@@ -30,8 +30,6 @@ Examples
 
    fix 1 all temp/berendsen 300.0 300.0 100.0
 
-Example input scripts available: ``examples/reaxff/ci-reaxFF/in.ci-reax.CH``, ``examples/reaxff/AB/in.AB``, ``examples/reaxff/RDX/in.RDX``
-
 Description
 """""""""""
 

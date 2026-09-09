@@ -43,8 +43,6 @@ Examples
    pair_style vashishta/table 100000 0.2
    pair_coeff * * SiC.vashishta Si C
 
-Example input scripts available: ``examples/vashishta``
-
 Description
 """""""""""
 

@@ -58,8 +58,6 @@ Examples
    fix vmd all imd 5678
    fix comm all imd 8888 trate 5 unwrap on fscale 10.0
 
-Example input scripts available: ``examples/PACKAGES/imd``
-
 Description
 """""""""""
 

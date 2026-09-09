@@ -34,8 +34,6 @@ Examples
    fix 2 edge settorque/atom NULL 0.0 0.0
    fix 2 edge settorque/atom NULL 0.0 v_oscillate
 
-Example input scripts available: ``examples/bpm/wires/in.bpm.wires``
-
 Description
 """""""""""
 

@@ -25,8 +25,6 @@ Examples
 
    fix 1 all nve/asphere
 
-Example input scripts available: ``examples/ASPHERE/vesicle/in.vesicle``, ``examples/ASPHERE/superellipsoid_gran/in.ellipsoid_gran``, ``examples/ASPHERE/flat_membrane/in.flat_membrane``
-
 Description
 """""""""""
 

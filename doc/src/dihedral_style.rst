@@ -21,8 +21,6 @@ Examples
    dihedral_style multi/harmonic
    dihedral_style hybrid harmonic charmm
 
-Example input scripts available: ``examples/peptide/in.peptide``
-
 Description
 """""""""""
 
