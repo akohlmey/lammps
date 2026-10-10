@@ -89,7 +89,7 @@ The pair style *lj/cut/coul/wolf/gauss* computes the Coulomb energy via the
    and Wilson <GingrichWilson>`). :math:`\alpha` is the damping parameter and is
    either gewald (cf. :doc:`kspace_modify <kspace_modify>`) or alpha in the Wolf
    summation. The damping parameter needs to be sufficiently small relative to
-   the reciprocal width of Gaussian charges. In particluar, the inequality is
+   the reciprocal width of Gaussian charges. In particular, the inequality is
    required to ensure the matrix in :doc:`fix electrode <fix_electrode>` is
    positive-definite.
 
