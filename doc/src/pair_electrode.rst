@@ -106,11 +106,11 @@ examples above or by the :doc:`read_data <read_data>` or :doc:`read_restart
 
    \eta_{ij} = \frac{\eta_i \eta_j}{\sqrt{\eta_i^2 + \eta_j^2}}
 
-for two Gaussian charges and :math:`\eta_{ij} = \eta_i` if  atoms of type
+for two Gaussian charges and :math:`\eta_{ij} = \eta_i` if atoms of type
 :math:`i` have Gaussian charges and atoms of type :math:`j` are point charges
 and vice versa.
 
-The following coefficients must be defined for each pair of atoms types via the
+The following coefficients must be defined for each pair of atom types via the
 :doc:`pair_coeff <pair_coeff>` command as in the examples above, or in the data
 file or restart files read by the :doc:`read_data <read_data>` or
 :doc:`read_restart <read_restart>` commands, or by mixing as described for
