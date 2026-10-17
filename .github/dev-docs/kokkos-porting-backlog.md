@@ -112,8 +112,7 @@ hand-written deck run serial and under `mpirun -np 2`.
 
 - **Minimizers:** `min sd`, `min quickmin`.  `MinKokkos`/`MinLineSearchKokkos`
   supply the device machinery, so both are small; they reproduce the CPU
-  trajectory step for step.  Registering `min_fire_kokkos` in `Install.sh`, which
-  was missing, came along with them.
+  trajectory step for step.
 - **Regions:** `plane`, `prism`, `cylinder`, `cone`, `ellipsoid`.  The concrete-type
   list that `fix wall/region/kk` needs now lives once in `region_kokkos_styles.h`;
   the six fixes that only need `match_all_kokkos` (`addforce`, `aveforce`, `efield`,
