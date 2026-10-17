@@ -36,4 +36,8 @@ jobs:
       working-directory: src
       shell: bash
       run: |
-         make check
+         make check-whitespace
+         make check-permissions
+         make check-homepage
+         make check-errordocs
+         make check-fmtlib
