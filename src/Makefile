@@ -30,12 +30,13 @@ help:
 
 # deprecation warning
 
-warning clean-all clean-serial clean-mpi mpi-stubs install-python tar package package-status ps package-installed pi yes-all yes-basic no-basic yes-most no-most package-update pu package-overwrite package-diff pd serial mpi:
+warning:
 	@echo ' '
 	@echo ' Support for the legacy build system has been removed from LAMMPS'
 	@echo ' Please use CMake instead. See https://docs.lammps.org/Build_cmake.html'
 	@echo ''
-	@echo ' The last LAMMPS version with (partial) support for the legacy build system was 30Sep2026'
+	@echo ' The last LAMMPS version with partial support for the legacy build system was 30Sep2026'
+	@echo ' The last LAMMPS version with full support for the legacy build system was 22Jul2025'
 	@echo ''
 	@echo ' Contact us at developers@lammps.org if you have concerns or questions'
 	@echo ' '
@@ -98,6 +99,7 @@ purge:
 
 no-all: purge
 
-.PHONY: warning help check check-whitespace check-permissions check-homepage check-errordocs check-fmtlib check-docs fix-whitespace fix-permissions fix-homepage fix-errordocs fix-fmtlib serial mpi clean purge no-all
+.PHONY: warning help check check-whitespace check-permissions check-homepage check-errordocs check-fmtlib check-docs fix-whitespace fix-permissions fix-homepage fix-errordocs fix-fmtlib clean purge no-all
 
-.DEFAULT: warning
+.DEFAULT:
+	@$(MAKE) $(MFLAGS) warning
