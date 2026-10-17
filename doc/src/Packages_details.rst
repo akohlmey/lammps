@@ -9,19 +9,18 @@ gives links to documentation, example scripts, and pictures/movies (if
 available) that illustrate use of the package.
 
 The majority of packages can be included in a LAMMPS build with a single
-setting (``-D PKG_<NAME>=on`` for CMake) or command (``make yes-<name>``
-for make).  See the :doc:`Build package <Build_package>` page for more
-info.  A few packages may require additional steps; this is indicated in
-the descriptions below.  The :doc:`Build extras <Build_extras>` page
-gives those details.
+setting (``-D PKG_<NAME>=on``).  See the :doc:`Build package
+<Build_package>` page for more info.  A few packages may require
+additional steps; this is indicated in the descriptions below.  The
+:doc:`Build extras <Build_extras>` page gives those details.
 
 .. note::
 
-   To see the complete list of commands a package adds to LAMMPS,
-   you can examine the files in its src directory, e.g. ``ls
-   src/GRANULAR``.  Files with names that start with fix, compute, atom,
-   pair, bond, angle, etc correspond to commands with the same style name
-   as contained in the file name.
+   To see the complete list of commands a package adds to LAMMPS, you
+   can examine the files in its src directory, e.g. ``ls src/GRANULAR``.
+   Files with names that start with fix, compute, atom, pair, bond,
+   angle, *etc.* correspond to commands with the same style name as
+   contained in the file name.
 
 .. table_from_list::
    :columns: 6
@@ -142,7 +141,8 @@ commands to write and read data using the ADIOS library.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <adios>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <adios>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -229,8 +229,8 @@ Ralf Drautz^2 and Godehard Sutmann^1^2.
 **Install:**
 
 The APIP package requires also the installation of ML-PACE, which has
-:ref:`specific installation instructions <ml-pace>` on the
-:doc:`Build extras <Build_extras>` page.
+:ref:`specific installation instructions <ml-pace>` on the :doc:`Build
+extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -588,7 +588,8 @@ available on your system.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <compress>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <compress>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -935,8 +936,8 @@ Robert Meissner (Helmholtz-Zentrum Hereon, Geesthacht and TUHH, Hamburg, Germany
 
 **Install:**
 
-This package has :ref:`specific installation instructions <electrode>` on the
-:doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <electrode>`
+on the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -1072,10 +1073,11 @@ FENIX package
 
 **Contents:**
 
-Fenix is a tool for online process recovery of MPI applications. This package
-provides methods for continuing a distributed simulation after one or more MPI
-processes is lost, without requiring the relaunch of all existing MPI ranks.
-This is accomplished with the :doc:`fenix <fenix>` command.
+Fenix is a tool for online process recovery of MPI applications. This
+package provides methods for continuing a distributed simulation after
+one or more MPI processes is lost, without requiring the relaunch of all
+existing MPI ranks.  This is accomplished with the :doc:`fenix <fenix>`
+command.
 
 **Author:** Matthew Whitlock (Sandia)
 
@@ -1083,8 +1085,8 @@ This is accomplished with the :doc:`fenix <fenix>` command.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <fenix_build>` on the
-:doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <fenix_build>`
+on the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -1135,19 +1137,20 @@ GPU package
 **Contents:**
 
 Dozens of pair styles and a version of the PPPM long-range Coulombic
-solver optimized for GPUs.  All such styles have a "gpu" as a suffix
-in their style name. The GPU code can be compiled with either CUDA or
+solver optimized for GPUs.  All such styles have a "gpu" as a suffix in
+their style name. The GPU code can be compiled with either CUDA or
 OpenCL, however the OpenCL variants are no longer actively maintained
-and only the CUDA versions are regularly tested.  The
-:doc:`Speed_gpu` page gives details of what hardware and GPU
-software is required on your system, and details on how to build and
-use this package.  Its styles can be invoked at run time via the ``-sf
-gpu`` or ``-suffix gpu`` :doc:`command-line switches <Run_options>`.  See
-also the :ref:`KOKKOS <PKG-KOKKOS>` package, which has GPU-enabled styles.
+and only the CUDA versions are regularly tested.  The :doc:`Speed_gpu`
+page gives details of what hardware and GPU software is required on your
+system, and details on how to build and use this package.  Its styles
+can be invoked at run time via the ``-sf gpu`` or ``-suffix gpu``
+:doc:`command-line switches <Run_options>`.  See also the :ref:`KOKKOS
+<PKG-KOKKOS>` package, which has GPU-enabled styles as well.
 
-**Authors:** Mike Brown (Intel) while at Sandia and ORNL and Trung Nguyen
-(Northwestern U) while at ORNL and later. AMD HIP support by Evgeny
-Kuznetsov, Vladimir Stegailov, and Vsevolod Nikolskiy (HSE University).
+**Authors:** Mike Brown (Intel) while at Sandia and ORNL and Trung
+Nguyen (U Chicago) while at ORNL, Northwestern and later.  AMD HIP
+support by Evgeny Kuznetsov, Vladimir Stegailov, and Vsevolod Nikolskiy
+(HSE University).
 
 **Install:**
 
@@ -1164,8 +1167,8 @@ This package has :ref:`specific installation instructions <gpu>` on the
 * :doc:`Section 4.2 -sf gpu <Run_options>`
 * :doc:`Section 4.2 -pk gpu <Run_options>`
 * :doc:`package gpu <package>`
-* :doc:`Commands <Commands_all>` pages (:doc:`pair <Commands_pair>`, :doc:`kspace <Commands_kspace>`)
-  for styles followed by (g)
+* :doc:`Commands <Commands_all>` pages (:doc:`pair <Commands_pair>`,
+  :doc:`kspace <Commands_kspace>`) for styles followed by (g)
 
 ----------
 
@@ -1267,9 +1270,9 @@ H5MD package
 **Contents:**
 
 H5MD stands for HDF5 for MD.  `HDF5 <HDF5_>`_ is a portable, binary,
-self-describing file format, used by many scientific simulations.
-H5MD is a format for molecular simulations, built on top of HDF5.
-This package implements a :doc:`dump h5md <dump_h5md>` command to output
+self-describing file format, used by many scientific simulations.  H5MD
+is a format for molecular simulations, built on top of HDF5.  This
+package implements a :doc:`dump h5md <dump_h5md>` command to output
 LAMMPS snapshots in this format.
 
 .. _HDF5: https://www.hdfgroup.org/solutions/hdf5/
@@ -1282,7 +1285,8 @@ H5MD format.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <h5md>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <h5md>` on the
+:doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -1317,13 +1321,14 @@ supported, performance will be sub-optimal.
 .. note::
 
    the INTEL package contains styles that require using the
-   -restrict flag, when compiling with Intel compilers.
+   ``-restrict`` flag, when compiling with Intel compilers.
 
-**Author:** Mike Brown (Intel).
+**Author:** Mike Brown (NVIDIA) while working at Intel.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <intel>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <intel>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -1334,8 +1339,11 @@ This package has :ref:`specific installation instructions <intel>` on the :doc:`
 * :doc:`Section 4.2 -sf intel <Run_options>`
 * :doc:`Section 4.2 -pk intel <Run_options>`
 * :doc:`package intel <package>`
-* Search the :doc:`commands <Commands_all>` pages (:doc:`fix <Commands_fix>`, :doc:`compute <Commands_compute>`,
-  :doc:`pair <Commands_pair>`, :doc:`bond, angle, dihedral, improper <Commands_bond>`, :doc:`kspace <Commands_kspace>`) for styles followed by (i)
+* Search the :doc:`commands <Commands_all>` pages (:doc:`fix
+  <Commands_fix>`, :doc:`compute <Commands_compute>`, :doc:`pair
+  <Commands_pair>`, :doc:`bond, angle, dihedral, improper
+  <Commands_bond>`, :doc:`kspace <Commands_kspace>`) for styles followed
+  by (i)
 * ``src/INTEL/TEST``
 
 ----------
@@ -1458,7 +1466,8 @@ Sandia, and which is included in the LAMMPS distribution in
 
 **Install:**
 
-This package has :ref:`specific installation instructions <kokkos>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <kokkos>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -1609,7 +1618,8 @@ Dynamics, Ernst Mach Institute, Germany).
 
 **Install:**
 
-This package has :ref:`specific installation instructions <machdyn>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <machdyn>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -2277,7 +2287,8 @@ at
 
 **Install:**
 
-This package has :ref:`specific installation instructions <molfile>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <molfile>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -2317,7 +2328,8 @@ tools:
 
 **Install:**
 
-This package has :ref:`specific installation instructions <netcdf>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <netcdf>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -2338,29 +2350,18 @@ OPENMP package
 Hundreds of pair, fix, compute, bond, angle, dihedral, improper, and
 kspace styles which are altered to enable threading on many-core CPUs
 via OpenMP directives.  All of them have an "omp" in their style name.
-The :doc:`OPENMP package <Speed_omp>` page gives details of what hardware
-and compilers are required on your system, and how to build and use
-this package.  Its styles can be invoked at run time via the ``-sf omp``
-or ``-suffix omp`` :doc:`command-line switches <Run_options>`.  Also see
-the :ref:`KOKKOS <PKG-KOKKOS>`, :ref:`OPT <PKG-OPT>`, and :ref:`INTEL <PKG-INTEL>`
-packages, which have styles optimized for CPUs.
+The :doc:`OPENMP package <Speed_omp>` page gives details of what
+hardware and compilers are required on your system, and how to build and
+use this package.  Its styles can be invoked at run time via the ``-sf
+omp`` or ``-suffix omp`` :doc:`command-line switches <Run_options>`.
+Also see the :ref:`KOKKOS <PKG-KOKKOS>`, :ref:`OPT <PKG-OPT>`, and
+:ref:`INTEL <PKG-INTEL>` packages, which have styles optimized for CPUs.
 
 **Author:** Axel Kohlmeyer (Temple U).
 
-.. note::
-
-   To enable multi-threading support the compile flag ``-fopenmp``
-   and the link flag ``-fopenmp`` (for GNU compilers, you have to look up
-   the equivalent flags for other compilers) must be used to build LAMMPS.
-   When using Intel compilers, also the ``-restrict`` flag is required.
-   The OPENMP package can be compiled without enabling OpenMP; then
-   all code will be compiled as serial and the only improvement over the
-   regular styles are some data access optimization. These flags should
-   be added to the CCFLAGS and LINKFLAGS lines of your Makefile.machine.
-   See ``src/MAKE/OPTIONS/Makefile``.omp for an example.
-
-Once you have an appropriate Makefile.machine, you can
-install/uninstall the package and build LAMMPS in the usual manner:
+Multi-threading support is enabled default if supported by the build
+environment.  It can be enforced by using ``-D BUILD_OMP=on`` when
+configuring with CMake.
 
 **Install:**
 
@@ -2390,20 +2391,23 @@ OPT package
 **Contents:**
 
 A handful of pair styles which are optimized for improved CPU
-performance on single or multiple cores.  These include EAM, LJ,
-CHARMM, and Morse potentials.  The styles have an "opt" suffix in
-their style name.  The :doc:`OPT package <Speed_opt>` page gives
-details of how to build and use this package.  Its styles can be
-invoked at run time via the ``-sf opt`` or ``-suffix opt`` :doc:`command-line switches <Run_options>`.  See also the :ref:`KOKKOS <PKG-KOKKOS>`,
-:ref:`INTEL <PKG-INTEL>`, and :ref:`OPENMP <PKG-OPENMP>` packages, which
-have styles optimized for CPU performance.
+performance on single or multiple cores.  These include EAM, LJ, CHARMM,
+and Morse potentials.  The styles have an "opt" suffix in their style
+name.  The :doc:`OPT package <Speed_opt>` page gives details of how to
+build and use this package.  Its styles can be invoked at run time via
+the ``-sf opt`` or ``-suffix opt`` :doc:`command-line switches
+<Run_options>`.  See also the :ref:`KOKKOS <PKG-KOKKOS>`, :ref:`INTEL
+<PKG-INTEL>`, and :ref:`OPENMP <PKG-OPENMP>` packages, which have styles
+optimized for CPU performance.
 
 **Authors:** James Fischer (High Performance Technologies), David Richie,
-and Vincent Natoli (Stone Ridge Technology).
+and Vincent Natoli (Stone Ridge Technology), Ping Gao and Xiaohui Duan
+(National Supercomputing Center in Wuxi, China).
 
 **Install:**
 
-This package has :ref:`specific installation instructions <opt>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <opt>` on the
+:doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -2604,7 +2608,8 @@ ways to use LAMMPS and Python together.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <python>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <python>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 
@@ -2844,7 +2849,8 @@ hydrodynamics and elastic objects. See the :doc:`Howto rheo
 
 **Install:**
 
-This package has :ref:`specific installation instructions <rheo>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <rheo>` on the
+:doc:`Build extras <Build_extras>` page.
 
 **Authors:** Joel T. Clemmer (Sandia National Labs),
 Thomas C. O'Connor (Carnegie Mellon University)
@@ -3154,7 +3160,8 @@ and LBNL.
 
 **Install:**
 
-This package has :ref:`specific installation instructions <voronoi>` on the :doc:`Build extras <Build_extras>` page.
+This package has :ref:`specific installation instructions <voronoi>` on
+the :doc:`Build extras <Build_extras>` page.
 
 **Supporting info:**
 

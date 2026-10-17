@@ -57,21 +57,12 @@ Using a GNU GCC ported to Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 One option for compiling LAMMPS on Windows natively is to install a Bash
-shell, Unix shell utilities, Perl, Python, GNU make, and a GNU compiler
+shell, Unix shell utilities, Perl, Python, CMake, GNU make, and a GNU compiler
 ported to Windows.  The Cygwin package provides a unix/linux interface
 to low-level Windows functions, so LAMMPS can be compiled on Windows.
 The necessary (minor) modifications to LAMMPS are included, but may not
 always up-to-date for recently added functionality and the corresponding
-new code.  A machine makefile for using cygwin for the old build system
-is provided.  Using CMake for this mode of compilation is untested and
-not likely to work.
-
-When compiling for Windows do **not** set the ``-DLAMMPS_MEMALIGN``
-define in the LMP_INC makefile variable and add ``-lwsock32 -lpsapi`` to
-the linker flags in LIB makefile variable. Try adding ``-static-libgcc``
-or ``-static`` or both to the linker flags when your resulting LAMMPS
-Windows executable complains about missing .dll files. The CMake
-configuration should set this up automatically, but is untested.
+new code.  Using CMake for this mode of compilation is untested.
 
 In case of problems, you are recommended to contact somebody with
 experience in using Cygwin.  If you do come across portability problems
@@ -93,10 +84,7 @@ significantly improved.  This has been tested with Visual Studio 2019
 recommend using Visual Studio 2022 version 17.1 or later.  Not all
 features and packages in LAMMPS are currently supported out of the box,
 but a preset ``cmake/presets/windows.cmake`` is provided that contains
-the packages that have been compiled successfully so far.  You **must**
-use the CMake based build procedure, since there is no support for GNU
-make or the Unix shell utilities required for the GNU make build
-procedure.
+the packages that have been compiled successfully so far.
 
 It is possible to use both the integrated CMake support of the Visual
 Studio IDE or use an external CMake installation (e.g. downloaded from
@@ -110,13 +98,13 @@ for the LAMMPS development branch through
 
    Versions of Visual Studio before version 17.1 may scan the entire
    LAMMPS source tree and likely miss the correct master
-   ``CMakeLists.txt`` and get confused since there are multiple files
-   of that name in different folders but none in top level folder.
+   ``CMakeLists.txt`` and get confused since there are multiple files of
+   that name in different folders but none in top level folder.
 
-Please note, that for either approach CMake will create a so-called
-:ref:`"multi-configuration" build environment <cmake_multiconfig>`, and
-the commands for building and testing LAMMPS must be adjusted
-accordingly.
+Please note, that for either approach CMake will create by default a
+so-called :ref:`"multi-configuration" build environment
+<cmake_multiconfig>`, and the commands for building and testing LAMMPS
+must be adjusted accordingly.
 
 The LAMMPS cmake folder contains a ``CMakeSettings.json`` file with
 build configurations for MSVC compilers and the MS provided Clang
@@ -125,12 +113,6 @@ compiler package in Debug and Release mode.
 To support running in parallel you can compile with OpenMP enabled using
 the OPENMP package or install Microsoft MPI (including the SDK) and compile
 LAMMPS with MPI enabled.
-
-.. note::
-
-   This is work in progress and you should contact the LAMMPS developers
-   via GitHub or the `LAMMPS forum at MatSci <https://matsci.org/c/lammps/lammps-development/>`_,
-   if you have questions or LAMMPS specific problems.
 
 .. _oneapi:
 

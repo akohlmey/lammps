@@ -30,10 +30,9 @@ by LAMMPS users.  If you have problems using them, we can direct you
 to the authors.
 
 The source code for each of these codes is in the tools subdirectory
-of the LAMMPS distribution.  There is a Makefile (which you may need
-to edit for your platform) which will build several of the tools which
-reside in that directory.  Most of them are larger packages in their
-own subdirectories with their own Makefiles and/or README files.
+of the LAMMPS distribution.  Use ``-D BUILD_TOOLS=ON`` to include them
+when building LAMMPS.  Some tools are packages with their own own
+subdirectory with their own Makefiles and/or README files.
 
 ----------
 
@@ -198,10 +197,10 @@ and report any non-compliance.  With the optional ``-f`` argument the
 corresponding script will try to change the non-compliant file(s) to
 match the conventions.
 
-For convenience this scripts can also be invoked by the make file in
+For convenience these scripts can also be invoked by the make file in
 the ``src`` folder with, `make check-whitespace` or `make fix-whitespace`
 to either detect or edit the files.  Correspondingly for the other python
-scripts. `make check` will run all checks.
+scripts. `make check` will run all checks except for the list of version tags.
 
 ----------
 
