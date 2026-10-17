@@ -76,7 +76,7 @@ Support for Zstandard compression is auto-detected and for that
 CMake depends on the `pkg-config
 <https://www.freedesktop.org/wiki/Software/pkg-config/>`_ tool to
 identify the necessary flags to compile with this library, so the
-corresponding ``libzstandard.pc`` file must be in a folder where
+corresponding ``libzstd.pc`` file must be in a folder where
 ``pkg-config`` can find it, which may require adding it to the
 ``PKG_CONFIG_PATH`` environment variable.
 
@@ -90,14 +90,14 @@ FENIX package
 .. versionadded:: 2Sep2026
 
 To build with this package you must have the `Fenix library
-<https://github.com/sandialabs/fenix>`_ available on your system. The Fenix
-library must be newer than version 1 (currently meaning built from the default
-"develop" branch). Older versions use an incompatible API and this LAMMPS will
-fail to compile.
+<https://github.com/sandialabs/fenix>`_ available on your system. The
+Fenix library must be newer than version 1 (currently meaning built from
+the default "develop" branch).  Older versions use an incompatible API
+and this LAMMPS will fail to compile.
 
 .. code-block:: bash
 
-   -D WITH_FENIX=value # enables FENIX package
+   -D PKG_FENIX=value  # enables FENIX package
                        # value = on or off (default)
 
 If CMake cannot find the Fenix library or include files, you can set the
@@ -295,7 +295,7 @@ liblammps.so.0, not found``.  This may be worked around by also setting:
 ``-DCMAKE_EXE_LINKER_FLAGS=-Wl,--unresolved-symbols=ignore-in-shared-libs``.
 
 To support the CUDA multi-process server (MPS) you can set the define
-``-DCUDA_MPS_SUPPORT``.
+``-DCUDA_MPS_SUPPORT=on``.
 
 If you are compiling for OpenCL, the default setting is to download,
 build, and link with a static OpenCL ICD loader library and standard
@@ -1768,13 +1768,9 @@ To build with this package, you must download and build the
 .. code-block:: bash
 
    -D DOWNLOAD_SCAFACOS=value    # download ScaFaCoS for build, value = off (default) or on
-   -D SCAFACOS_LIBRARY=path      # ScaFaCos library file (only needed if at custom location)
-   -D SCAFACOS_INCLUDE_DIR=path  # ScaFaCoS include directory (only needed if at custom location)
 
 If ``DOWNLOAD_SCAFACOS`` is set, the ScaFaCoS library will be downloaded
 and built inside the CMake build directory.  If the ScaFaCoS library is
-already on your system (in a location CMake cannot find it),
-``SCAFACOS_LIBRARY`` is the filename (plus path) of the ScaFaCoS library
-file, not the directory the library file is in.
-``SCAFACOS_INCLUDE_DIR`` is the directory the ScaFaCoS include file is
-in.
+already on your system but in a location where CMake cannot find it,
+append the folder containing the ``scafacos.pc`` file to the
+``PKG_CONFIG_PATH`` environment variable.

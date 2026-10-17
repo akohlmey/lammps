@@ -100,7 +100,7 @@ The configuration and compilation of LAMMPS has to happen in a dedicated
 the source folder (``src``) must remain pristine, so it is not allowed
 to "install" packages using the traditional make process and after a
 compilation attempt all created source files must be removed.  This can
-be achieved with ``make no-all purge`` in the ``src`` folder.
+be achieved with ``make purge`` in the ``src`` folder.
 
 You can pick **any** folder outside the ``src`` folder.  We recommend to
 use a folder ``build`` in the top-level folder, or multiple folders in

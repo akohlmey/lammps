@@ -128,7 +128,7 @@ include:
 - `Clang Static Analyzer <https://clang-analyzer.llvm.org/>`_
 - `Clang-Tidy <https://clang.llvm.org/extra/clang-tidy/>`_
 - Enabling and looking at compiler warnings
-- Code review though AI coding agents like GitHub Copilot or Claude Code
+- Code review through AI coding agents like GitHub Copilot or Claude Code
 
 CodeQL alerts for the ``develop`` branch of LAMMPS can be seen at
 https://github.com/lammps/lammps/security/code-scanning.  Static code

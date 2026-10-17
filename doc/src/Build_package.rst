@@ -76,7 +76,7 @@ The mechanism for including packages is simple:
 
    -D PKG_NAME=value          # on or off (default)
 
-   Examples:
+Examples:
 
 .. code-block:: csh
 
@@ -90,11 +90,12 @@ packages at once.
 Almost all packages can be included or excluded in a LAMMPS build,
 independent of the other packages.  However, some packages include files
 derived from files in other packages.  LAMMPS checks for this and
-(usually) does the right thing.  Individual files are only included if
-their dependencies are already included.  Likewise, if a package is
-excluded, other files dependent on that package are also excluded.  The
-entire package depends on some other package that package will be
-included automatically.  Information about this will be printed to the
+(usually) does the right thing automatically:  Individual files are
+only included if their dependencies are already included.  Likewise,
+if a package is excluded, other files dependent on that package are
+also excluded.  If an entire package depends on some other package
+that package will either be included automatically or CMake will
+stop with an error.  Information about this will be printed to the
 screen when running the CMake configuration.
 
 ----------

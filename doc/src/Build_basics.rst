@@ -100,22 +100,6 @@ flag that enables OpenMP.  For the GNU compilers or Clang, it is
 ``-fopenmp``\ .  For (recent) Intel compilers, it is ``-qopenmp``\ .  If
 you are using a different compiler, please refer to its documentation.
 
-.. _default-none-issues:
-
-OpenMP Compiler compatibility
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Some compilers do not fully support the ``default(none)`` directive and
-others (e.g. GCC version 9 and beyond, Clang version 10 and later) may
-implement strict OpenMP 4.0 and later semantics, which are incompatible
-with the OpenMP 3.1 semantics used in LAMMPS for maximal compatibility
-with compiler versions in use.  If compilation with OpenMP enabled fails
-because of your compiler requiring strict OpenMP 4.0 semantics, you can
-change the behavior by adding ``-D LAMMPS_OMP_COMPAT=4`` to the
-``LMP_INC`` variable in your makefile, or add it to the command-line flags
-while configuring with CMake.  LAMMPS will auto-detect a suitable setting
-for most GNU, Clang, and Intel compilers.
-
 ----------
 
 .. _compile:
@@ -284,10 +268,10 @@ the executable 3-5 fold.
 
 If this is a concern, you can change the compilation settings to use
 ``-D CMAKE_BUILD_TYPE=Release`` or explicitly set the applicable
-compiler flags (best done using the text mode or graphical user
-interface).  or remove the debug information from the LAMMPS executable.
+compiler flags or remove the debug information from the LAMMPS
+executable.
 
-To remove debug info from the executables (e.g. after testing or
+To remove debug info from existing executables (e.g. after testing or
 debugging), you can use the ``strip`` tool (e.g. ``strip -g lmp
 liblammps.so.0``) to remove the debug information from the executable
 files.

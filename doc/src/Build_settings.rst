@@ -131,8 +131,7 @@ platform and can be faster than the KISS FFT library.  LAMMPS requires
 FFTW version 3.x.
 
 The Intel MKL math library is part of the Intel compiler suite.  It
-can be used with the Intel or GNU compiler (see the ``FFT_LIB`` setting
-above).
+can be used with the Intel or GNU compiler.
 
 The NVIDIA Performance Libraries (NVPL) FFT library is optimized for NVIDIA
 Grace Armv9.0 architecture. You can download it from https://docs.nvidia.com/nvpl/
@@ -152,10 +151,10 @@ Double precision means they are 8-byte doubles.  Note that Fourier
 transform and related PPPM operations are somewhat less sensitive to
 floating point truncation errors, and thus the resulting error is
 generally less than the difference in precision. Using the
-``-DFFT_SINGLE`` setting trades off a little accuracy for reduced memory
-use and parallel communication costs for transposing 3d FFT data.
+``-DFFT_SINGLE=on`` setting trades off a little accuracy for reduced
+memory use and parallel communication costs for transposing 3d FFT data.
 
-When using ``-DFFT_SINGLE`` with FFTW3, you may need to ensure that
+When using ``-DFFT_SINGLE=on`` with FFTW3, you may need to ensure that
 the FFTW3 installation includes support for single-precision.
 
 Performing 3d FFTs requires communication to transpose the 3d FFT
@@ -165,13 +164,13 @@ Depending on the machine, the size of the FFT grid, the number of
 processors used, one option may be slightly faster.  The default is
 ARRAY mode.
 
-When using ``-DFFT_HEFFTE`` CMake will first look for an existing
-install with hints provided by ``-DHeffte_ROOT``, as recommended by the
-CMake standard and note that the name is case sensitive. If CMake cannot
-find a heFFTe installation with the correct back end (e.g., FFTW or
-MKL), it will attempt to download and build the library automatically.
-In this case, LAMMPS CMake will also accept all heFFTe specific
-variables listed in the `heFFTe documentation
+When using ``-DFFT_USE_HEFFTE=on`` CMake will first look for an existing
+install with hints provided by ``-DHeffte_ROOT=<path>``, as recommended
+by the CMake standard and note that the name is case sensitive. If CMake
+cannot find a heFFTe installation with the correct back end (e.g., FFTW
+or MKL), it will attempt to download and build the library
+automatically.  In this case, LAMMPS CMake will also accept all heFFTe
+specific variables listed in the `heFFTe documentation
 <https://icl-utk-edu.github.io/heffte/md_doxygen_installation.html>`_
 and those variables will be passed into the heFFTe build.
 

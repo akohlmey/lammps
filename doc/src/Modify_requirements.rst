@@ -219,10 +219,6 @@ been removed.  New packages must be integrated into the build system in
 a similar fashion to existing packages.  Additions to existing packages
 must follow the requirements set by that package.
 
-For a single pair of header and implementation files that are an
-independent feature, it is usually only required to add them to
-``src/.gitignore``.
-
 Changes may need to be made to ``cmake/CMakeLists.txt``, some of the
 files in ``cmake/presets``, and possibly a file with specific
 instructions needs to be added to ``cmake/Modules/Packages/``.  Please
