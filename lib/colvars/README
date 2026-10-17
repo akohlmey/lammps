@@ -45,4 +45,4 @@ needed besides "-D PKG_COLVARS=yes".
 
 Linking to the Lepton library, which is also used by the LEPTON LAMMPS package,
 is enabled automatically.  Optionally, support for Lepton within Colvars may
-be manually controlled with the￼CMake setting "-D COLVARS_LEPTON=yes|no".
+be manually controlled with the CMake setting "-D COLVARS_LEPTON=on|off".

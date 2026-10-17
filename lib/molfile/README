@@ -1,6 +1,6 @@
 This directory contains copies of the VMD plugin interface header
-files that enable building LAMMPS with the MOLFILE packages to
-to dynamically link to plugins from the VMD molfile library.
+files that enable building LAMMPS with the MOLFILE package to
+dynamically load plugins from the VMD molfile library.
 
 More information about the VMD molfile plugins can be found at
 http://www.ks.uiuc.edu/Research/vmd/plugins/molfile.

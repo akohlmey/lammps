@@ -13,15 +13,15 @@ Using this package requires the KIM-API library and its models
 The library can be automatically downloaded and built during the
 compilation of LAMMPS or installed separately on your system, which must
 be done before building LAMMPS with this package.  Outside of testing
-LAMMPS, it is generally recommened to perform a separate installation of
+LAMMPS, it is generally recommended to perform a separate installation of
 the KIM-API so that its tools are available directly.  Details of the
 download, build, and install process for the KIM-API are given in the
 KIM-API documentation.  Also see the LAMMPS manual for general
 information on building LAMMPS with packages requiring external
 libraries. Once you have successfully built LAMMPS with this package,
-you can test it using an input files in the examples dir:
+you can test it using one of the input files in the examples dir:
 
-./build/lmp -in lammps/examples/kim/in.kim.lj
+./build/lmp -in lammps/examples/kim/in.kim-ex.melt
 
 These commands were written by Ryan S. Elliott (UMN), Ellad B. Tadmor (UMN),
 Yaser Afshar (UMN), Ilia Nikiforov (UMN), and Axel Kohlmeyer (Temple U).

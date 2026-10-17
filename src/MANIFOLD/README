@@ -66,7 +66,7 @@ If the above instructions seem a bit intimidating, you can get by just fine
 by copying an existing manifold and modifying it. See e.g. manifold_sphere for
 a relatively simple manifold.
 
-With those things in place, the install script should be able to add your
+With those things in place, CMake will detect the new files and add your
 manifold to LAMMPS without any extra work, so just running:
 
 cmake --build build
