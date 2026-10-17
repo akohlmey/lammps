@@ -93,7 +93,7 @@ To build with this package you must have the `Fenix library
 <https://github.com/sandialabs/fenix>`_ available on your system. The
 Fenix library must be newer than version 1 (currently meaning built from
 the default "develop" branch).  Older versions use an incompatible API
-and this LAMMPS will fail to compile.
+and thus LAMMPS will fail to compile.
 
 .. code-block:: bash
 
@@ -285,10 +285,9 @@ Please note that the GPU library accesses the CUDA driver library
 directly, so it needs to be linked with the CUDA driver library
 (``libcuda.so``) that ships with the Nvidia driver.  If you are
 compiling LAMMPS on the head node of a GPU cluster, this library may not
-be installed, so you may need to copy it over from one of the compute
-nodes (best into the build folder).  Recent versions of the CUDA toolkit
-starting from CUDA 9 provide a dummy ``libcuda.so`` library (typically
-under ``$(CUDA_HOME)/lib64/stubs``), that can be used for linking.  If
+be installed.  Recent versions of the CUDA toolkit starting from CUDA 9
+provide a dummy ``libcuda.so`` library (typically under
+``$(CUDA_HOME)/lib64/stubs``), that CMake will then use for linking.  If
 you are compiling LAMMPS with the ``-D BUILD_SHARED_LIBS=ON`` setting,
 you may get to see ``ld: warning: libcuda.so.1, needed by
 liblammps.so.0, not found``.  This may be worked around by also setting:
@@ -425,7 +424,8 @@ detailed information is available at:
 .. code-block:: bash
 
    -D DOWNLOAD_KIM=value           # download OpenKIM API v2 for build
-                                   # value = off (default) or on
+                                   # value = on or off (default: on, if no
+                                   # installed library is found)
    -D LMP_DEBUG_CURL=value         # set libcurl verbose mode on/off
                                    # value = off (default) or on
    -D LMP_NO_SSL_CHECK=value       # tell libcurl to not verify the peer
@@ -967,16 +967,16 @@ Eigen3 is a template library, so you do not need to build it.
 
 .. code-block:: bash
 
-   -D DOWNLOAD_EIGEN3            # download Eigen3, value = off (default) or on
-   -D EIGEN3_INCLUDE_DIR=path    # path to Eigen library (only needed if a
-                                 # custom location)
+   -D DOWNLOAD_EIGEN3=value      # download Eigen3, value = on or off
+                                 # (default: on, if Eigen3 is not found)
+   -D Eigen3_DIR=path            # folder with the Eigen3Config.cmake file
+                                 # (only needed if at custom location)
 
 If ``DOWNLOAD_EIGEN3`` is set, the Eigen3 library will be downloaded and
-configured inside the CMake build directory.  Eigen3 is a header-only
-library that does not require compilation.  If the Eigen3 library is
+unpacked inside the CMake build directory.  If the Eigen3 library is
 already on your system (in a location where CMake cannot find it), set
-``EIGEN3_INCLUDE_DIR`` to the directory the ``Eigen3`` include file is
-in.
+``Eigen3_DIR`` to the folder containing the ``Eigen3Config.cmake`` file
+(or ``Eigen3_ROOT`` to the Eigen3 installation folder).
 
 ----------
 
@@ -1022,7 +1022,7 @@ No additional settings are needed besides ``-D PKG_OPT=on``
 PYTHON package
 ---------------------------
 
-Building with the PYTHON package requires you have the Python
+Building with the PYTHON package requires that you have the Python
 development headers and library available on your system, which
 needs to be Python version 3.6 or later.
 
@@ -1031,8 +1031,9 @@ needs to be Python version 3.6 or later.
    -D Python_EXECUTABLE=path   # path to Python executable to use
 
 Without this setting, CMake will guess the default Python version on
-your system.  To use a different Python version, you can either create a
-virtualenv, activate it and then run cmake.  Note that you will also
+your system.  To use a different Python version, you can either set
+``Python_EXECUTABLE`` or create a virtualenv, activate it, and then run
+cmake.  Note that you will also
 need to have the development headers installed for this version,
 e.g. python3-devel.
 
@@ -1050,7 +1051,8 @@ binary package provided by your operating system.
 .. code-block:: bash
 
    -D DOWNLOAD_VORO=value    # download Voro++ for build
-                             # value = off (default) or on
+                             # value = on or off (default: on, if no
+                             # installed library is found)
    -D VORO_LIBRARY=path      # Voro++ library file
                              # (only needed if at custom location)
    -D VORO_INCLUDE_DIR=path  # Voro++ include directory
@@ -1077,7 +1079,6 @@ you build LAMMPS with or without MPI.  ADIOS compilation settings for
 LAMMPS are automatically detected, if the PATH and LD_LIBRARY_PATH
 environment variables have been updated for the local ADIOS installation
 and the instructions below are followed.
-systems.
 
 .. code-block:: bash
 
@@ -1126,7 +1127,8 @@ This package depends on the KSPACE package.
 
    -D PKG_ELECTRODE=on           # enable the package itself
    -D PKG_KSPACE=on              # the ELECTRODE package requires KSPACE
-   -D USE_INTERNAL_LINALG=value  # value = on means to favor liblinalg over BLAS/LAPACK
+   -D USE_INTERNAL_LINALG=value  # value = off (default) or on; on means to use the
+                                 # bundled linalg library instead of BLAS/LAPACK
 
 Features in the ELECTRODE package are dependent on code in the
 KSPACE package so the latter one *must* be enabled.
@@ -1235,7 +1237,8 @@ within CMake will download the non-commercial use version.
 .. code-block:: bash
 
    -D DOWNLOAD_QUIP=value       # download QUIP library for build
-                                # value = off (default) or on
+                                # value = on or off (default: on, if no
+                                # installed library is found)
    -D QUIP_LIBRARY=path         # path to libquip.a
                                 # (only needed if a custom location)
    -D USE_INTERNAL_LINALG=value # Use the internal linear algebra library
@@ -1296,7 +1299,7 @@ three linkage modes are supported by LAMMPS on selected operating
 systems (e.g. Linux).  The "static" mode should be the most portable,
 while the "runtime" mode support in LAMMPS makes the most assumptions
 about operating system and compiler environment. If one mode does not
-work, try a different one, switch to a different build system, consider
+work, try a different one, consider
 a global PLUMED installation or consider downloading PLUMED during the
 LAMMPS build.
 
@@ -1308,7 +1311,7 @@ command <plugin>`.
 
 When the ``-D PKG_PLUMED=on`` flag is included in the cmake
 command you must ensure that `the GNU Scientific Library (GSL)
-<https://www.gnu.org/software/gsl/>` is installed in locations
+<https://www.gnu.org/software/gsl/>`_ is installed in locations
 that are accessible in your environment.  There are then two
 additional variables that control the manner in which PLUMED is
 obtained and linked into LAMMPS.
@@ -1316,7 +1319,8 @@ obtained and linked into LAMMPS.
 .. code-block:: bash
 
    -D DOWNLOAD_PLUMED=value   # download PLUMED for build
-                              # value = off (default) or on
+                              # value = on or off (default: on, if no
+                              # installed library is found)
    -D PLUMED_MODE=value       # Linkage mode for PLUMED
                               # value = static (default), shared,
                               #         or runtime
@@ -1378,7 +1382,8 @@ using GCC it should suffice to execute ``make libnnpif`` in the *n2p2*
 .. code-block:: bash
 
    -D DOWNLOAD_N2P2=value    # download n2p2 for build
-                             # value = off (default) or on
+                             # value = on or off (default: on, if no
+                             # installed library is found)
    -D N2P2_DIR=path          # n2p2 base directory
                              # (only needed if a custom location)
 
@@ -1559,7 +1564,8 @@ MDI package
 .. code-block:: bash
 
    -D DOWNLOAD_MDI=value    # download MDI Library for build
-                            # value = off (default) or on
+                            # value = on or off (default: on, if no
+                            # installed library is found)
 
 ----------
 
@@ -1766,7 +1772,8 @@ To build with this package, you must download and build the
 
 .. code-block:: bash
 
-   -D DOWNLOAD_SCAFACOS=value    # download ScaFaCoS for build, value = off (default) or on
+   -D DOWNLOAD_SCAFACOS=value    # download ScaFaCoS for build, value = on or off
+                                 # (default: on, if ScaFaCoS is not found)
 
 If ``DOWNLOAD_SCAFACOS`` is set, the ScaFaCoS library will be downloaded
 and built inside the CMake build directory.  If the ScaFaCoS library is

@@ -7,7 +7,7 @@ Building LAMMPS from source uses CMake to adapt the build configuration
 and generate files for the selected build system.  CMake support has
 been available in LAMMPS since 2018 thanks to the efforts of Christoph
 Junghans (LANL), Richard Berger (LANL), and Axel Kohlmeyer (Temple U).
-The :doc:`legacy build system <Build_make>` based on GNU make has been
+The :doc:`legacy build system <Build_make>` based on GNU make was
 removed in fall 2026.
 
 A key strength of CMake is that it is not tied to a specific platform or
@@ -97,10 +97,10 @@ When using CMake the build procedure is separated into multiple distinct phases:
 
 The configuration and compilation of LAMMPS has to happen in a dedicated
 *build folder* which must be different from the source folder.  Also
-the source folder (``src``) must remain pristine, so it is not allowed
-to "install" packages using the traditional make process and after a
-compilation attempt all created source files must be removed.  This can
-be achieved with ``make purge`` in the ``src`` folder.
+the source folder (``src``) must remain pristine: files left behind
+there by the legacy make-based build of older LAMMPS versions conflict
+with CMake and must be removed with ``make purge`` in the ``src``
+folder.
 
 You can pick **any** folder outside the ``src`` folder.  We recommend to
 use a folder ``build`` in the top-level folder, or multiple folders in

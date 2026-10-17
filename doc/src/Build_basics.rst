@@ -1,8 +1,7 @@
 Basic build options
 ===================
 
-The following topics are covered on this page, for building with both
-CMake and make:
+The following topics are covered on this page:
 
 * :ref:`Serial vs parallel build <serial>`
 * :ref:`Choice of compiler and compile/link options <compile>`
@@ -223,10 +222,10 @@ different settings). If none are set, defaults are applied.
 
 The compilation will always produce a LAMMPS library and an executable
 linked to it.  By default, this will be a static library named
-``liblammps.a`` and an executable named ``lmp`` Setting
+``liblammps.a`` and an executable named ``lmp``.  Setting
 ``BUILD_SHARED_LIBS=on`` will instead produce a shared library called
 ``liblammps.so`` (or ``liblammps.dylib`` or ``liblammps.dll`` depending
-on the platform) If ``LAMMPS_MACHINE=name`` is set in addition, the name
+on the platform).  If ``LAMMPS_MACHINE=name`` is set in addition, the name
 of the generated libraries will be changed to either
 ``liblammps_name.a`` or ``liblammps_name.so``\ , respectively and the
 executable will be called ``lmp_name``.
@@ -236,10 +235,10 @@ Additional information
 
 Note that for creating a shared library, all the libraries it depends on
 must be compiled to be compatible with shared libraries.  This should be
-the case for libraries included with LAMMPS, such as the dummy MPI
-library in ``src/STUBS`` or any package libraries in the ``lib``
-directory, since they are always built in a shared library compatible
-way (e.g. using the ``-fPIC`` compiler switch with GCC on Linux).
+the case for code included with LAMMPS, such as the MPI stubs in
+``src/STUBS`` or the libraries in the ``lib`` directory, since CMake
+compiles them as position independent code by default (e.g. using the
+``-fPIC`` compiler switch with GCC on Linux).
 However, if an auxiliary library (like MPI or FFTW) does not exist as a
 compatible format, the shared library linking step may generate an
 error.  This means you will need to install a compatible version of the
@@ -284,8 +283,9 @@ Some tools described in :doc:`Auxiliary tools <Tools>` can be built directly.
 .. code-block:: bash
 
    -D BUILD_TOOLS=value         # on or off (default). Build binary2txt,
-                                # chain.x, micelle2d.x, msi2lmp, phana,
-                                # stl_bin2txt
+                                # msi2lmp, phana, reformat-json,
+                                # stl_bin2txt, and (with Fortran)
+                                # chain.x and micelle2d.x
    -D BUILD_LAMMPS_GUI=value    # on or off (default). Build LAMMPS-GUI
    -D BUILD_WHAM=value          # on (default). Download and build WHAM;
                                 # only available for BUILD_LAMMPS_GUI=on

@@ -112,8 +112,7 @@ variables (which represent selected options), and can also contain
 control flow constructs for more complex operations.
 
 LAMMPS includes several of these files to define configuration
-"presets", similar to the options that exist for the Make based
-system. Using these files, you can enable/disable portions of the
+"presets".  Using these files, you can enable/disable portions of the
 available packages in LAMMPS. If you need a custom preset, you can
 make a copy of one of them and modify it to suit your needs.
 

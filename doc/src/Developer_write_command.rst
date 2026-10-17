@@ -39,9 +39,9 @@ Interfacing the *libcurl* library
 """""""""""""""""""""""""""""""""
 
 Rather than implementing the various protocols for downloading files, we
-rely on an external library: `libcurl library
+rely on the external `libcurl library
 <https://curl.se/libcurl/>`_.  This requires that the library and its
-headers are installed.  Thus we need to add some lines to the file
+headers are installed.  To find and link it, we need to add some lines to the file
 ``cmake/Modules/Packages/EXTRA-COMMAND.cmake``:
 
 .. code-block:: cmake

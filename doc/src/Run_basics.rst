@@ -5,7 +5,7 @@ LAMMPS is run from the command-line, reading commands from a file via
 the ``-in`` command-line flag, or from standard input.  Using the ``-in
 in.file`` variant is recommended (see note below).  The name of the
 LAMMPS executable is ``lmp`` by default.  When running CMake with the
-``-D LAMMPS_MACHINE=<machine>`` it is changed to ``lmp_<machine>``.
+``-D LAMMPS_MACHINE=<machine>`` setting, it is changed to ``lmp_<machine>``.
 Examples:
 
 .. code-block:: bash

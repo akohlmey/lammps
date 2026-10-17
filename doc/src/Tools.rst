@@ -166,7 +166,7 @@ The syntax for running the tool is
 
 .. code-block:: bash
 
-   chain < def.chain > data.file
+   chain.x < def.chain > data.file
 
 See the def.chain or def.chain.ab files in the tools directory for
 examples of definition files.  This tool was used to create the system
@@ -198,9 +198,9 @@ corresponding script will try to change the non-compliant file(s) to
 match the conventions.
 
 For convenience these scripts can also be invoked by the make file in
-the ``src`` folder with, `make check-whitespace` or `make fix-whitespace`
+the ``src`` folder with ``make check-whitespace`` or ``make fix-whitespace``
 to either detect or edit the files.  Correspondingly for the other python
-scripts. `make check` will run all checks except for the list of version tags.
+scripts.  ``make check`` will run all checks except for the list of version tags.
 
 ----------
 
@@ -632,7 +632,7 @@ These scripts were written by Arun Subramaniyan at Purdue Univ
 micelle2d tool
 ----------------------------
 
-The file micelle2d.f creates a LAMMPS data file containing short lipid
+The file micelle2d.f90 creates a LAMMPS data file containing short lipid
 chains in a monomer solution.  It uses a text file containing lipid
 definition parameters as an input.  The created molecules and solvent
 atoms can strongly overlap, so LAMMPS needs to run the system
@@ -641,7 +641,7 @@ for running the tool is
 
 .. code-block:: bash
 
-   micelle2d < def.micelle2d > data.file
+   micelle2d.x < def.micelle2d > data.file
 
 See the def.micelle2d file in the tools directory for an example of a
 definition file.  This tool was used to create the system for the
@@ -1010,7 +1010,7 @@ Building the wrapper
 
 The build steps for building a wrapper module are integrated for the
 languages: Java, Lua, Perl5, Python, Ruby, and Tcl.  These require that
-the LAMMPS library is build as a shared library and all necessary
+the LAMMPS library is built as a shared library and all necessary
 development headers and libraries are present.
 
 .. code-block:: bash

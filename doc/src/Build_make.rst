@@ -63,7 +63,7 @@ Make to CMake quick-start guide
      - Use ``-D BUILD_SHARED_LIBS=on``
    * - Install LAMMPS Python module
      - ``make install-python``
-     - Use ``cmake --build build --target install-python``
+     - Use ``cmake --build build --target install-python`` (requires ``-D BUILD_SHARED_LIBS=on``)
 
 Some general CMake tips:
 

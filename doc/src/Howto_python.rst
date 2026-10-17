@@ -147,14 +147,13 @@ executable to the location in the virtual environment with:
 
    cmake -S cmake -B build -D Python_EXECUTABLE=$(which python)
 
-Then install the LAMMPS Python module (for the traditional make build
-use ``make install-python`` in the ``src`` folder instead) and other
-useful packages into the virtual environment:
+Then install the LAMMPS Python module and other useful packages into
+the virtual environment:
 
 .. code-block:: bash
 
    # install LAMMPS package in virtual environment
-   cmake --build build-shared --target install-python
+   cmake --build build --target install-python
 
    # install other useful packages
    pip install matplotlib jupyterlab mpi4py pandas

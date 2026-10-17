@@ -3616,7 +3616,8 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
    The INTEL package must be enabled with ``-D PKG_INTEL=on`` when LAMMPS is built.
 
 *Package kokkos command without KOKKOS package enabled*
-   The KOKKOS package must be enabled with ``-D PKG_KOKKOS=on`` when LAMMPS is built.
+   The KOKKOS package must be enabled with ``-D PKG_KOKKOS=on`` when LAMMPS is built
+   and activated with the ``-k on`` command-line flag when LAMMPS is run.
 
 *Package omp command without OPENMP package installed*
    The OPENMP package must be enabled with ``-D PKG_OPENMP=on`` when LAMMPS is built.
@@ -4412,10 +4413,10 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
    or the read_data command to set this limit larger
 
 *Support for writing images in JPEG format not included*
-   LAMMPS was not built with the -DLAMMPS_JPEG switch in the Makefile.
+   LAMMPS was built without JPEG support (``-D WITH_JPEG=on``).
 
 *Support for writing images in PNG format not included*
-   LAMMPS was not built with the -DLAMMPS_PNG switch in the Makefile.
+   LAMMPS was built without PNG support (``-D WITH_PNG=on``).
 
 *System in data file is too big*
    See the setting for bigint in the src/lmptype.h file.

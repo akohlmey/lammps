@@ -18,13 +18,11 @@ for example ``src/MOLECULE`` or ``src/EXTRA-MOLECULE``.  The
 ``src/STUBS`` subdirectory is not a package but contains a dummy MPI
 library, that is used when building a serial version of the code.
 
-The ``lib`` directory contains the source code for several supporting
-libraries or files with configuration settings to use globally installed
-libraries, that are required by some optional packages.  They may
-include python scripts that can transparently download additional source
-code on request.  Each subdirectory, like ``lib/colvars`` or
-``lib/gpu``, contains the source files.  These libraries included in the
-LAMMPS build, if the corresponding package is installed.
+The ``lib`` directory contains the source code or header files of
+several supporting libraries that are required by some optional
+packages.  Each subdirectory, like ``lib/colvars`` or ``lib/gpu``,
+contains the source files.  These libraries are included in the LAMMPS
+build, if the corresponding package is enabled.
 
 LAMMPS C++ source files almost always come in pairs, such as
 ``src/run.cpp`` (implementation file) and ``src/run.h`` (header file).

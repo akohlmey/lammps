@@ -442,7 +442,7 @@ and :ref:`ASPHERE <PKG-ASPHERE>` packages are installed.
 **Supporting info:**
 
 * ``src/CG-DNA``: filenames -> commands
-* ``src/CG-DNA/README``
+* ``src/CG-DNA/README.md``
 * :doc:`pair_style oxdna/\* <pair_oxdna>`
 * :doc:`pair_style oxdna2/\* <pair_oxdna2>`
 * :doc:`pair_style oxdna3/\* <pair_oxdna3>`
@@ -595,7 +595,6 @@ the :doc:`Build extras <Build_extras>` page.
 
 * ``src/COMPRESS``: filenames -> commands
 * ``src/COMPRESS/README``
-* ``lib/compress/README``
 * :doc:`dump atom/gz <dump>`
 * :doc:`dump cfg/gz <dump>`
 * :doc:`dump custom/gz <dump>`
@@ -1147,7 +1146,7 @@ can be invoked at run time via the ``-sf gpu`` or ``-suffix gpu``
 :doc:`command-line switches <Run_options>`.  See also the :ref:`KOKKOS
 <PKG-KOKKOS>` package, which has GPU-enabled styles as well.
 
-**Authors:** Mike Brown (Intel) while at Sandia and ORNL and Trung
+**Authors:** Mike Brown (NVIDIA) while at Sandia and ORNL and Trung
 Nguyen (U Chicago) while at ORNL, Northwestern and later.  AMD HIP
 support by Evgeny Kuznetsov, Vladimir Stegailov, and Vsevolod Nikolskiy
 (HSE University).
@@ -1421,7 +1420,6 @@ This package has :ref:`specific installation instructions <kim>` on the
 * :doc:`pair_style kim <pair_kim>`
 * ``src/KIM``: filenames -> commands
 * ``src/KIM/README``
-* ``lib/kim/README``
 * ``examples/kim``
 
 ----------
@@ -1448,7 +1446,7 @@ optimized for CPUs, KNLs, and GPUs.
 You must have a C++20 compatible compiler to use this package.  KOKKOS
 makes extensive use of advanced C++ features, which can expose compiler
 bugs, especially when compiling for maximum performance at high
-optimization levels.  Please see the file ``lib/kokkos/README`` for a
+optimization levels.  Please see the file ``lib/kokkos/README.md`` for a
 list of compilers and their respective platforms, that are known to
 work.
 
@@ -1468,7 +1466,7 @@ the :doc:`Build extras <Build_extras>` page.
 
 * ``src/KOKKOS``: filenames -> commands
 * ``src/KOKKOS/README``
-* ``lib/kokkos/README``
+* ``lib/kokkos/README.md``
 * :doc:`Accelerator packages <Speed_packages>`
 * :doc:`KOKKOS package <Speed_kokkos>`
 * :doc:`Section 4.2 -k on ... <Run_options>`
@@ -1578,7 +1576,7 @@ the :doc:`Build extras <Build_extras>` page.
 **Supporting info:**
 
 * ``src/LEPTON``: filenames -> commands
-* ``lib/lepton/README``.md
+* ``lib/lepton/README.md``
 * :doc:`pair_style lepton <pair_lepton>`
 * :doc:`bond_style lepton <bond_lepton>`
 * :doc:`angle_style lepton <angle_lepton>`
@@ -1773,7 +1771,6 @@ the :doc:`Build extras <Build_extras>` page.
 **Supporting info:**
 
 * ``src/MDI/README``
-* ``lib/mdi/README``
 * :doc:`Howto MDI <Howto_mdi>`
 * :doc:`mdi <mdi>`
 * :doc:`fix mdi/qm <fix_mdi_qm>`
@@ -1944,7 +1941,6 @@ This package has :ref:`specific installation instructions <ml-hdnnp>` on the
 
 * ``src/ML-HDNNP``: filenames -> commands
 * ``src/ML-HDNNP/README``
-* ``lib/hdnnp/README``
 * :doc:`pair_style hdnnp <pair_hdnnp>`
 * ``examples/PACKAGES/hdnnp``
 
@@ -2325,7 +2321,6 @@ the :doc:`Build extras <Build_extras>` page.
 
 * ``src/NETCDF``: filenames -> commands
 * ``src/NETCDF/README``
-* ``lib/netcdf/README``
 * :doc:`dump netcdf <dump_netcdf>`
 
 ----------
@@ -2547,7 +2542,6 @@ as a plugin to avoid licensing conflicts when distributing binaries.
 **Supporting info:**
 
 * ``src/PLUMED/README``
-* ``lib/plumed/README``
 * :doc:`fix plumed <fix_plumed>`
 * ``examples/PACKAGES/plumed``
 
@@ -2605,7 +2599,6 @@ the :doc:`Build extras <Build_extras>` page.
 
 * ``src/PYTHON``: filenames -> commands
 * :doc:`Python call <Python_head>`
-* ``lib/python/README``
 * ``examples/python``
 
 ----------
@@ -2972,7 +2965,6 @@ SMATB: Daniele Rapetti (Politecnico di Torino)
 **Supporting info:**
 
 * ``src/SMTBQ``: filenames -> commands
-* ``src/SMTBQ/README``
 * :doc:`pair_style smtbq <pair_smtbq>`
 * :doc:`pair_style smatb <pair_smatb>`, :doc:`pair_style smatb/single <pair_smatb>`
 * ``examples/PACKAGES/smtbq``
@@ -3157,7 +3149,6 @@ the :doc:`Build extras <Build_extras>` page.
 
 * ``src/VORONOI``: filenames -> commands
 * ``src/VORONOI/README``
-* ``lib/voronoi/README``
 * :doc:`compute voronoi/atom <compute_voronoi_atom>`
 * ``examples/voronoi``
 

@@ -61,9 +61,9 @@ compiler ported to Windows.  The Cygwin and the MinGW packages provide
 this, so LAMMPS can be compiled on Windows.  The former emulates a
 Unix-like environment while the latter re-implements a native Windows
 SDK.  The necessary (minor) modifications to LAMMPS are included, but
-may not always up-to-date for recently added functionality and the
-corresponding new code.  Using CMake for this mode of compilation is
-untested.
+may not always be up-to-date for recently added functionality and the
+corresponding new code.  Compiling LAMMPS this way is not regularly
+tested.
 
 In case of problems, you are recommended to contact somebody with
 experience in using Cygwin.  If you do come across portability problems
@@ -130,10 +130,9 @@ toolkit provides two sets of C/C++ and Fortran compilers: the so-called
 "classic" compilers (``icl.exe`` and ``ifort.exe``) and newer, LLVM
 based compilers (``icx.exe`` and ``ifx.exe``).  In addition to the
 compilers and their dependent modules, also the thread building blocks
-(TBB) and the math kernel library (MKL) need to be installed.  Two
-presets (``cmake/presets/windows-intel-llvm.cmake`` and
-``cmake/presets/windows-intel-classic.cmake``) are provided for
-selecting the LLVM based or classic compilers, respectively. The preset
+(TBB) and the math kernel library (MKL) need to be installed.  The
+preset ``cmake/presets/intel-llvm.cmake`` selects the LLVM based
+compilers. The preset
 ``cmake/presets/windows.cmake`` enables compatible packages that are not
 dependent on additional features or libraries.  You **must** use the
 CMake based build procedure and use Ninja as build tool.  For compiling

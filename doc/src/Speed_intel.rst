@@ -85,8 +85,9 @@ order of operations compared to LAMMPS without acceleration:
 * The *newton* setting applies to all atoms, not just atoms shared
   between MPI tasks
 * Vectorization can change the order for adding pairwise forces
-* When using the ``-DLMP_USE_MKL_RNG`` define (all included intel optimized
-  makefiles do) at build time, the random number generator for
+* When LAMMPS is linked to the Intel MKL library (CMake detects it
+  automatically and then sets the ``-DLMP_USE_MKL_RNG`` define), the
+  random number generator for
   dissipative particle dynamics (``pair style dpd/intel``) uses the Mersenne
   Twister generator included in the Intel MKL library (that should be
   more robust than the default Masaglia random number generator)
@@ -186,9 +187,9 @@ this information can normally be obtained with:
 Building LAMMPS with the INTEL package
 """"""""""""""""""""""""""""""""""""""
 
-See the :ref:`Build extras <intel>` page for instructions.  See the
-``src/INTEL/README`` file for additional flags that might be needed for
-best performance on Intel processors.
+See the :ref:`Build extras <intel>` page for instructions.  CMake
+automatically adds suitable optimization flags when using the Intel
+compilers.
 
 .. note::
 
@@ -198,9 +199,10 @@ best performance on Intel processors.
    should build for the processor used for compiling. For fourth
    generation Intel Xeon (v4/Broadwell) processors, ``-xCORE-AVX2`` should
    be used. For older Intel Xeon processors, ``-xAVX`` will perform best
-   in general for the different simulations in LAMMPS. The default
-   in most of the example Makefiles is to use ``-xHost``, however this
-   should not be used when cross-compiling.
+   in general for the different simulations in LAMMPS. With the LLVM
+   based Intel compilers, CMake adds ``-xHost`` unless an architecture
+   flag is already present in ``CMAKE_CXX_FLAGS``, so you need to set
+   a suitable flag explicitly when compiling for a different CPU.
 
 Running LAMMPS with the INTEL package
 """""""""""""""""""""""""""""""""""""
@@ -300,9 +302,9 @@ Long-Range Thread (LRT) mode is an option to the :doc:`package intel
 <kspace_style>` for long-range electrostatics on processors with SMT. It
 generates an extra pthread for each MPI task.  The thread is dedicated
 to performing some of the PPPM calculations and MPI communications. This
-feature requires configuring with the ``-D INTEL_LRT_MODE=<value>`` with
-``<value>`` set to either ``c++17`` or ``threads``.  It is set to
-``none`` by default.  On Intel Xeon processors, using this mode might
+feature requires configuring with ``-D INTEL_LRT_MODE=<value>`` with
+``<value>`` set to either ``threads`` (the default, if a threads library
+is found) or ``c++17``.  On Intel Xeon processors, using this mode might
 result in better performance when using multiple nodes, depending on the
 specific machine configuration. To enable LRT mode, specify that the
 number of OpenMP threads is one less than would normally be used for the
@@ -321,7 +323,7 @@ yes``. When using LRT, you should set the environment variable
 Not all styles are supported in the INTEL package. You can mix the INTEL
 package with styles from the :doc:`OPT <Speed_opt>` package or the
 :doc:`OPENMP package <Speed_omp>`. Of course, this requires that these
-packages were installed at build time. This can performed automatically
+packages were installed at build time. This can be performed automatically
 by using ``-sf hybrid intel opt`` or ``-sf hybrid intel omp``
 command-line options. Alternatively, the "opt" and "omp" suffixes can be
 appended manually in the input script. For the latter, the :doc:`package

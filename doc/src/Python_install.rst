@@ -166,10 +166,9 @@ folder that the dynamic loader searches or inside of the installed
       window and after you turn off the virtual environment with the
       ``deactivate`` command.
 
-      When using CMake to build LAMMPS, you need to set
-      ``CMAKE_INSTALL_PREFIX`` to the value of the ``$VIRTUAL_ENV``
-      environment variable during the configuration step. For the
-      traditional make procedure, no additional steps are needed.  After
+      Configure LAMMPS with CMake while the virtual environment is
+      active, so that CMake uses its Python interpreter (or set
+      ``-D Python_EXECUTABLE=$VIRTUAL_ENV/bin/python``).  After
       compiling LAMMPS you can do a "Python package only" installation
       with ``cmake --build build --target install-python`` and the
       LAMMPS Python package and the shared library file are installed
@@ -197,14 +196,14 @@ folder that the dynamic loader searches or inside of the installed
       .. code-block:: bash
 
          export PYTHONPATH=${PYTHONPATH}:${HOME}/lammps/python
-         export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/lammps/src
+         export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/lammps/build
 
       For the C-shells like csh or tcsh the commands are:
 
       .. code-block:: csh
 
          setenv PYTHONPATH ${PYTHONPATH}:${HOME}/lammps/python
-         setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${HOME}/lammps/src
+         setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${HOME}/lammps/build
 
       On macOS you may also need to set ``DYLD_LIBRARY_PATH`` accordingly.
       You can make those changes permanent by editing your ``$HOME/.bashrc``
@@ -286,7 +285,7 @@ follows:
 
   .. code-block:: console
 
-     $ source $HOME/myenv/activate
+     $ source $HOME/myenv/bin/activate
      (myenv)$ python -m pip install mpi4py
 
 - Via ``pip`` into a system folder (not recommended):
@@ -305,8 +304,8 @@ certain that **both** are using the **same** implementation and version
 of MPI library.  If you only have one MPI library installed on your
 system this is not an issue, but it can be if you have multiple MPI
 installations (e.g. on an HPC cluster to be selected through environment
-modules).  Your LAMMPS build is explicit about which MPI it is using
-since it is either detected during CMake configuration.  The
+modules).  Your LAMMPS build is explicit about which MPI library it is
+using, since that is determined during CMake configuration.  The
 installation process of ``mpi4py`` uses the ``mpicc`` command to find
 information about the MPI it uses to build against.  And it tries to
 load "libmpi.so" from the ``LD_LIBRARY_PATH``.  This may or may not find

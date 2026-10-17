@@ -1,7 +1,7 @@
 Development build options
 =========================
 
-The build procedures in LAMMPS offers a few extra options which are
+The build procedure in LAMMPS offers a few extra options which are
 useful during development, testing or debugging.
 
 .. contents::
@@ -768,8 +768,7 @@ Coding style utilities
 ----------------------
 
 To aid with enforcing some of the coding style conventions in LAMMPS
-some additional build targets have been added to the makefile in the
-``src`` folder.  These require Python 3.5 or later and will only work
+the makefile in the ``src`` folder provides the following targets.  These require Python 3.5 or later and will only work
 properly on Unix-like operating and file systems.
 
 The following options are available (to be run in the ``src`` folder):

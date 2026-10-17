@@ -38,8 +38,8 @@ create a local copy of the LAMMPS repository with a command like:
    git clone -b release https://github.com/lammps/lammps.git mylammps
 
 where "mylammps" is the name of the directory you wish to create on
-your machine and "release" is one of the 3 branches listed above.
-(Note that you actually download all 3 branches; you can switch
+your machine and "release" is one of the 4 branches listed above.
+(Note that you actually download all branches; you can switch
 between them at any time using "git checkout <branch name>".)
 
 .. admonition:: Saving time and disk space when using ``git clone``
@@ -117,7 +117,7 @@ tarballs <verify_download>`.
 
 Once you have updated your local files with a ``git pull`` (or ``git
 checkout``), you still need to re-build LAMMPS if any source files have
-changed.  How to do this depends on the build system you are using.
+changed.
 
 From the top-level LAMMPS folder (with ``build`` as build folder), type:
 

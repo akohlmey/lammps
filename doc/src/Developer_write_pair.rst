@@ -63,8 +63,9 @@ please consult with the LAMMPS developers first.
 
 The contributed code needs to support the :doc:`CMake build process
 <Build_cmake>`.  This is usually automatic unless the new style uses
-some external library or is derived from a class in another package.
-In those cases it is necessary to make changes to the general CMake
+some external library or depends on code from a different optional
+package (variants in the accelerator packages are handled automatically).
+In those cases it may be necessary to make changes to the general CMake
 scripting file in ``cmake/CMakeLists.txt`` or the package
 specific CMake scripting in ``cmake/Modules/Packages``.
 
