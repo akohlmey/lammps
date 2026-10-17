@@ -30,13 +30,7 @@ C++17 standard compliance
 A C++17 standard compatible compiler is currently the minimum
 requirement for compiling LAMMPS.  LAMMPS version 22 July 2025 is the
 last version compatible with the C++11 standard for the core code and
-most packages.  Most currently used C++ compilers are compatible with
-C++17, but some older ones may need extra flags to enable C++17
-compliance.
-
-.. code-block:: make
-
-   CCFLAGS = -g -O3 -std=c++17
+most packages.
 
 Individual packages may require compliance with a later C++ standard
 like C++20.  These requirements will be documented with the
@@ -255,11 +249,6 @@ an atom moves through the periodic box more than this limit, the value
 will "roll over", e.g. from 511 to -512, which can cause diagnostics
 like the mean-squared displacement, as calculated by the :doc:`compute
 msd <compute_msd>` command, to be faulty.
-
-Also note that the GPU package requires its lib/gpu library to be
-compiled with the same size setting, or the link will fail.  A CMake
-build does this automatically.  When building with make, the setting
-in whichever ``lib/gpu/Makefile`` is used must be the same as above.
 
 ----------
 

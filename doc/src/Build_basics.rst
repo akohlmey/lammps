@@ -90,15 +90,10 @@ to: e.g. ``KSPACE``, and ``COLVARS``.  See the :doc:`Packages details
 <Packages_details>` page for more info on these packages, and the pages
 for their respective commands for OpenMP threading info.
 
-For CMake, if you use ``BUILD_OMP=on``, you can use these packages and
-turn on their native OpenMP support at run time by setting the
-``OMP_NUM_THREADS`` environment variable before you launch LAMMPS.
-
-When building LAMMPS with conventional make, the ``CCFLAGS`` and
-``LINKFLAGS`` variables in Makefile.machine need to include the compiler
-flag that enables OpenMP.  For the GNU compilers or Clang, it is
-``-fopenmp``\ .  For (recent) Intel compilers, it is ``-qopenmp``\ .  If
-you are using a different compiler, please refer to its documentation.
+If you use ``-D BUILD_OMP=on`` when configuring a LAMMPS build, you can
+use these packages **and** turn on their native OpenMP support at run time
+by setting the ``OMP_NUM_THREADS`` environment variable before you
+launch LAMMPS.
 
 ----------
 

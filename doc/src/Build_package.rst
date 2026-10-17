@@ -90,11 +90,11 @@ packages at once.
 Almost all packages can be included or excluded in a LAMMPS build,
 independent of the other packages.  However, some packages include files
 derived from files in other packages.  LAMMPS checks for this and
-(usually) does the right thing automatically:  Individual files are
-only included if their dependencies are already included.  Likewise,
-if a package is excluded, other files dependent on that package are
-also excluded.  If an entire package depends on some other package
-that package will either be included automatically or CMake will
+(usually) does the right thing automatically: Individual files are only
+included if their dependencies are already included.  Likewise, if a
+package is excluded, other files dependent on that package are also
+excluded.  If an entire package depends on some other package that
+additional package will either be included automatically or CMake will
 stop with an error.  Information about this will be printed to the
 screen when running the CMake configuration.
 

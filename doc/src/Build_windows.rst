@@ -56,13 +56,14 @@ For more details on that, please see :doc:`this tutorial <Howto_wsl>`.
 Using a GNU GCC ported to Windows
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-One option for compiling LAMMPS on Windows natively is to install a Bash
-shell, Unix shell utilities, Perl, Python, CMake, GNU make, and a GNU compiler
-ported to Windows.  The Cygwin package provides a unix/linux interface
-to low-level Windows functions, so LAMMPS can be compiled on Windows.
-The necessary (minor) modifications to LAMMPS are included, but may not
-always up-to-date for recently added functionality and the corresponding
-new code.  Using CMake for this mode of compilation is untested.
+One option for compiling LAMMPS on Windows natively is to install a GNU
+compiler ported to Windows.  The Cygwin and the MinGW packages provide
+this, so LAMMPS can be compiled on Windows.  The former emulates a
+Unix-like environment while the latter re-implements a native Windows
+SDK.  The necessary (minor) modifications to LAMMPS are included, but
+may not always up-to-date for recently added functionality and the
+corresponding new code.  Using CMake for this mode of compilation is
+untested.
 
 In case of problems, you are recommended to contact somebody with
 experience in using Cygwin.  If you do come across portability problems

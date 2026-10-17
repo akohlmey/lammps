@@ -3610,20 +3610,16 @@ Please also see the page with :doc:`Warning messages <Errors_warnings>`.
    create_box command.
 
 *Package gpu command without GPU package installed*
-   The GPU package must be installed via "make yes-gpu" before LAMMPS is
-   built.
+   The GPU package must be enabled with ``-D PKG_GPU=on`` when LAMMPS is built.
 
 *Package intel command without INTEL package installed*
-   The INTEL package must be installed via "make yes-intel"
-   before LAMMPS is built.
+   The INTEL package must be enabled with ``-D PKG_INTEL=on`` when LAMMPS is built.
 
 *Package kokkos command without KOKKOS package enabled*
-   The KOKKOS package must be installed via "make yes-kokkos" before
-   LAMMPS is built, and the "-k on" must be used to enable the package.
+   The KOKKOS package must be enabled with ``-D PKG_KOKKOS=on`` when LAMMPS is built.
 
 *Package omp command without OPENMP package installed*
-   The OPENMP package must be installed via "make yes-openmp" before
-   LAMMPS is built.
+   The OPENMP package must be enabled with ``-D PKG_OPENMP=on`` when LAMMPS is built.
 
 *Pair body requires body style nparticle*
    This pair style is specific to the nparticle body style.

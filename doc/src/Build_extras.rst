@@ -286,7 +286,7 @@ directly, so it needs to be linked with the CUDA driver library
 (``libcuda.so``) that ships with the Nvidia driver.  If you are
 compiling LAMMPS on the head node of a GPU cluster, this library may not
 be installed, so you may need to copy it over from one of the compute
-nodes (best into this directory).  Recent versions of the CUDA toolkit
+nodes (best into the build folder).  Recent versions of the CUDA toolkit
 starting from CUDA 9 provide a dummy ``libcuda.so`` library (typically
 under ``$(CUDA_HOME)/lib64/stubs``), that can be used for linking.  If
 you are compiling LAMMPS with the ``-D BUILD_SHARED_LIBS=ON`` setting,
@@ -761,11 +761,11 @@ They must be specified in uppercase.
 
 This list was last updated for version 5.2.1 of the Kokkos library.
 
-For multicore CPUs using OpenMP, set these 2 variables.
+For multicore CPUs using OpenMP, set these variables.
 
 .. code-block:: bash
 
-   -D Kokkos_ARCH_HOSTARCH=on   # HOSTARCH = HOST from list above
+   -D Kokkos_ARCH_<HOSTARCH>=on   # <HOSTARCH> = HOST from list above (optional)
    -D Kokkos_ENABLE_OPENMP=on
    -D BUILD_OMP=on
 
@@ -1023,19 +1023,16 @@ PYTHON package
 
 Building with the PYTHON package requires you have a the Python
 development headers and library available on your system, which
-needs to be Python version 3.6 or later.  See ``lib/python/README``
-for additional details.
+needs to be Python version 3.6 or later.
 
 .. code-block:: bash
 
    -D Python_EXECUTABLE=path   # path to Python executable to use
 
-Without this setting, CMake will guess the default Python version
-on your system.  To use a different Python version, you can either
-create a virtualenv, activate it and then run cmake.  Or you can
-set the Python_EXECUTABLE variable to specify which Python
-interpreter should be used.  Note note that you will also need to
-have the development headers installed for this version,
+Without this setting, CMake will guess the default Python version on
+your system.  To use a different Python version, you can either create a
+virtualenv, activate it and then run cmake.  Note that you will also
+need to have the development headers installed for this version,
 e.g. python3-devel.
 
 ----------
@@ -1078,12 +1075,12 @@ sure that you have ADIOS built either with or without MPI to match if
 you build LAMMPS with or without MPI.  ADIOS compilation settings for
 LAMMPS are automatically detected, if the PATH and LD_LIBRARY_PATH
 environment variables have been updated for the local ADIOS installation
-and the instructions below are followed for the respective build
+and the instructions below are followed.
 systems.
 
 .. code-block:: bash
 
-   -D ADIOS2_DIR=path        # path is where ADIOS 2.x is installed
+   -D ADIOS2_DIR=path        # path is where ADIOS 2.x is installed (optional)
    -D PKG_ADIOS=on
 
 ----------
@@ -1295,18 +1292,18 @@ runtime. This mode of linking is particularly convenient for doing
 PLUMED development and comparing multiple PLUMED versions as these sorts
 of comparisons can be done without recompiling the hosting MD code. All
 three linkage modes are supported by LAMMPS on selected operating
-systems (e.g. Linux) and using either CMake or traditional make
-build. The "static" mode should be the most portable, while the
-"runtime" mode support in LAMMPS makes the most assumptions about
-operating system and compiler environment. If one mode does not work,
-try a different one, switch to a different build system, consider a
-global PLUMED installation or consider downloading PLUMED during the
+systems (e.g. Linux).  The "static" mode should be the most portable,
+while the "runtime" mode support in LAMMPS makes the most assumptions
+about operating system and compiler environment. If one mode does not
+work, try a different one, switch to a different build system, consider
+a global PLUMED installation or consider downloading PLUMED during the
 LAMMPS build.
 
-Instead of including the PLUMED package directly into LAMMPS, it
-is also possible to skip this step and build the PLUMED package as
-a plugin using the CMake script files in the ``examples/PACKAGES/plumed/plugin``
-folder and then load this plugin at runtime with the :doc:`plugin command <plugin>`.
+Instead of including the PLUMED package directly into LAMMPS, it is also
+possible to skip this step and build the PLUMED package as a plugin
+using the CMake script files in the ``examples/PACKAGES/plumed/plugin``
+folder and then load this plugin at runtime with the :doc:`plugin
+command <plugin>`.
 
 When the ``-D PKG_PLUMED=on`` flag is included in the cmake
 command you must ensure that `the GNU Scientific Library (GSL)
@@ -1356,11 +1353,7 @@ the HDF5 library.
 
 No additional settings are needed besides ``-D PKG_H5MD=on``.
 
-This should auto-detect the H5MD library on your system.  Several
-advanced CMake H5MD options exist if you need to specify where it
-is installed.  Use the ccmake (terminal window) or cmake-gui
-(graphical) tools to see these options and set them interactively
-from their user interfaces.
+This should detect the HDF5 installation on your system or error out.
 
 ----------
 
@@ -1371,15 +1364,14 @@ ML-HDNNP package
 
 To build with the ML-HDNNP package it is required to download and build the
 external `n2p2 <https://github.com/CompPhysVienna/n2p2>`_ library ``v2.1.4``
-(or higher). The LAMMPS build process offers an automatic download and
+(or higher).  The LAMMPS build process offers an automatic download and
 compilation of *n2p2* or allows you to choose the installation directory of
-*n2p2* manually. Please see the boxes below for the CMake and traditional build
-system for detailed information.
+*n2p2* manually. Please see below for detailed information.
 
-In case of a manual installation of *n2p2* you only need to build the *n2p2* core
-library ``libnnp`` and interface library ``libnnpif``. When using GCC it should
-suffice to execute ``make libnnpif`` in the *n2p2* ``src`` directory. For more
-details please see ``lib/hdnnp/README`` and the `n2p2 build documentation
+In case of a manual installation of *n2p2* you only need to build the
+*n2p2* core library ``libnnp`` and interface library ``libnnpif``.  When
+using GCC it should suffice to execute ``make libnnpif`` in the *n2p2*
+``src`` directory. For more details see the `n2p2 build documentation
 <https://compphysvienna.github.io/n2p2/topics/build.html>`_.
 
 .. code-block:: bash
@@ -1394,6 +1386,12 @@ built inside the CMake build directory.  If the *n2p2* library is already
 on your system (in a location CMake cannot find it), set the ``N2P2_DIR``
 to path where *n2p2* is located. If *n2p2* is located directly in
 ``lib/hdnnp/n2p2`` it will be automatically found by CMake.
+
+.. admonition:: Ninja-build
+   :class: note
+
+   Building the *n2p2* library automatically requires the ``Unix Makefiles``
+   back end of CMake and is not compatible with, e.g. ``-G Ninja``.
 
 .. admonition:: Failure to build n2p2 due to git branch names
    :class: note
