@@ -29,9 +29,9 @@ actively supported by the LAMMPS developers, as they were contributed
 by LAMMPS users.  If you have problems using them, we can direct you
 to the authors.
 
-The source code for each of these codes is in the tools subdirectory
-of the LAMMPS distribution.  Use ``-D BUILD_TOOLS=ON`` to include them
-when building LAMMPS.  Some tools are packages with their own own
+The source code for each of these codes is in the tools subdirectory of
+the LAMMPS distribution.  Use ``-D BUILD_TOOLS=ON`` to include some of
+them when building LAMMPS.  Some tools are packages with their own
 subdirectory with their own Makefiles and/or README files.
 
 ----------
@@ -1008,11 +1008,10 @@ SWIG will generate a 1:1 translation of the functions in the interface file.
 Building the wrapper
 ^^^^^^^^^^^^^^^^^^^^
 
-When using CMake, the build steps for building a wrapper
-module are integrated for the languages: Java, Lua,
-Perl5, Python, Ruby, and Tcl.  These require that the
-LAMMPS library is build as a shared library and all
-necessary development headers and libraries are present.
+The build steps for building a wrapper module are integrated for the
+languages: Java, Lua, Perl5, Python, Ruby, and Tcl.  These require that
+the LAMMPS library is build as a shared library and all necessary
+development headers and libraries are present.
 
 .. code-block:: bash
 
@@ -1023,32 +1022,6 @@ necessary development headers and libraries are present.
    -D BUILD_SWIG_PYTHON=on  # to enable building the Python wrapper
    -D BUILD_SWIG_RUBY=on    # to enable building the Ruby wrapper
    -D BUILD_SWIG_TCL=on     # to enable building the Tcl wrapper
-
-
-Manual building allows a little more flexibility. E.g. one can choose
-the name of the module and build and use a dynamically loaded object
-for Tcl with:
-
-.. code-block:: bash
-
-   swig -tcl -module tcllammps lammps.i
-   gcc -fPIC -shared $(pkg-config tcl --cflags) -o tcllammps.so \
-               lammps_wrap.c -L ../src/ -llammps
-   tclsh
-
-Or one can build an extended Tcl shell command with the wrapped
-functions included with:
-
-.. code-block:: bash
-
-   swig -tcl -module tcllmps lammps_shell.i
-   gcc -o tcllmpsh lammps_wrap.c -Xlinker -export-dynamic \
-            -DHAVE_CONFIG_H $(pkg-config tcl --cflags) \
-            $(pkg-config tcl --libs) -L ../src -llammps
-
-In both cases it is assumed that the LAMMPS library was compiled
-as a shared library in the ``src`` folder. Otherwise the last
-part of the commands needs to be adjusted.
 
 Utility functions
 ^^^^^^^^^^^^^^^^^

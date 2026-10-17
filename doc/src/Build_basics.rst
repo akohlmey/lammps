@@ -239,11 +239,12 @@ must be compiled to be compatible with shared libraries.  This should be
 the case for libraries included with LAMMPS, such as the dummy MPI
 library in ``src/STUBS`` or any package libraries in the ``lib``
 directory, since they are always built in a shared library compatible
-way using the ``-fPIC`` compiler switch.  However, if an auxiliary
-library (like MPI or FFTW) does not exist as a compatible format, the
-shared library linking step may generate an error.  This means you will
-need to install a compatible version of the auxiliary library.  The
-build instructions for that library should tell you how to do this.
+way (e.g. using the ``-fPIC`` compiler switch with GCC on Linux).
+However, if an auxiliary library (like MPI or FFTW) does not exist as a
+compatible format, the shared library linking step may generate an
+error.  This means you will need to install a compatible version of the
+auxiliary library.  The build instructions for that library should tell
+you how to do this.
 
 ----------
 

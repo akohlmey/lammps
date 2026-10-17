@@ -2,9 +2,9 @@ GPU package
 ===========
 
 The GPU package was developed by Mike Brown while at SNL and ORNL (now
-at Intel Corp.) and his collaborators, particularly Trung Nguyen (now at
-Northwestern).  Support for AMD GPUs via HIP was added by Vsevolod Nikolskiy
-and coworkers at HSE University.
+at NVIDIA) and his collaborators, particularly Trung Nguyen (now at
+U Chicago).  Support for AMD GPUs via HIP was added by Vsevolod
+Nikolskiy and coworkers at HSE University.
 
 The GPU package provides GPU versions of many pair styles and for
 parts of the :doc:`kspace_style pppm <kspace_style>` for long-range
@@ -42,18 +42,22 @@ and unsupported on Windows):
 * Check if you have an NVIDIA GPU: ``cat /proc/driver/nvidia/gpus/\*/information``
 * Go to https://developer.nvidia.com/cuda-downloads
 * Install a driver and toolkit appropriate for your system (SDK is not necessary)
-* Run ``lammps/lib/gpu/nvc_get_devices`` (after building the GPU library, see below) to
-  list supported devices and properties
+* Configure and compile LAMMPS with CMake.  After compilation, you can
+  run ``./build/nvc_get_devices`` to list all supported devices and
+  their properties
 
-To compile and use this package in OpenCL mode, you currently need
-to have the OpenCL headers and the (vendor neutral) OpenCL library installed.
-In OpenCL mode, the acceleration depends on having an `OpenCL Installable Client Driver (ICD) <https://www.khronos.org/news/permalink/opencl-installable-client-driver-icd-loader>`_
-installed. There can be multiple of them for the same or different hardware
-(GPUs, CPUs, Accelerators) installed at the same time. OpenCL refers to those
-as 'platforms'.  The GPU library will try to auto-select the best suitable platform,
-but this can be overridden using the platform option of the :doc:`package <package>`
-command. run ``lammps/lib/gpu/ocl_get_devices`` to get a list of available
-platforms and devices with a suitable ICD available.
+To compile and use this package in OpenCL mode, you currently need to
+have the OpenCL headers and the (vendor neutral) OpenCL library
+installed.  In OpenCL mode, the acceleration depends on having an
+`OpenCL Installable Client Driver (ICD)
+<https://www.khronos.org/news/permalink/opencl-installable-client-driver-icd-loader>`_
+installed.  There can be multiple of them for the same or different
+hardware (GPUs, CPUs, Accelerators) installed at the same time.  OpenCL
+refers to those as 'platforms'.  The GPU library will try to auto-select
+the best suitable platform, but this can be overridden using the
+platform option of the :doc:`package <package>` command. run
+``./build/ocl_get_devices`` to get a list of available platforms and
+devices where a suitable ICD is available.
 
 To compile and use this package for Intel GPUs, OpenCL or the Intel oneAPI
 HPC Toolkit can be installed using linux package managers. The latter also
@@ -61,14 +65,12 @@ provides optimized C++, MPI, and many other libraries and tools. See:
 
 * https://software.intel.com/content/www/us/en/develop/tools/oneapi/hpc-toolkit/download.html
 
-If you do not have a discrete GPU card installed, this package can still provide
-significant speedups on some CPUs that include integrated GPUs. Additionally, for
-many macs, OpenCL is already included with the OS and Makefiles are available
-in the ``lib/gpu`` directory.
-
-To compile and use this package in HIP mode, you have to have the AMD ROCm
-software installed. Versions of ROCm older than 3.5 are currently deprecated
-by AMD.
+If you do not have a discrete GPU card installed, this package can still
+provide significant speedups on some CPUs that include integrated
+GPUs. Additionally, OpenCL support may already included with the OS or
+provided by the graphics card driver.  To compile and use this package
+in HIP mode, you have to have the AMD ROCm software installed.  Version
+6.x or later of ROCm is required.
 
 Building LAMMPS with the GPU package
 """"""""""""""""""""""""""""""""""""

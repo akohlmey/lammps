@@ -18,6 +18,16 @@ environments is on a :doc:`separate page <Howto_cmake>`.
 
 LAMMPS currently requires CMake version 3.27 or later.
 
+.. versionremoved:: TBD
+
+.. warning::
+
+   Files generated or copied by the :doc:`legacy make based
+   <Build_make>` build procedure for LAMMPS conflict with using CMake.
+   Since the legacy build system has been removed, they serve no purpose
+   and any leftover files can be identified and deleted with the command
+   ``make -C src purge``.
+
 .. _cmake_build:
 
 Getting started

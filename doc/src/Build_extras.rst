@@ -971,11 +971,12 @@ Eigen3 is a template library, so you do not need to build it.
    -D EIGEN3_INCLUDE_DIR=path    # path to Eigen library (only needed if a
                                  # custom location)
 
-If ``DOWNLOAD_EIGEN3`` is set, the Eigen3 library will be
-downloaded and inside the CMake build directory.  If the Eigen3
-library is already on your system (in a location where CMake
-cannot find it), set ``EIGEN3_INCLUDE_DIR`` to the directory the
-``Eigen3`` include file is in.
+If ``DOWNLOAD_EIGEN3`` is set, the Eigen3 library will be downloaded and
+configured inside the CMake build directory.  Eigen3 is a header-only
+library that does not require compilation.  If the Eigen3 library is
+already on your system (in a location where CMake cannot find it), set
+``EIGEN3_INCLUDE_DIR`` to the directory the ``Eigen3`` include file is
+in.
 
 ----------
 
@@ -1021,7 +1022,7 @@ No additional settings are needed besides ``-D PKG_OPT=on``
 PYTHON package
 ---------------------------
 
-Building with the PYTHON package requires you have a the Python
+Building with the PYTHON package requires you have the Python
 development headers and library available on your system, which
 needs to be Python version 3.6 or later.
 
@@ -1125,7 +1126,7 @@ This package depends on the KSPACE package.
 
    -D PKG_ELECTRODE=on           # enable the package itself
    -D PKG_KSPACE=on              # the ELECTRODE package requires KSPACE
-   -D USE_INTERNAL_LINALG=value  #
+   -D USE_INTERNAL_LINALG=value  # value = on means to favor liblinalg over BLAS/LAPACK
 
 Features in the ELECTRODE package are dependent on code in the
 KSPACE package so the latter one *must* be enabled.

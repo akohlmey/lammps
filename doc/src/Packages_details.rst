@@ -1318,11 +1318,6 @@ You need to have an Intel compiler, version 14 or higher to take full
 advantage of this package. While compilation with GNU compilers is
 supported, performance will be sub-optimal.
 
-.. note::
-
-   the INTEL package contains styles that require using the
-   ``-restrict`` flag, when compiling with Intel compilers.
-
 **Author:** Mike Brown (NVIDIA) while working at Intel.
 
 **Install:**
@@ -1905,11 +1900,6 @@ A variety of compute, fix, pair, bond styles with specialized
 capabilities that don't align with other packages.  Do a directory
 listing, ``ls src/MISC``, to see the list of commands.
 
-.. note::
-
-   the MISC package contains styles that require using the
-   -restrict flag, when compiling with Intel compilers.
-
 **Supporting info:**
 
 * ``src/MISC``: filenames -> commands
@@ -2359,9 +2349,9 @@ Also see the :ref:`KOKKOS <PKG-KOKKOS>`, :ref:`OPT <PKG-OPT>`, and
 
 **Author:** Axel Kohlmeyer (Temple U).
 
-Multi-threading support is enabled default if supported by the build
-environment.  It can be enforced by using ``-D BUILD_OMP=on`` when
-configuring with CMake.
+Multi-threading support is *enabled by default* if it is supported by
+the build environment.  It can be enforced by using ``-D BUILD_OMP=on``
+when configuring with CMake.
 
 **Install:**
 
@@ -2702,9 +2692,9 @@ supported.
 
 **Install:**
 
-This package requires libxtb 6.7 or newer, its installed Fortran module files,
-mctc-lib, and BLAS.  It supports only the CMake build.  See
-:ref:`QMMM-XTB build instructions <qmmm-xtb>` for details.
+This package requires libxtb 6.7 or newer, its installed Fortran module
+files, mctc-lib, and BLAS.  See :ref:`QMMM-XTB build instructions
+<qmmm-xtb>` for details.
 
 **Supporting info:**
 

@@ -111,7 +111,7 @@ version) of the manual within the :doc:`CMake build directory
 installation of the HTML manual pages into the "install" step when
 installing LAMMPS after the CMake build via ``cmake --install build`` as
 it is preferred or even required by tools that are packaging LAMMPS for
-Linux distributions or similar packaging system.
+Linux distributions or similar packaging systems.
 
 The documentation build is included in the default build target, but can
 also be requested independently with ``cmake --build build --target

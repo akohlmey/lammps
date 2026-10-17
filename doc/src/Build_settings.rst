@@ -316,7 +316,7 @@ curl package header, library, executable files, you can set these variables:
 .. code-block:: bash
 
    -D CURL_INCLUDE_DIR=path    # path to folder which contains curl.h header file
-   -D CURL_LIBRARY=path        # path to libcurls.a (.so) file
+   -D CURL_LIBRARY=path        # path to libcurl.a (.so) file
 
 ----------
 

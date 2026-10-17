@@ -44,9 +44,6 @@ molecules as included in the two example folders.
 
 Building the QM/MM executable has to be done in multiple stages
 
-Building with CMake for LAMMPS
-==============================
-
 Step 1)
 
 Go to the top-level folder of the LAMMPS source code and create
@@ -95,7 +92,7 @@ on the QM atoms only.
 Step 3)
 
 Go back to this folder (lib/qmmm) and now review the file
-Makefile.gfortran-cmake and make adjustments to the makefile variables
+Makefile.gfortran and make adjustments to the makefile variables
 according to the comments in the file.  You probably need to adjust
 the QETOPDIR variable to point to the location of your QE
 compilation/installation.
@@ -108,13 +105,6 @@ If this is successful, you should be able to run a QM/MM calculation
 and can try the examples in the example-mc and example-ec folders:
 
   mpirun -np 4 ../pwqmmm.x qmmm.inp 2
-
-
-Building with traditional make for LAMMPS
-=========================================
-
-The QMMM package no longer supports building with the traditional
-make build system.  Please use CMake instead.
 
 -------------------------------------------------
 
@@ -218,4 +208,4 @@ slout    water_single.out  # output file for MM slave (or NULL to print to scree
 
 ---------------------------------
 
-Version: 2025-08-04
+Version: 2026-10-17

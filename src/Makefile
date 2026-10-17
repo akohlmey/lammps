@@ -89,12 +89,12 @@ clean:
 purge:
 	@echo 'Purging files left behind by the legacy build system'
 	@for f in */*.cpp */*.h; do case $$f in Obj_*) continue ;; esac; \
-	    b=$${f##*/}; test -f $$b && rm $$b && echo $$b || : ; \
+	    b=$${f##*/}; test -f $$b && rm -v $$b && echo $$b || : ; \
 	done
 	@rm -fv style_*.h style_*.cpp packages_*.h package_registry.cpp lmpgitversion.h lmpinstalledpkgs.h
 	@rm -fv mliap_model_python_couple.h mliap_model_python_couple.cpp Makefile.package Makefile.package.settings
 	@rm -fv ../lib/gpu/*_cubin.h
-	@rm -rf Obj_* lmp_* liblammps*
+	@rm -rfv Obj_* lmp_* liblammps*
 
 no-all: purge
 

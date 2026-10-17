@@ -7,10 +7,7 @@ Examples are shown below of how to run these scripts.  Log files for
 running them on 1 and 4 processors of a Linux box are included in the
 directory.  This assumes that the executable lmp_mpi has been built
 with the appropriate packages installed in order to run with a
-particular potential.  For the ReaxFF potential invoked by the in.reax
-script, you should build the Fortran ReaxFF library in lib/reax, using
-the included reax_defs.h file to enable the problem size specified by
-the in.reax file.
+particular potential.
 
 Any potential parameter file(s) used by the input scripts are also
 included in this directory.

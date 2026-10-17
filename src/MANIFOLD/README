@@ -14,7 +14,6 @@ Eindhoven University of Technology (TU/e), The Netherlands
 
 since 2017: Brandeis University, Waltham, MA, USA.
 
-
 Thanks to Remy Kusters at TU/e for testing.
 
 This software is distributed under the GNU General Public License.
@@ -68,9 +67,10 @@ by copying an existing manifold and modifying it. See e.g. manifold_sphere for
 a relatively simple manifold.
 
 With those things in place, the install script should be able to add your
-manifold to LAMMPS without any extra work, so just running
-make yes-manifold
-make <your_architecture>
+manifold to LAMMPS without any extra work, so just running:
+
+cmake --build build
+
 should (re)compile LAMMPS with the manifolds added.
 
 +==============================================================================+

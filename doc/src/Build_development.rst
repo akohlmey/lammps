@@ -777,16 +777,23 @@ The following options are available (to be run in the ``src`` folder):
 .. code-block:: bash
 
    make check-whitespace    # search for files with whitespace issues
+   make check-permissions   # search for files with permissions issues
    make check-homepage      # search for files with old LAMMPS homepage URLs
    make check-errordocs     # search for deprecated error docs in header files
-   make check-permissions   # search for files with permissions issues
+   make check-fmtlib        # check source files for fmt::format features incompatible with std::format
    make check-docs          # search for several issues in the manual
    make check               # run all check targets from above
-   make check-version       # list files with pending release version tags
+
    make fix-whitespace      # correct whitespace issues in files
+   make fix-permissions     # correct permissions issues in files
    make fix-homepage        # correct LAMMPS homepage URLs in files
    make fix-errordocs       # remove error docs in header files
-   make fix-permissions     # correct permissions issues in files
+   make fix-fmtlib          # replace fmt::format features with known alternatives for std::format compatibility
+
+   make check-version       # list source and doc files with pending version tags
+
+   make purge               # remove files left behind in src by the legacy build system
+   make clean               # remove editor and patch backup files
 
 The whitespace, homepage, and permission checks and fixes are also
 available as targets of the CMake build, e.g. ``cmake --build build

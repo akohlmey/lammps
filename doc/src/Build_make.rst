@@ -9,7 +9,7 @@ for GNU make is no longer available.  Please use :doc:`CMake
 :doc:`how to use CMake with LAMMPS <Howto_cmake>` and the `CMake online
 documentation <https://cmake.org/cmake/help/v3.27/>`_.  For the
 impatient, there is also a quick transition guide below.  Contact the
-the LAMMPS developers at developers@lammps.org if you have any concerns
+LAMMPS developers at developers@lammps.org if you have any concerns
 or questions about this.
 
 Make to CMake quick-start guide
@@ -20,8 +20,8 @@ Make to CMake quick-start guide
    :widths: 17 38 45
 
    * - Action
-     - Traditional ``make`` command in (``src/``)
-     - CMake equivalent in (main folder)
+     - Traditional ``make`` command in ``src/``
+     - CMake equivalent in main folder
    * - Initial Setup
      - None or Edit ``Makefile.<machine>``
      - ``cmake -S cmake -B build``
@@ -42,7 +42,7 @@ Make to CMake quick-start guide
      - ``cmake -S cmake -B build -C cmake/presets/<preset>.cmake``
    * - List enabled packages
      - ``make ps`` (or ``make package-status``)
-     - Check CMake output or use ``ccmake build``
+     - Check CMake output or use ``ccmake build`` or ``lmp -h``
    * - Change configuration settings
      - Copy ``Makefile.<machine>`` to MAKE/MINE and edit
      - Rerun CMake with changed options
@@ -61,9 +61,12 @@ Make to CMake quick-start guide
    * - Build LAMMPS shared library
      - ``make mode=shared <machine>``
      - Use ``-D BUILD_SHARED_LIBS=on``
+   * - Install LAMMPS Python module
+     - ``make install-python``
+     - Use ``cmake --build build --target install-python``
 
 Some general CMake tips:
 
-* You can have multiple independent build folders with different configurations (e.g. MPI on/off or different package selections). The convention is that the name starts with "build" (e.g. ``build-serial``)
+* You can have multiple independent build folders with different configurations (e.g. MPI on/off or different package selections). The convention is that the name starts with "build" (e.g. ``build-serial``).
 * To build a LAMMPS executable with defaults and most packages that do not need manual configurations: ``cmake -S cmake -B build -C cmake/presets/most.cmake; cmake --build build``
 * To make multiple configuration changes interactively use either ``ccmake build`` or edit ``build/CMakeCache.txt`` in a text editor and run ``cmake -S cmake -B build``
