@@ -770,7 +770,7 @@ For multicore CPUs using OpenMP, set these variables.
    -D BUILD_OMP=on
 
 Please note that enabling OpenMP for KOKKOS requires that OpenMP is
-also :ref:`enabled for the rest of LAMMPS <serial>`.
+also :ref:`enabled for the rest of LAMMPS <build_serial>`.
 
 For Intel KNLs using OpenMP, set these variables:
 

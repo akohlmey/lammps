@@ -3,15 +3,13 @@ Basic build options
 
 The following topics are covered on this page:
 
-* :ref:`Serial vs parallel build <serial>`
-* :ref:`Choice of compiler and compile/link options <compile>`
-* :ref:`Build the LAMMPS executable and library <exe>`
-* :ref:`Including and removing debug support <debug>`
-* :ref:`Install LAMMPS after a build <install>`
+.. contents::
+   :local:
+   :depth: 2
 
 ----------
 
-.. _serial:
+.. _build_serial:
 
 Serial vs parallel build
 ------------------------
@@ -95,8 +93,6 @@ by setting the ``OMP_NUM_THREADS`` environment variable before you
 launch LAMMPS.
 
 ----------
-
-.. _compile:
 
 Choice of compiler and compile/link options
 ---------------------------------------------------------
@@ -193,8 +189,7 @@ and ``-C cmake/presets/nvhpc.cmake`` will switch to the NVHPC compilers.
 
 ----------
 
-.. _exe:
-.. _library:
+.. _build_exe:
 
 Build the LAMMPS executable and library
 ---------------------------------------
@@ -247,7 +242,7 @@ you how to do this.
 
 ----------
 
-.. _debug:
+.. _build_debug:
 
 Including or removing debug support
 -----------------------------------
@@ -273,7 +268,7 @@ files.
 
 ----------
 
-.. _tools:
+.. _build_tools:
 
 Build LAMMPS tools
 ------------------
@@ -294,8 +289,6 @@ The generated binaries will also become part of the LAMMPS installation
 (see below).
 
 ----------
-
-.. _install:
 
 Install LAMMPS after a build
 ------------------------------------------

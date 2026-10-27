@@ -8,22 +8,15 @@ Optional build settings
 LAMMPS can be built with several optional settings.  Each subsection
 explains how to do this.
 
-* `C++17 standard compliance`_ when building all of LAMMPS
-* `FFT library`_ for use with the :doc:`kspace_style pppm <kspace_style>` command
-* `Size of LAMMPS integer types and size limits`_
-* `Read or write compressed files`_
-* `Support for downloading files from the input`_
-* `Prevent download of large potential files`_
-* `Memory allocation alignment`_
-* `Workaround for long long integers`_
-* `Exception handling when using LAMMPS as a library`_ to capture errors
+.. contents::
+   :local:
+   :depth: 1
 
 ----------
 
-.. _cxx17:
-
-C++17 standard compliance
--------------------------
+++17 standard compliance
+C++17 standard compliance when building all of LAMMPS
+-----------------------------------------------------
 
 .. versionchanged:: 10Sep2025
 
@@ -44,10 +37,12 @@ FFT library
 -----------
 
 When the KSPACE package is included in a LAMMPS build, the
-:doc:`kspace_style pppm <kspace_style>` command performs 3d FFTs which
-require use of an FFT library to compute 1d FFTs.  The KISS FFT
-library is included with LAMMPS, but other libraries can be faster.
-LAMMPS can use them if they are available on your system.
+:doc:`kspace_style pppm or esp <kspace_style>` commands and their
+variants perform 3d FFTs which require use of an FFT library to compute
+1d FFTs.  The `KISS FFT library
+<https://github.com/mborgerding/kissfft>`_ is included with LAMMPS, but
+other libraries can be faster.  LAMMPS can use them if they are
+available on your system.
 
 .. versionadded:: 7Feb2024
 
@@ -320,8 +315,6 @@ curl package header, library, executable files, you can set these variables:
 
 ----------
 
-.. _download_pot:
-
 Prevent download of large potential files
 -----------------------------------------
 
@@ -337,8 +330,6 @@ This automatic download can be prevented by adding the setting `-D
 DOWNLOAD_POTENTIALS=off` when configuring.
 
 ----------
-
-.. _align:
 
 Memory allocation alignment
 ---------------------------
@@ -363,8 +354,6 @@ function instead.  When compiling LAMMPS for Windows systems,
 
 ----------
 
-.. _longlong:
-
 Workaround for long long integers
 ---------------------------------
 
@@ -382,7 +371,8 @@ those systems:
 .. _exceptions:
 
 Exception handling when using LAMMPS as a library
--------------------------------------------------
+Exception handling when using LAMMPS as a library to capture errors
+-------------------------------------------------------------------
 
 LAMMPS errors do not kill the calling code, but throw an exception.  In
 the C-library interface, the call stack is unwound and control returns

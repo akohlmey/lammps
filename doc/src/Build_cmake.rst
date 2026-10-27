@@ -30,8 +30,6 @@ Support for the legacy GNU make-based build system was removed.
    and any leftover files can be identified and deleted with the command
    ``make -C src purge``.
 
-.. _cmake_build:
-
 Getting started
 ^^^^^^^^^^^^^^^
 
@@ -176,8 +174,6 @@ defaults to ``${HOME}/.local``.
       [100%] Linking CXX executable simpleCC
       [100%] Built target simpleCC
 
-.. _cmake_options:
-
 Configuration and build options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -215,8 +211,6 @@ tool <ninja_ccache>`) or project files for IDEs like Xcode or Visual
 Studio can be selected using the ``-G`` command-line flag.  A list of
 available generator settings for your specific CMake version is given
 when running ``cmake --help``.
-
-.. _cmake_targets:
 
 Build targets
 ^^^^^^^^^^^^^
