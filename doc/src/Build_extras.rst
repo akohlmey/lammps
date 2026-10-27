@@ -1538,7 +1538,11 @@ With the LLVM based Intel compilers (``icx`` and ``icpx``), CMake
 adds the flags ``-xHost`` and ``-qopt-zmm-usage=high`` and compiles
 the INTEL package sources with ``-fp-model=fast=2``.  The ``-xHost``
 flag is omitted when a target architecture is already selected in
-``CMAKE_CXX_FLAGS``, e.g. when compiling for a different CPU.
+``CMAKE_CXX_FLAGS``, e.g. when compiling for a different CPU.  The
+main program of the LAMMPS executable is compiled with ``-ftz``, so
+that very small floating-point numbers (subnormals) are flushed to
+zero, which avoids a large slowdown of some INTEL package styles in
+mixed precision.
 
 In Long-range thread mode (LRT) a modified verlet style is used, that
 operates the Kspace calculation in a separate thread concurrently to
