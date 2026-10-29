@@ -278,7 +278,7 @@ Some tools described in :doc:`Auxiliary tools <Tools>` can be built directly.
 .. code-block:: bash
 
    -D BUILD_TOOLS=value         # on or off (default). Build binary2txt,
-                                # msi2lmp, phana, reformat-json,
+                                # find-symmetry, msi2lmp, phana, reformat-json,
                                 # stl_bin2txt, and (with Fortran)
                                 # chain.x and micelle2d.x
    -D BUILD_LAMMPS_GUI=value    # on or off (default). Build LAMMPS-GUI
