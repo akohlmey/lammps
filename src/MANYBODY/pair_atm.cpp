@@ -81,6 +81,7 @@ void PairATM::compute(int eflag, int vflag)
 {
   int i,j,k,ii,jj,kk,inum,jnum,jnumm1;
   double xi,yi,zi,evdwl;
+  double fxtmp,fytmp,fztmp,fjxtmp,fjytmp,fjztmp;
   double rij2,rik2,rjk2;
   double rij[3],rik[3],rjk[3],fj[3],fk[3];
   double nu_local;
@@ -121,6 +122,7 @@ void PairATM::compute(int eflag, int vflag)
     jlist = firstneigh[i];
     jnum = numneigh[i];
     jnumm1 = jnum - 1;
+    fxtmp = fytmp = fztmp = 0.0;
 
     for (jj = 0; jj < jnumm1; jj++) {
       j = jlist[jj];
@@ -134,6 +136,7 @@ void PairATM::compute(int eflag, int vflag)
       if (rij[0] == 0.0 && rij[1] == 0.0 && rij[2] < 0.0) continue;
       rij2 = rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2];
       if (rij2 > cutoff_squared) continue;
+      fjxtmp = fjytmp = fjztmp = 0.0;
 
       for (kk = jj+1; kk < jnum; kk++) {
         k = jlist[kk];
@@ -163,19 +166,25 @@ void PairATM::compute(int eflag, int vflag)
         interaction_ddd(nu_local,
                         r6,rij2,rik2,rjk2,rij,rik,rjk,fj,fk,eflag,evdwl);
 
-        f[i][0] -= fj[0] + fk[0];
-        f[i][1] -= fj[1] + fk[1];
-        f[i][2] -= fj[2] + fk[2];
-        f[j][0] += fj[0];
-        f[j][1] += fj[1];
-        f[j][2] += fj[2];
+        fxtmp -= fj[0] + fk[0];
+        fytmp -= fj[1] + fk[1];
+        fztmp -= fj[2] + fk[2];
+        fjxtmp += fj[0];
+        fjytmp += fj[1];
+        fjztmp += fj[2];
         f[k][0] += fk[0];
         f[k][1] += fk[1];
         f[k][2] += fk[2];
 
         if (evflag) ev_tally3(i,j,k,evdwl,0.0,fj,fk,rij,rik);
       }
+      f[j][0] += fjxtmp;
+      f[j][1] += fjytmp;
+      f[j][2] += fjztmp;
     }
+    f[i][0] += fxtmp;
+    f[i][1] += fytmp;
+    f[i][2] += fztmp;
   }
 
   if (vflag_fdotr) virial_fdotr_compute();
