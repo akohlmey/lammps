@@ -164,9 +164,22 @@ void PairSW::compute(int eflag, int vflag)
       fxtmp += delx*fpair;
       fytmp += dely*fpair;
       fztmp += delz*fpair;
+#ifdef SW_KBUF2
+      if (skip_threebody_flag) {
+        f[j][0] -= delx*fpair;
+        f[j][1] -= dely*fpair;
+        f[j][2] -= delz*fpair;
+      } else {
+        double *fsum = shortleg[numshort-1].fsum;
+        fsum[0] -= delx*fpair;
+        fsum[1] -= dely*fpair;
+        fsum[2] -= delz*fpair;
+      }
+#else
       f[j][0] -= delx*fpair;
       f[j][1] -= dely*fpair;
       f[j][2] -= delz*fpair;
+#endif
 
       if (evflag) ev_tally(i,j,nlocal,newton_pair,
                            evdwl,0.0,fpair,delx,dely,delz);
@@ -201,15 +214,21 @@ void PairSW::compute(int eflag, int vflag)
         fjxtmp += fj[0];
         fjytmp += fj[1];
         fjztmp += fj[2];
-        f[k][0] += fk[0];
-        f[k][1] += fk[1];
-        f[k][2] += fk[2];
+        s2.fsum[0] += fk[0];
+        s2.fsum[1] += fk[1];
+        s2.fsum[2] += fk[2];
 
         if (evflag) ev_tally3(i,j,k,evdwl,0.0,fj,fk,s1.del,s2.del);
       }
-      f[j][0] += fjxtmp;
-      f[j][1] += fjytmp;
-      f[j][2] += fjztmp;
+      s1.fsum[0] += fjxtmp;
+      s1.fsum[1] += fjytmp;
+      s1.fsum[2] += fjztmp;
+    }
+    for (jj = 0; jj < numshort; jj++) {
+      const ShortLeg &s = shortleg[jj];
+      f[s.j][0] += s.fsum[0];
+      f[s.j][1] += s.fsum[1];
+      f[s.j][2] += s.fsum[2];
     }
     f[i][0] += fxtmp;
     f[i][1] += fytmp;

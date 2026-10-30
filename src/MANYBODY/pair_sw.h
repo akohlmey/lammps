@@ -55,6 +55,7 @@ class PairSW : public Pair {
 
   struct ShortLeg {
     double del[3], r, rinvsq, gsrainvsq, expgsrainv;
+    double fsum[3];    // force on this neighbor, accumulated over all its triplets
     int j, jtype;
   };
 
@@ -89,6 +90,7 @@ class PairSW : public Pair {
     s.rinvsq = 1.0 / rsq;
     s.gsrainvsq = gsrainv * rainv / r;
     s.expgsrainv = exp(gsrainv);
+    s.fsum[0] = s.fsum[1] = s.fsum[2] = 0.0;
   }
 
   template <int MODFLAG>
