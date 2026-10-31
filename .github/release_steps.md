@@ -118,7 +118,7 @@ and then stops all active containers.
 
 ### macOS virtual machine
 
-``` bash
+``` console
 toolbox enter fedora-toolbox-44
 ./quickemu/macos-monterey.conf
 exit
