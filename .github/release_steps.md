@@ -10,7 +10,7 @@ manual](https://docs.lammps.org/Manual_version.html).
 
 ## Current setup of build server:
 
-- Dell PowerEdge R640 rackmounted server
+- Dell PowerEdge R640 rack-mounted server
 - 2x Intel Xeon Gold 6248 @ 3.2GHz max, 20 cores each with SMT enabled
 - 384GB RAM, 2x 450GiB SATA SSD: 1GB RAID-1 -> /boot, 880 GiB RAID-9 /
 - Rocky Linux 10.2 with EPEL as host operating system
@@ -27,9 +27,9 @@ manual](https://docs.lammps.org/Manual_version.html).
 
 Use a checkout of LAMMPS created on Rocky 10 with a 'lammps' folder for
 regular work, a worktree 'lammps-release' for feature releases, and a
-worktree 'lammps-maintenance' for stable releases and updates.  A build
+worktree 'lammps-stable' for stable releases and updates.  A build
 without a suitable release tag will build packages using the current
-state of the 'lammps' checkcout and will only copy results to
+state of the 'lammps' checkout and will only copy results to
 `${HOME}/results` but not to the webserver's testing folder.  Checkout
 and worktrees are shared across the containers.  As a virtual machine,
 macOS requires its own checkout and worktrees but follows the same
@@ -38,7 +38,7 @@ scheme.
 Build folders: | Used for:
 ---|---
 *build-lib*    | for liblammps shared lib for use with LAMMPS-GUI
-*build-mingw*  | for liblamms.dll using direct config and installers wiqth nsis target
+*build-mingw*  | for liblammps.dll using direct configuration and installers with nsis target
 *build-gui*    | for LAMMPS + LAMMPS-GUI and building tar.gz and dmg package
 *build-static* | for fully static LAMMPS Linux binary package
 
@@ -94,7 +94,7 @@ spell  |  run "codespell" on script files
 clean  |  delete editor and git backups and temporary files
 purge  |  clean and also delete all release asset files
 
-### Creating and maintaininer virtual machine and containers
+### Creating and maintaining virtual machine and containers
 
 TODO.
 
@@ -116,8 +116,8 @@ exit
 ```
 
 This will launch the container and virtual machine within the container.
-They will keep running after `exit`.  Wait about 5 mins until macOS is
-fully booted.  Then you can log in passwordless with `ssh hackintosh`.
+They will keep running after `exit`.  Wait about 5 minutes until macOS is
+fully booted.  Then you can log in password-less with `ssh hackintosh`.
 
 ### Fedora 44 container
 
@@ -126,7 +126,7 @@ toolbox enter fedora-toolbox-44
 ```
 
 This launches the container and it will keep running.  Launching the
-macOS virtual machine will achieve that.  The container has a passwordless
+macOS virtual machine will achieve that.  The container has a password-less
 sudo configuration for software installation and updates.
 
 ### AlmaLinux 9 container
@@ -175,7 +175,7 @@ document, last minute trivial(!) changes).
 This PR shall not be merged before **all** pending tests have completed
 and cleared.  We currently use automated tests with GitHub workflows.
 There is also a Coverity Scan run with static code analysis done every
-thursday evening or when triggered manually.  That output should be
+Thursday evening or when triggered manually.  That output should be
 checked for any significant issues before a release, too.  In addition
 there is a nightly static code analysis run that can be checked at
 https://downloads.lammps.org/analysis/
@@ -562,3 +562,28 @@ it and creating a new release using a different version tag.
 The build procedure is the same as for the feature releases, only
 that packages are built from the 'stable' branch.  This includes
 creating and uploading the signed list of checksums as the last step.
+
+<!--  LocalWords:  rstudio PowerEdge R640 2x Xeon 2GHz SMT 384GB 450GiB
+<!--  LocalWords:  SATA SSD 1GB EPEL AlmaLinux podman gz MinGW64 qemu
+<!--  LocalWords:  flatpak quickemu kvm Fedora44 localhost hackintosh
+<!--  LocalWords:  ws01 proxyjump 'lammps worktree webserver's mingw gh
+<!--  LocalWords:  worktrees liblammps dll nsis dmg scp Makefile TODO
+<!--  LocalWords:  shellcheck codespell sudo 'develop 'next src Mmm TBD
+<!--  LocalWords:  YYYY versionadded versionchanged DMmmYYYY DDMmmYYYY
+<!--  LocalWords:  cmake pre repo Coverity 'release 4Feb2025 html musl
+<!--  LocalWords:  symlinks SHASUM Changelog checksums libc rf mkdir cd
+<!--  LocalWords:  wget apptainer fedora41 sif PWD TOOLCHAIN MESONT PTM
+<!--  LocalWords:  MGPT MOLFILE QTB SMTBQ LINALG czvvf MinGW Xcode OSX
+<!--  LocalWords:  arm64 mmacosx Sur libomp
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
+ -->
