@@ -17,8 +17,8 @@ manual](https://docs.lammps.org/Manual_version.html).
 - AlmaLinux 9 container via podman/toolbox, for Linux tar.gz, liblammps.so.0
 - Fedora 44 container via podman/toolbox, for MinGW64 cross-compiler, flatpak, static binary
 - macOS 12 Monterey virtual machine via quickemu using qemu/kvm, headless
-  must *launch* from within Fedora44 container
-  can enter *directly* with ssh to localhost on port 22230 from `rstudio`
+  must be *launched* from within Fedora44 container but you can enter
+  *directly* with ssh to localhost on port 22230 from `rstudio`
   via public key (`ssh hackintosh`), also from ws01 via proxyjump.
 
 ## Directory structure
@@ -33,13 +33,14 @@ state of the 'lammps' checkout and will only copy results to
 `${HOME}/results` but not to the webserver's testing folder.  Checkout
 and worktrees are shared across the containers.  As a virtual machine,
 macOS requires its own checkout and worktrees but follows the same
-scheme.
+directory structure.
 
 Build folders: | Used for:
 ---|---
+*build*        | for Linux flatpak, source tarball, PDF manual
 *build-lib*    | for liblammps shared lib for use with LAMMPS-GUI
-*build-mingw*  | for liblammps.dll using direct configuration and installers with nsis target
-*build-gui*    | for LAMMPS + LAMMPS-GUI and building tar.gz and dmg package
+*build-mingw*  | for liblammps.dll and Windows installers
+*build-gui*    | for LAMMPS + LAMMPS-GUI and tar.gz package or dmg installer
 *build-static* | for fully static LAMMPS Linux binary package
 
 Install folders: | Used for:
@@ -56,34 +57,37 @@ same scheme.
 
 Build folders: | Used for:
 ---|---
-*build*       |  for creating flatpak, source tarball, and manual as PDF
-*build-mingw* |  for creating Windows installer package, plugin mode
-*build-gui*   |  for creating tar.gz installer and dmg installer, plugin mode
+*build*       |  for Linux flatpak, source tarball, and PDF manual
+*build-mingw* |  for Windows installer package, plugin mode
+*build-gui*   |  for tar.gz package or dmg installer, plugin mode
 
 ## Collecting release assets
 
 Release assets are collected in $HOME/release before uploading them to
-GitHub with `gh release upload`. They are also copied with `scp` to
-`publish@www.lammps.org:/var/www/lammps/download/testing` so they can be
-downloaded from https://download.lammps.org/testing/
+GitHub with `gh release upload`. Release versions are also copied with
+`scp` to `publish@www.lammps.org:/var/www/lammps/download/testing` so
+they can be downloaded from https://download.lammps.org/testing/ and
+tested before finalizing the release and locking the version.
 
 ## Scripts for building and uploading release assets
 
 The [lammps-release GitHub repository](https://github.com/lammps/lammps-release)
-contains the scripts used for preparing and uploading the tarballs, binaries and
-installer packages on the build machine. The `${HOME}/release/` folder on the
-build machine is a clone of that repository.  Thus the scripts are also the
-documentation for the sequence of commands required to perform the steps for
-creating all release assets and with the information included in this document
-should describe the process completely and largely automate it, too.  If things
-are not well explained or details are missing please submit and issue.
+contains the scripts used for preparing and uploading the tarballs,
+binaries and installer packages on the build machine. The
+`${HOME}/release/` folder on the build machine is a clone of that
+repository.  Thus the scripts are also the authoritative documentation
+for the sequence of commands required to perform the steps for creating
+all release assets and with the information included in this document
+should describe the process completely and largely automate it, too.  If
+things are not well explained or details are missing please submit an
+issue in the LAMMPS repository.
 
-Due to the sensitive nature of those scripts revealing details of the internal
-setup, the repository is private and access is limited to the members of the
-LAMMPS organization.
+Due to the sensitive nature of those scripts revealing details of the
+internal setup, the repository is private and access is limited to the
+members of the LAMMPS organization.
 
-The scripts for the Linux containers use /bin/bash syntax, the
-scripts for macOS /bin/zsh (which is largely compatible).
+The scripts for the Linux containers use `/bin/bash` syntax, the
+scripts for macOS `/bin/zsh` (which is largely compatible with bash).
 
 ### Makefile
 
@@ -92,7 +96,7 @@ Target | Purpose
 check  |  run "shellcheck" on script files
 spell  |  run "codespell" on script files
 clean  |  delete editor and git backups and temporary files
-purge  |  clean and also delete all release asset files
+purge  |  "make clean" plus also delete all release asset files
 
 ### Creating and maintaining virtual machine and containers
 
@@ -100,16 +104,21 @@ TODO.
 
 ### Launching and stopping virtual machine and containers
 
-The ./boot-build.sh will activate all required containers and launch the
-macOS virtual machine and apply a 2 minute delay to wait until the
-virtual machine has booted to the point where one can enter it with ssh.
-As last step of the boot, all scripts for macOS are synchronized with
-the release folder of the virtual machine.  There is no git checkout
-since no development of the build scripts is planned to be done there.
+The `./boot-build.sh` script will activate all required containers and
+launch the macOS virtual machine and apply a 2 minute delay to wait
+until the virtual machine has booted to the point where one can enter it
+with ssh.  As last step of the boot, all scripts for macOS are
+synchronized with the release folder of the virtual machine.  There is
+no git checkout since no development of the build scripts is planned to
+be done there.
+
+The `./shutdown-build.sh` script performs the inverse process and
+first shuts down the macOS virtual machine, waits for 30 seconds
+and then stops all active containers.
 
 ### macOS virtual machine
 
-``` console
+``` bash
 toolbox enter fedora-toolbox-44
 ./quickemu/macos-monterey.conf
 exit
@@ -132,32 +141,31 @@ sudo configuration for software installation and updates.
 ### AlmaLinux 9 container
 
 ``` console
-toolbox enter
+toolbox enter almalinux-9
 ```
-
 
 ## LAMMPS Feature Release
 
-A LAMMPS feature release is currently prepared after about 500 to 750
-commits to the 'develop' branch or after a period of four weeks up to
-two months.  This is not a fixed rule, though, since external
-circumstances can cause delays in preparing a release, or pull requests
-that are desired to be merged for the release are not yet completed.
+A LAMMPS feature release is currently prepared after about 750 to 1000
+commits to the 'develop' branch or after a period of six weeks up to two
+months.  This is not a fixed rule, though, since external circumstances
+can cause delays in preparing a release, or pull requests that are
+desired to be merged for the release are not yet completed.
 
 ### Preparing a 'next\_release' branch
 
 Create a 'next\_release' branch off 'develop' and make the following changes:
 
 - set the LAMMPS\_VERSION define to the planned release date in
-  src/version.h in the format "D Mmm YYYY" or "DD Mmm YYYY"
+  `src/version.h` in the format "D Mmm YYYY" or "DD Mmm YYYY"
 - remove the LAMMPS\_UPDATE define in src/version.h
-- update the release date in doc/lammps.1
-- update all TBD arguments for ..versionadded::, ..versionchanged::
-  ..deprecated:: to the planned release date in the format "DMmmYYYY" or
-  "DDMmmYYYY"
+- update the release date in `doc/lammps.1`
 - check release notes for merged new features and check if
-  ..versionadded:: or ..versionchanged:: are missing and need to be
+  `..versionadded::` or `..versionchanged::` are missing and need to be
   added
+- update all TBD arguments for `..versionadded::`, `..versionchanged::`
+  `..deprecated::` to the planned release date in the format "DMmmYYYY"
+  or "DDMmmYYYY"
 - check at https://github.com/lammps/lammps-gui/releases whether there
   is a newer release of LAMMPS-GUI.  If there is, update the `GIT_TAG`
   setting for LAMMPS-GUI in `cmake/Modules/Packaging.cmake` to the tag
@@ -169,21 +177,17 @@ Create a 'next\_release' branch off 'develop' and make the following changes:
   `gh release verify --repo lammps/lammps-gui <tag>`
 
 Submit this pull request.  This is the last pull request merged for the
-release and should not contain any other changes. (Exceptions: this
-document, last minute trivial(!) changes).
+release and should not contain any other changes. (Exceptions: internal
+documents like this one and  last minute trivial(!) changes).
 
-This PR shall not be merged before **all** pending tests have completed
-and cleared.  We currently use automated tests with GitHub workflows.
-There is also a Coverity Scan run with static code analysis done every
-Thursday evening or when triggered manually.  That output should be
-checked for any significant issues before a release, too.  In addition
-there is a nightly static code analysis run that can be checked at
-https://downloads.lammps.org/analysis/
-If needed, a bug-fix pull request should be created and merged to clear
-pending issues.
-
-As of July 4th, 2026 the post-merge test results are summarized on
-the LAMMPS Testing Dashboard at: https://lammps.github.io/lammps-test-results/
+This pull request shall not be merged before **all** pending tests have
+completed and cleared.  We currently use automated tests with GitHub
+workflows and automated nightly tests.  There is also a Coverity Scan
+run with static code analysis done every Thursday evening or when
+triggered manually.  The various test outputs are consolidated on the
+[LAMMPS Testing Dashboard](https://lammps.github.io/lammps-test-results/)
+website and it should be consulted to decide with issues need to be
+addressed before the source code is suitable for a release.
 
 ### Create release on GitHub
 
@@ -192,12 +196,12 @@ cleared testing, the 'next\_release' branch is merged into 'develop'.
 
 Check out or update the 'develop' branch locally, pull the latest
 changes, merge them into 'release' with a fast forward(!) merge, and
-apply a suitable release tag (for historical reasons the tag starts
-with "patch_" followed by the date, and finally push everything back
-to GitHub.  There should be no commits made to 'release' but only
-fast forward merges.  Example:
+apply a suitable release tag (for historical reasons the tag starts with
+"patch_" followed by the version date, and finally push everything back
+to GitHub.  There should be no commits made to 'release' but only fast
+forward merges.  Example:
 
-```
+``` console
 git checkout develop
 git pull
 git checkout release
@@ -562,28 +566,3 @@ it and creating a new release using a different version tag.
 The build procedure is the same as for the feature releases, only
 that packages are built from the 'stable' branch.  This includes
 creating and uploading the signed list of checksums as the last step.
-
-<!--  LocalWords:  rstudio PowerEdge R640 2x Xeon 2GHz SMT 384GB 450GiB
-<!--  LocalWords:  SATA SSD 1GB EPEL AlmaLinux podman gz MinGW64 qemu
-<!--  LocalWords:  flatpak quickemu kvm Fedora44 localhost hackintosh
-<!--  LocalWords:  ws01 proxyjump 'lammps worktree webserver's mingw gh
-<!--  LocalWords:  worktrees liblammps dll nsis dmg scp Makefile TODO
-<!--  LocalWords:  shellcheck codespell sudo 'develop 'next src Mmm TBD
-<!--  LocalWords:  YYYY versionadded versionchanged DMmmYYYY DDMmmYYYY
-<!--  LocalWords:  cmake pre repo Coverity 'release 4Feb2025 html musl
-<!--  LocalWords:  symlinks SHASUM Changelog checksums libc rf mkdir cd
-<!--  LocalWords:  wget apptainer fedora41 sif PWD TOOLCHAIN MESONT PTM
-<!--  LocalWords:  MGPT MOLFILE QTB SMTBQ LINALG czvvf MinGW Xcode OSX
-<!--  LocalWords:  arm64 mmacosx Sur libomp
- -->
- -->
- -->
- -->
- -->
- -->
- -->
- -->
- -->
- -->
- -->
- -->
